@@ -1,0 +1,84 @@
+<!doctype html>
+<html>
+  <head>
+    <base target="_top">
+    <style>
+      body {
+        margin: 0;
+        padding: 18px;
+        color: #111827;
+        font: 13px/1.45 Arial, sans-serif;
+        background: #ffffff;
+      }
+      h1 {
+        margin: 0 0 6px;
+        font-size: 20px;
+        font-weight: 800;
+      }
+      p { margin: 0 0 14px; color: #4b5563; }
+      select, button {
+        width: 100%;
+        box-sizing: border-box;
+        border-radius: 10px;
+        border: 1px solid #d1d5db;
+        padding: 10px 12px;
+        font-size: 13px;
+      }
+      button {
+        margin-top: 10px;
+        border-color: #991b1b;
+        background: #991b1b;
+        color: #ffffff;
+        font-weight: 800;
+        cursor: pointer;
+      }
+      button:disabled {
+        cursor: wait;
+        opacity: 0.65;
+      }
+      .status {
+        margin-top: 14px;
+        border-radius: 12px;
+        background: #f3f4f6;
+        padding: 10px;
+        color: #111827;
+      }
+    </style>
+  </head>
+  <body>
+    <h1>Surgeflow</h1>
+    <label for="market">Market</label>
+    <select id="market">
+      <option value="us">US</option>
+      <option value="cn">CN</option>
+      <option value="jp">JP</option>
+      <option value="hk">HK</option>
+      <option value="uk">UK</option>
+      <option value="in">IN</option>
+    </select>
+    <button id="refresh">Refresh</button>
+    <div id="status" class="status">Ready.</div>
+    <script>
+      const btn = document.getElementById('refresh');
+      const status = document.getElementById('status');
+      btn.addEventListener('click', () => {
+        const market = document.getElementById('market').value;
+        btn.disabled = true;
+        status.textContent = 'Refreshing ' + market.toUpperCase() + '...';
+        google.script.run
+          .withSuccessHandler((result) => {
+            btn.disabled = false;
+            status.textContent =
+              'section | market_status | market_quality\n' +
+              'HOTLIST | ' + result.hotlist_status + ' | ' + result.hotlist_quality + '\n' +
+              'REALTIME TABLE | ' + result.realtime_status + ' | ' + result.realtime_quality;
+          })
+          .withFailureHandler((error) => {
+            btn.disabled = false;
+            status.textContent = 'Error: ' + (error && error.message ? error.message : String(error));
+          })
+          .refreshMarket(market);
+      });
+    </script>
+  </body>
+</html>
