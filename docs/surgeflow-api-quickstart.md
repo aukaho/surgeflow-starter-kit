@@ -4,13 +4,16 @@ Status: public API beta.
 
 ## What happens next
 
-After downloading this guide, a beta user still needs a SurgeFlow API key.
+After downloading this guide, create a free beta key from the Extension page.
 
-1. Ask SurgeFlow for a beta key.
-2. Save the key locally as `SURGEFLOW_API_KEY`.
-3. Call `/api/v1/me` to confirm the key works.
-4. Pull one market endpoint, usually `realtime` first.
-5. Use the returned rows in Google Sheets, Python, JavaScript, or a dashboard.
+1. Open `https://surgeflows.capital/extension`.
+2. Enter name and email.
+3. Agree to the terms.
+4. Copy the key when it appears.
+5. Save the key locally as `SURGEFLOW_API_KEY`.
+6. Call `/api/v1/me` to confirm the key works.
+7. Pull one market endpoint, usually `realtime` first.
+8. Use the returned rows in Google Sheets, Python, JavaScript, or a dashboard.
 
 Use this base URL for authenticated API calls:
 
@@ -22,7 +25,7 @@ Do not send authenticated `GET /api/v1/*` calls through `https://surgeflows.capi
 
 ## Auth
 
-Each beta member should receive a unique key:
+Each beta user receives a unique key:
 
 ```text
 Authorization: Bearer sf_live_...
@@ -41,6 +44,7 @@ SurgeFlow stores only the key hash. Save the key when it is issued.
 ```text
 GET /api/v1/health
 GET /api/v1/catalog
+POST /api/v1/keys
 GET /api/v1/me
 GET /api/v1/summary
 GET /api/v1/markets/{market}/screen
