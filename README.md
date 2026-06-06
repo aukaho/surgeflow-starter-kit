@@ -9,7 +9,7 @@ SurgeFlow covers common stocks across the US, China, Japan, Hong Kong, India, an
 - `templates/surgeflow-google-sheets-starter.xlsx` - starter workbook with dashboard, sample `Surgeflow_US` output, and API endpoint map.
 - `docs/surgeflow-api-quickstart.md` - compact API guide with auth, limits, endpoints, and examples.
 - `notebooks/surgeflow-realtime-hotlist-60s.ipynb` - beginner Jupyter notebook that prompts for an API key and displays realtime + hotlist tables with 60-second refresh.
-- `apps-script/Code.gs` and `apps-script/Sidebar.html` - Google Sheets add-on source for the submitted SurgeFlow Realtime add-on.
+- `apps-script/appsscript.json`, `apps-script/Code.gs`, and `apps-script/Sidebar.html` - Google Sheets add-on source for the submitted SurgeFlow Realtime add-on.
 
 ## Website Downloads
 
@@ -67,7 +67,7 @@ Free beta limits:
 
 The Google Sheets add-on has been submitted for Google review. After approval, users will install it from Google Workspace Marketplace and refresh market sheets directly from the spreadsheet menu.
 
-Until then, the starter workbook shows the expected sheet layout and output shape.
+Until then, the starter workbook shows the expected sheet layout and output shape. The add-on namespace is `/api/addin/*` and does not require a user API key.
 
 ## Important Release Note
 
