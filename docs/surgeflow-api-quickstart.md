@@ -90,6 +90,17 @@ payload.rows
 payload.data.rows
 ```
 
+## Namespace note
+
+The public API uses `/api/v1/*` and requires your generated key.
+
+The Google Sheets add-on uses `/api/addin/realtime` and `/api/addin/hotlist`
+with no user API key. Those add-on endpoints return rows at the top level:
+
+```js
+payload.rows
+```
+
 ## JavaScript
 
 ```js
