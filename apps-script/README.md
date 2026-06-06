@@ -3,6 +3,12 @@
 This is the Google Sheets add-on wrapper for the frozen `/api/addin/*`
 spreadsheet data contract.
 
+Copy all three files into the Apps Script project:
+
+- `appsscript.json`
+- `Code.gs`
+- `Sidebar.html`
+
 ## What it does
 
 - Adds a `Surgeflow` menu and sidebar in Google Sheets.
