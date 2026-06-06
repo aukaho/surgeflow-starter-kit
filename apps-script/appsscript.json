@@ -1,0 +1,21 @@
+{
+  "timeZone": "Etc/UTC",
+  "exceptionLogging": "STACKDRIVER",
+  "runtimeVersion": "V8",
+  "oauthScopes": [
+    "https://www.googleapis.com/auth/spreadsheets.currentonly",
+    "https://www.googleapis.com/auth/script.external_request"
+  ],
+  "addOns": {
+    "common": {
+      "name": "Surgeflow",
+      "logoUrl": "https://surgeflows.capital/brand/surgeflow-logo-120.png",
+      "homepageTrigger": {
+        "runFunction": "buildHomepage",
+        "enabled": true
+      },
+      "useLocaleFromApp": true
+    },
+    "sheets": {}
+  }
+}
