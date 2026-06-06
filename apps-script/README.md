@@ -1,6 +1,7 @@
 # Surgeflow for Google Sheets
 
-This is the Google Sheets add-on wrapper for the frozen `/api/addin/*` spreadsheet data contract.
+This is the Google Sheets add-on wrapper for the frozen `/api/addin/*`
+spreadsheet data contract.
 
 ## What it does
 
@@ -21,4 +22,6 @@ It does not request Google Drive file-list access.
 
 ## Submission state
 
-This code is ready to import into Apps Script and test. Public install will come through the Google Workspace Marketplace path after Google review.
+This source mirrors the Surgeflow for Google Sheets add-on submitted for Google
+authentication and Workspace Marketplace review. Public one-click installation
+will be available after Google approval.
