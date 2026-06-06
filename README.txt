@@ -9,6 +9,9 @@ Files:
 - surgeflow-realtime-hotlist-60s.ipynb: beginner Jupyter notebook for realtime and hotlist tables with 60-second refresh.
 - surgeflow-starter-kit.zip: portable package for users or a future GitHub release.
 
+The ZIP includes the Apps Script appsscript.json manifest with narrow Google
+Sheets scopes, plus Code.gs and Sidebar.html.
+
 Release base URL:
 
 https://stock-api-c4qdowjxva-uc.a.run.app
