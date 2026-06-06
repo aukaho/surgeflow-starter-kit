@@ -20,6 +20,14 @@ SurgeFlow covers common stocks across the US, China, Japan, Hong Kong, India, an
 
 ## API Beta
 
+Create a free beta key from the Extension page:
+
+```text
+https://surgeflows.capital/extension
+```
+
+The form asks only for name, email, and terms agreement. The key appears once.
+
 Use the direct API base URL for authenticated calls:
 
 ```text
@@ -37,6 +45,7 @@ First release endpoints:
 ```text
 GET /api/v1/health
 GET /api/v1/catalog
+POST /api/v1/keys
 GET /api/v1/me
 GET /api/v1/summary
 GET /api/v1/markets/{market}/screen
