@@ -71,7 +71,7 @@ Until then, the starter workbook shows the expected sheet layout and output shap
 
 ## Important Release Note
 
-Do not send authenticated `GET /api/v1/*` calls through `https://surgeflows.capital` yet. Use the direct Cloud Run API base above until Cloudflare bypasses and purges `/api/v1/*`.
+Use the direct Cloud Run API base above for external scripts, notebooks, and third-party browser apps. The `https://surgeflows.capital/api/v1/*` proxy is for same-origin SurgeFlow website pages.
 
 ## Support
 
