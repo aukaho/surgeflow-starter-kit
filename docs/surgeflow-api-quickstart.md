@@ -2,6 +2,16 @@
 
 Status: public API beta.
 
+## What happens next
+
+After downloading this guide, a beta user still needs a SurgeFlow API key.
+
+1. Ask SurgeFlow for a beta key.
+2. Save the key locally as `SURGEFLOW_API_KEY`.
+3. Call `/api/v1/me` to confirm the key works.
+4. Pull one market endpoint, usually `realtime` first.
+5. Use the returned rows in Google Sheets, Python, JavaScript, or a dashboard.
+
 Use this base URL for authenticated API calls:
 
 ```text
@@ -45,8 +55,27 @@ Markets: `us`, `cn`, `jp`, `hk`, `uk`, `in`.
 ```bash
 export SURGEFLOW_API_KEY="sf_live_..."
 
+curl "https://stock-api-c4qdowjxva-uc.a.run.app/api/v1/health"
+
+curl -H "Authorization: Bearer ${SURGEFLOW_API_KEY}" \
+  "https://stock-api-c4qdowjxva-uc.a.run.app/api/v1/me"
+
 curl -H "Authorization: Bearer ${SURGEFLOW_API_KEY}" \
   "https://stock-api-c4qdowjxva-uc.a.run.app/api/v1/markets/us/realtime?limit=25"
+```
+
+## Response shape
+
+`screen` returns rows at the top level:
+
+```js
+payload.rows
+```
+
+`realtime` and `hotlist` wrap the add-in contract under `data`:
+
+```js
+payload.data.rows
 ```
 
 ## JavaScript
@@ -63,8 +92,8 @@ if (!response.ok) {
   throw new Error(await response.text());
 }
 
-const data = await response.json();
-console.log(data.rows);
+const payload = await response.json();
+console.log(payload.data.rows);
 ```
 
 ## Python
@@ -79,11 +108,12 @@ headers = {"Authorization": f"Bearer {os.environ['SURGEFLOW_API_KEY']}"}
 response = requests.get(
     f"{base_url}/api/v1/markets/us/screen",
     headers=headers,
-    params={"limit": 25},
+    params={"page": 1, "page_size": 25},
     timeout=30,
 )
 response.raise_for_status()
-print(response.json()["rows"])
+payload = response.json()
+print(payload["rows"])
 ```
 
 ## Support
