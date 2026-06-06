@@ -15,6 +15,14 @@ After downloading this guide, create a free beta key from the Extension page.
 7. Pull one market endpoint, usually `realtime` first.
 8. Use the returned rows in Google Sheets, Python, JavaScript, or a dashboard.
 
+If you are new to APIs or JSON, start with the notebook monitor:
+
+```text
+https://surgeflows.capital/templates/surgeflow-realtime-hotlist-60s.ipynb
+```
+
+It prompts for your generated key, calls `/api/v1/me`, and visually refreshes the realtime table and hotlist every 60 seconds.
+
 Use this base URL for authenticated API calls:
 
 ```text
