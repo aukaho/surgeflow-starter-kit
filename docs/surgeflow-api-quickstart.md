@@ -29,7 +29,7 @@ Use this base URL for authenticated API calls:
 https://stock-api-c4qdowjxva-uc.a.run.app
 ```
 
-Do not send authenticated `GET /api/v1/*` calls through `https://surgeflows.capital` until the Cloudflare bypass and purge for `/api/v1/*` is finished.
+For external scripts, notebooks, and browser apps, use the direct API base above. `https://surgeflows.capital/api/v1/*` is reserved for same-origin SurgeFlow website pages and may not send third-party CORS headers.
 
 ## Auth
 
