@@ -1,58 +1,78 @@
-# SurgeFlow API Quickstart
+# SurgeFlow Beginner Quickstart
 
-Status: public API beta.
+Status: free public API beta.
 
-## What happens next
+Best first path: use the website. You do **not** need to install Python, Jupyter, VS Code, Postman, or any developer tool.
 
-After downloading this guide, create a free beta key from the Extension page.
+## First Successful Use
 
 1. Open `https://surgeflows.capital/extension`.
-2. Enter name and email.
-3. Agree to the terms.
-4. Copy the key when it appears.
-5. Save the key locally as `SURGEFLOW_API_KEY`.
-6. Call `/api/v1/me` to confirm the key works.
-7. Pull one market endpoint, usually `realtime` first.
-8. Use the returned rows in Google Sheets, Python, JavaScript, or a dashboard.
+2. Go to **Create your API key**.
+3. Enter only your name and email.
+4. Agree to the terms.
+5. Click **Create key**.
+6. Copy the key when it appears. It starts with `sf_live_`.
+7. In the same panel, choose a market and click **Realtime** or **Hotlist**.
+8. You should see a live table immediately.
 
-If you are new to APIs or JSON, start with the notebook monitor:
+That is the first successful API use. Nothing else is required.
+
+## What The Key Can Access
+
+- Realtime turnover tables
+- Momentum hotlists
+- Market screen rows
+- Six markets: US, China, Japan, Hong Kong, UK, India
+
+## Free Beta Limits
+
+- 250 requests per day
+- 50 requests per minute
+- Read-only market research data
+
+## Recommended Paths
+
+### Path A: No Code, Today
+
+Use the table preview on the Extension page after creating your key. This confirms the key works and shows the table shape.
+
+### Path B: Google Sheets
+
+After the Google Sheets add-on is approved in Google Workspace Marketplace, install it from Google Sheets and refresh tables from the spreadsheet menu. The add-on will not require you to understand APIs or JSON.
+
+Current status page:
 
 ```text
-https://surgeflows.capital/templates/surgeflow-realtime-hotlist-60s.ipynb
+https://surgeflows.capital/extension/google-sheets
 ```
 
-It prompts for your generated key, calls `/api/v1/me`, and visually refreshes the realtime table and hotlist every 60 seconds.
+### Path C: Google Colab, No Local Install
 
-Use this base URL for authenticated API calls:
+1. Open the notebook directly in Colab:
+   `https://colab.research.google.com/github/aukaho/surgeflow-starter-kit/blob/main/notebooks/surgeflow-realtime-hotlist-60s.ipynb`
+2. Run the cells from top to bottom.
+3. Paste your `sf_live_` key when asked.
+
+Colab runs in your browser. You do not need to install Python.
+
+### Path D: Developers
+
+Use the direct API base URL:
 
 ```text
 https://stock-api-c4qdowjxva-uc.a.run.app
 ```
 
-For external scripts, notebooks, and browser apps, use the direct API base above. `https://surgeflows.capital/api/v1/*` is reserved for same-origin SurgeFlow website pages and may not send third-party CORS headers.
-
-## Auth
-
-Each beta user receives a unique key:
+Authentication:
 
 ```text
 Authorization: Bearer sf_live_...
 ```
 
-SurgeFlow stores only the key hash. Save the key when it is issued.
-
-## Free beta limits
-
-- 250 requests per day per key
-- 50 requests per minute per key
-- Read-only market research endpoints
-
-## First endpoints
+First developer endpoints:
 
 ```text
 GET /api/v1/health
-GET /api/v1/catalog
-POST /api/v1/keys
 GET /api/v1/me
 GET /api/v1/summary
 GET /api/v1/markets/{market}/screen
@@ -62,12 +82,10 @@ GET /api/v1/markets/{market}/hotlist
 
 Markets: `us`, `cn`, `jp`, `hk`, `uk`, `in`.
 
-## cURL
+## cURL Example
 
 ```bash
 export SURGEFLOW_API_KEY="sf_live_..."
-
-curl "https://stock-api-c4qdowjxva-uc.a.run.app/api/v1/health"
 
 curl -H "Authorization: Bearer ${SURGEFLOW_API_KEY}" \
   "https://stock-api-c4qdowjxva-uc.a.run.app/api/v1/me"
@@ -76,69 +94,44 @@ curl -H "Authorization: Bearer ${SURGEFLOW_API_KEY}" \
   "https://stock-api-c4qdowjxva-uc.a.run.app/api/v1/markets/us/realtime?limit=25"
 ```
 
-## Response shape
-
-`screen` returns rows at the top level:
-
-```js
-payload.rows
-```
-
-`realtime` and `hotlist` wrap the add-in contract under `data`:
-
-```js
-payload.data.rows
-```
-
-## Namespace note
-
-The public API uses `/api/v1/*` and requires your generated key.
-
-The Google Sheets add-on uses `/api/addin/realtime` and `/api/addin/hotlist`
-with no user API key. Those add-on endpoints return rows at the top level:
-
-```js
-payload.rows
-```
-
-## JavaScript
-
-```js
-const baseUrl = "https://stock-api-c4qdowjxva-uc.a.run.app";
-const response = await fetch(`${baseUrl}/api/v1/markets/us/hotlist?limit=25`, {
-  headers: {
-    Authorization: `Bearer ${process.env.SURGEFLOW_API_KEY}`,
-  },
-});
-
-if (!response.ok) {
-  throw new Error(await response.text());
-}
-
-const payload = await response.json();
-console.log(payload.data.rows);
-```
-
-## Python
+## Python Example
 
 ```python
-import os
 import requests
 
 base_url = "https://stock-api-c4qdowjxva-uc.a.run.app"
-headers = {"Authorization": f"Bearer {os.environ['SURGEFLOW_API_KEY']}"}
+api_key = "sf_live_..."  # paste your key here only in a private notebook
+headers = {"Authorization": f"Bearer {api_key}"}
 
 response = requests.get(
-    f"{base_url}/api/v1/markets/us/screen",
+    f"{base_url}/api/v1/markets/us/hotlist",
     headers=headers,
-    params={"page": 1, "page_size": 25},
     timeout=30,
 )
 response.raise_for_status()
 payload = response.json()
-print(payload["rows"])
+rows = payload["data"]["rows"]
+print(rows[:5])
 ```
+
+## Response Shape
+
+`screen`:
+
+```python
+payload["rows"]
+```
+
+`realtime` and `hotlist`:
+
+```python
+payload["data"]["rows"]
+```
+
+## Important Safety Note
+
+Keep your key private. If you share screenshots, hide or blur the key. SurgeFlow stores only the key hash and cannot show the full key again.
 
 ## Support
 
-Email `support@surgeflows.capital`.
+Email: support@surgeflows.capital
