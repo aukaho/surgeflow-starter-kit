@@ -1,14 +1,14 @@
-# SurgeFlow Starter Kit
+# SurgeFlow Templates
 
 Public beta templates for SurgeFlow market research in Google Sheets and the SurgeFlow Public API v1.
 
-SurgeFlow covers common stocks across the US, China, Japan, Hong Kong, India, and the UK. This starter kit helps beta users get from zero to a working market monitor without touching private brokerage data or spreadsheet contents.
+SurgeFlow covers common stocks across the US, China, Japan, Hong Kong, India, and the UK. These files help beta users get from zero to a working market monitor without touching private brokerage data or spreadsheet contents.
 
 ## What Is Included
 
 - `templates/surgeflow-google-sheets-starter.xlsx` - starter workbook with dashboard, sample `Surgeflow_US` output, and API endpoint map.
-- `docs/surgeflow-api-quickstart.md` - compact API guide with auth, limits, endpoints, and examples.
-- `notebooks/surgeflow-realtime-hotlist-60s.ipynb` - beginner Jupyter notebook that prompts for an API key and displays realtime + hotlist tables with 60-second refresh.
+- `docs/surgeflow-api-quickstart.md` - beginner guide that starts with the no-code website preview, then offers Sheets, Colab, and developer paths.
+- `notebooks/surgeflow-realtime-hotlist-60s.ipynb` - Google Colab notebook source that prompts for an API key and displays realtime + hotlist tables with 60-second refresh. No local Python install required.
 - `apps-script/appsscript.json`, `apps-script/Code.gs`, and `apps-script/Sidebar.html` - Google Sheets add-on source for the submitted SurgeFlow Realtime add-on.
 
 ## Website Downloads
@@ -17,8 +17,7 @@ SurgeFlow covers common stocks across the US, China, Japan, Hong Kong, India, an
 - Google Sheets page: https://surgeflows.capital/extension/google-sheets
 - Starter workbook: https://surgeflows.capital/templates/surgeflow-google-sheets-starter.xlsx
 - API quickstart: https://surgeflows.capital/templates/surgeflow-api-quickstart.txt
-- Jupyter notebook monitor: https://surgeflows.capital/templates/surgeflow-realtime-hotlist-60s.ipynb
-- Starter ZIP: https://surgeflows.capital/templates/surgeflow-starter-kit.zip
+- Open notebook in Colab: https://colab.research.google.com/github/aukaho/surgeflow-starter-kit/blob/main/notebooks/surgeflow-realtime-hotlist-60s.ipynb
 
 ## API Beta
 
@@ -28,7 +27,7 @@ Create a free beta key from the Extension page:
 https://surgeflows.capital/extension
 ```
 
-The form asks only for name, email, and terms agreement. The key appears once.
+The form asks only for name, email, and terms agreement. The key appears once, then users can test realtime and hotlist tables directly on the Extension page.
 
 Use the direct API base URL for authenticated calls:
 
@@ -67,7 +66,7 @@ Free beta limits:
 
 The Google Sheets add-on has been submitted for Google review. After approval, users will install it from Google Workspace Marketplace and refresh market sheets directly from the spreadsheet menu.
 
-Until then, the starter workbook shows the expected sheet layout and output shape. The add-on namespace is `/api/addin/*` and does not require a user API key.
+Until then, the starter workbook shows the expected sheet layout and output shape.
 
 ## Important Release Note
 
@@ -79,4 +78,4 @@ Email: support@surgeflows.capital
 
 ## Disclaimer
 
-SurgeFlow is research software. This starter kit and API are for educational and research use only. They are not investment advice, broker-dealer services, order routing, portfolio management, or a recommendation to buy or sell securities.
+SurgeFlow is research software. These templates and the API are for educational and research use only. They are not investment advice, broker-dealer services, order routing, portfolio management, or a recommendation to buy or sell securities.
