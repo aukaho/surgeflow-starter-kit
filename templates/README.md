@@ -4,9 +4,9 @@ Download the current SurgeFlow Google Sheets starter workbook from the website:
 
 https://surgeflows.capital/templates/surgeflow-google-sheets-starter.xlsx
 
-Download the beginner Jupyter monitor for realtime and hotlist tables:
+Open the Google Colab notebook for realtime and hotlist tables:
 
-https://surgeflows.capital/templates/surgeflow-realtime-hotlist-60s.ipynb
+https://colab.research.google.com/github/aukaho/surgeflow-starter-kit/blob/main/notebooks/surgeflow-realtime-hotlist-60s.ipynb
 
 The workbook includes:
 
