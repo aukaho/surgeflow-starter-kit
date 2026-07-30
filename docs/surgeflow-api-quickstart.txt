@@ -1,81 +1,82 @@
-SurgeFlow Beginner Quickstart
+SurgeFlow API Beginner Quickstart
 
 Status: free public API beta.
 
-Best first path: use the website. You do not need to install Python,
-Jupyter, VS Code, Postman, or any developer tool.
+Create a key:
+https://surgeflows.capital/membership#api-key
 
-1. Open https://surgeflows.capital/extension
-2. Go to Create your API key.
-3. Enter only your name and email.
-4. Agree to the terms.
-5. Click Create key.
-6. Copy the key when it appears. It starts with sf_live_.
-7. In the same panel, choose a market and click Realtime or Hotlist.
-8. You should see a live table immediately.
+1. Enter your email and optional name.
+2. Agree to the terms.
+3. Click Create key.
+4. Copy the key when it appears. It starts with sf_live_.
+5. Use the website preview or Colab notebook to load a current-session
+   turnover table or momentum hotlist.
 
-That is the first successful API use. Nothing else is required.
+The full key is displayed once. Keep it private.
 
-What the key can access
+Current API offer
 
-- Realtime turnover tables
-- Momentum hotlists
-- Market screen rows
-- Six markets: US, China, Japan, Hong Kong, UK, India
+- 15 authenticated, read-only endpoint families
+- Eight markets: us, cn, jp, hk, tw, kr, uk, in
+- 2,000 requests per day per key
+- 180 requests per minute per key
+- Market, AI, ML, whale, sector, news, factor, Notes, macro, and bond research
 
-Free beta limits
+The live catalogue is authoritative:
+https://surgeflows.capital/api/v1/catalog
 
-- 250 requests per day
-- 50 requests per minute
-- Read-only market research data
+Google Colab
 
-Recommended paths
-
-Path A - No code, today
-
-Use the table preview on the Extension page after creating your key.
-This confirms the key works and shows the table shape.
-
-Path B - Google Sheets
-
-After the Google Sheets add-on is approved in Google Workspace Marketplace,
-install it from Google Sheets and refresh tables from the spreadsheet menu.
-The add-on will not require you to understand APIs or JSON.
-
-Current status page:
-https://surgeflows.capital/extension/google-sheets
-
-Path C - Google Colab, no local install
-
-1. Open the notebook directly in Colab:
+1. Open:
    https://colab.research.google.com/github/aukaho/surgeflow-starter-kit/blob/main/notebooks/surgeflow-realtime-hotlist-60s.ipynb
 2. Run the cells from top to bottom.
 3. Paste your sf_live_ key when asked.
+4. Select any of the eight supported markets.
 
-Colab runs in your browser. You do not need to install Python.
+Google Sheets
 
-Path D - Developers
+The included Apps Script wrapper, authenticated API, and Colab notebook support
+us, cn, jp, hk, tw, kr, uk, and in.
 
-Use the direct API base URL:
+The Google Sheets add-on has been submitted for Google authentication and
+Workspace Marketplace review. It is not yet publicly installable. Synchronize
+the included source into the linked Apps Script project and re-run the
+eight-market contract test before resubmission.
 
+Status:
+https://surgeflows.capital/membership/google-sheets
+
+API base URL:
 https://stock-api-c4qdowjxva-uc.a.run.app
 
 Authentication:
-
 Authorization: Bearer sf_live_...
 
-First developer endpoints:
+Authenticated endpoints:
 
-GET /api/v1/health
 GET /api/v1/me
 GET /api/v1/summary
 GET /api/v1/markets/{market}/screen
 GET /api/v1/markets/{market}/realtime
 GET /api/v1/markets/{market}/hotlist
+GET /api/v1/ai/ratings
+GET /api/v1/ai/grade-book
+GET /api/v1/markets/{market}/ml/clusters
+GET /api/v1/markets/{market}/whales
+GET /api/v1/markets/{market}/sector
+GET /api/v1/markets/{market}/news
+GET /api/v1/markets/{market}/factor-portfolios
+GET /api/v1/notes/daily
+GET /api/v1/macro/calendar
+GET /api/v1/bond/etfs
 
-Markets: us, cn, jp, hk, uk, in.
+Open utility endpoints:
 
-cURL example
+GET /api/v1/health
+GET /api/v1/catalog
+POST /api/v1/keys
+
+cURL example:
 
 export SURGEFLOW_API_KEY="sf_live_..."
 
@@ -85,12 +86,12 @@ curl -H "Authorization: Bearer ${SURGEFLOW_API_KEY}" \
 curl -H "Authorization: Bearer ${SURGEFLOW_API_KEY}" \
   "https://stock-api-c4qdowjxva-uc.a.run.app/api/v1/markets/us/realtime?limit=25"
 
-Python example
+Python example:
 
 import requests
 
 base_url = "https://stock-api-c4qdowjxva-uc.a.run.app"
-api_key = "sf_live_..."  # paste your key here only in a private notebook
+api_key = "sf_live_..."  # use only in a private notebook or environment variable
 headers = {"Authorization": f"Bearer {api_key}"}
 
 response = requests.get(
@@ -99,23 +100,18 @@ response = requests.get(
     timeout=30,
 )
 response.raise_for_status()
-payload = response.json()
-rows = payload["data"]["rows"]
+rows = response.json()["data"]["rows"]
 print(rows[:5])
 
-Response shape
+Data boundary
 
-screen:
-payload["rows"]
+The endpoint name realtime describes a current-session board. SurgeFlow does
+not claim a live-tick feed across all eight markets. Historical, factor, and
+fundamental outputs may be current to the last completed market session.
+Inspect freshness and evidence fields before use.
 
-realtime and hotlist:
-payload["data"]["rows"]
+SurgeFlow is research software. It does not place orders and is not investment
+advice.
 
-Important safety note
-
-Keep your key private. If you share screenshots, hide or blur the key.
-SurgeFlow stores only the key hash and cannot show the full key again.
-
-Support
-
+Support:
 support@surgeflows.capital
