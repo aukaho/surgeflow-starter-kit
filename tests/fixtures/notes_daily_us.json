@@ -1,0 +1,1844 @@
+{
+ "ok": true,
+ "schema_version": "surgeflow.daily_notes.v1",
+ "source": "/api/notes/daily",
+ "market": "us",
+ "data": {
+  "ok": true,
+  "count": 1,
+  "as_of_date": "2026-10-07",
+  "market": "us",
+  "notes": [
+   {
+    "as_of_date": "2026-10-07",
+    "generated_at": "2026-10-07T01:20:37.448120+00:00",
+    "scope": "market",
+    "market": "us",
+    "title": "US Daily Notes — 2026-10-07",
+    "subtitle": "Daily conclusion for US, ready to copy.",
+    "website_url": "https://surgeflows.capital/notes",
+    "x_post": "US market watch - 2026-10-07\nPlaceholder post generated from fixture data.\nPrice Momentum (placeholder): 534 fixture names pass the filter; top trend_run 1.16.\nTurnover Surge (placeholder): 407 fixture names trade at least their prior-day turnover.\nMarket Structure (placeholder): Financial Services leads the fixture sector trend; Biotech\nhttps://surgeflows.capital/notes",
+    "reddit_post": "# US Daily Notes — 2026-10-07\n\nSource dashboard: https://surgeflows.capital/notes\n\n## Price Momentum\nPrice Momentum (placeholder): 534 fixture names pass the filter; top trend_run 1.16.\n\n## Turnover Surge\nTurnover Surge (placeholder): 407 fixture names trade at least their prior-day turnover.\n\n## Market Structure\nMarket Structure (placeholder): Financial Services leads the fixture sector trend; Biotechnology shows the largest turnover-versus-cap inflow.\n\n## Whales\nWhales (placeholder): consensus leader KO in the fixture boards.\n- Placeholder: conviction leader is NGZV.\n- Placeholder: position_delta leader is KO.\n- Placeholder: network leader is WMT.\n\n## Fundamental Valuation\nFundamental Valuation (placeholder): 218 fixture names pass the strict filter.\n\n## Macro Risk\nMacro Risk (placeholder): leading -0.46, coincident -0.11, lagging +0.30.\n- Placeholder line: composite scores are synthetic fixture values.\n- Placeholder line: composite scores are synthetic fixture values.\n- Placeholder line: composite scores are synthetic fixture values.\n\n## ML Market Map\nML Market Map (placeholder): 10 clusters; largest is 'low volatility (1y) · low volatility (3m) · low idio vol'.\n- Placeholder line 1: see the ml/clusters fixture for the numbers.\n- Placeholder line 2: see the ml/clusters fixture for the numbers.\n- Placeholder line 3: see the ml/clusters fixture for the numbers.\n\n## AI Analyst Team\nAI Analyst Team (placeholder): see the ai/ratings fixture for the checkpoint.\n- Placeholder line 1: synthetic council summary.\n- Placeholder line 2: synthetic council summary.\n- Placeholder line 3: synthetic council summary.\n- Placeholder line 4: synthetic council summary.\n- Placeholder line 5: synthetic council summary.\n\n## News & Sentiment\nNews & Sentiment (placeholder): 40 fixture articles, mean score +0.05.\n- Placeholder line: headlines are synthetic.\n- Placeholder line: scores are synthetic.\n",
+    "copy_markdown": "# US Daily Notes — 2026-10-07\n\nSource dashboard: https://surgeflows.capital/notes\n\n## Price Momentum\nPrice Momentum (placeholder): 534 fixture names pass the filter; top trend_run 1.16.\n\n## Turnover Surge\nTurnover Surge (placeholder): 407 fixture names trade at least their prior-day turnover.\n\n## Market Structure\nMarket Structure (placeholder): Financial Services leads the fixture sector trend; Biotechnology shows the largest turnover-versus-cap inflow.\n\n## Whales\nWhales (placeholder): consensus leader KO in the fixture boards.\n- Placeholder: conviction leader is NGZV.\n- Placeholder: position_delta leader is KO.\n- Placeholder: network leader is WMT.\n\n## Fundamental Valuation\nFundamental Valuation (placeholder): 218 fixture names pass the strict filter.\n\n## Macro Risk\nMacro Risk (placeholder): leading -0.46, coincident -0.11, lagging +0.30.\n- Placeholder line: composite scores are synthetic fixture values.\n- Placeholder line: composite scores are synthetic fixture values.\n- Placeholder line: composite scores are synthetic fixture values.\n\n## ML Market Map\nML Market Map (placeholder): 10 clusters; largest is 'low volatility (1y) · low volatility (3m) · low idio vol'.\n- Placeholder line 1: see the ml/clusters fixture for the numbers.\n- Placeholder line 2: see the ml/clusters fixture for the numbers.\n- Placeholder line 3: see the ml/clusters fixture for the numbers.\n\n## AI Analyst Team\nAI Analyst Team (placeholder): see the ai/ratings fixture for the checkpoint.\n- Placeholder line 1: synthetic council summary.\n- Placeholder line 2: synthetic council summary.\n- Placeholder line 3: synthetic council summary.\n- Placeholder line 4: synthetic council summary.\n- Placeholder line 5: synthetic council summary.\n\n## News & Sentiment\nNews & Sentiment (placeholder): 40 fixture articles, mean score +0.05.\n- Placeholder line: headlines are synthetic.\n- Placeholder line: scores are synthetic.\n",
+    "methodology_version": "daily_notes_v1_0",
+    "updated_at": "2026-10-07T01:20:37.448120+00:00",
+    "sections": [
+     {
+      "tab": "ma_breakthrough",
+      "label": "Price Momentum",
+      "ok": true,
+      "as_of_date": "2026-10-06",
+      "source_url": "https://surgeflows.capital/api/us/screen?sort=trend_run&dir=desc&tab=ma_breakthrough&limit=300",
+      "tab_url": "https://surgeflows.capital/price",
+      "headline": "Price Momentum (placeholder): 534 fixture names pass the filter; top trend_run 1.16.",
+      "filter": "market_cap_usd >= 400M AND rsi_state != overbought AND price >= avwap",
+      "sort": "trend_run desc",
+      "top_rows": [
+       {
+        "ticker": "RNGF",
+        "name": "Copperline Global Bancorp, Inc.",
+        "sector": "Financial Services",
+        "industry": "Insurance - Life",
+        "market_cap": 66218934187,
+        "market_cap_usd": 66218934187,
+        "price": 178.76,
+        "avwap": 164.6382,
+        "avwap_cushion": 0.085775,
+        "trend_run": 1.1644,
+        "rsi_14": 54.0295,
+        "rsi_state": "neutral",
+        "change_pct": 0.018676,
+        "return_5d": 0.088188,
+        "ytd_return": 2.216903,
+        "ticker_url": "https://surgeflows.capital/stock/us/RNGF",
+        "tab_url": "https://surgeflows.capital/price",
+        "trend_making_streak_days": 37,
+        "agent_rating": {
+         "schema_version": "notes_agent_rating_v1",
+         "as_of": "2026-10-06",
+         "state": "available",
+         "available_lenses": 6,
+         "total_lenses": 6,
+         "overall": 3.33,
+         "top_down": 3.0,
+         "bottom_up": 3.67,
+         "lenses": {
+          "macro": {
+           "value": 2,
+           "state": "available",
+           "as_of": "2026-10-06",
+           "source": "stock_sentiment_score_v1",
+           "explanation": null
+          },
+          "sentiment": {
+           "value": 3,
+           "state": "partial",
+           "as_of": "2026-10-06",
+           "source": "stock_sentiment_score_v1",
+           "explanation": "Uses 1 of 4 inputs; missing: industry rotation, news, management outlook."
+          },
+          "factor": {
+           "value": 4,
+           "state": "available",
+           "as_of": "2026-10-06",
+           "source": "stock_scores_latest_v1",
+           "explanation": "Derived from the available within-market momentum, value and quality percentiles."
+          },
+          "technical": {
+           "value": 5,
+           "state": "available",
+           "as_of": "2026-10-06",
+           "source": "stock_scores_latest_v1",
+           "explanation": null
+          },
+          "fundamental": {
+           "value": 3,
+           "state": "available",
+           "as_of": "2026-10-06",
+           "source": "stock_scores_latest_v1",
+           "explanation": null
+          },
+          "risk": {
+           "value": 3,
+           "state": "available",
+           "as_of": "2026-10-05",
+           "source": "ticker_risk_metrics_latest_v1",
+           "explanation": null
+          }
+         }
+        }
+       },
+       {
+        "ticker": "VSH",
+        "name": "Falconer Financial Corporation",
+        "sector": "Financial Services",
+        "industry": "Banks - Regional",
+        "market_cap": 13518016505,
+        "market_cap_usd": 13518016505,
+        "price": 41.0,
+        "avwap": 36.5762,
+        "avwap_cushion": 0.120948,
+        "trend_run": 1.0189,
+        "rsi_14": 58.0565,
+        "rsi_state": "neutral",
+        "change_pct": 0.037773,
+        "return_5d": 0.019838,
+        "ytd_return": 1.385783,
+        "ticker_url": "https://surgeflows.capital/stock/us/VSH",
+        "tab_url": "https://surgeflows.capital/price",
+        "agent_rating": {
+         "schema_version": "notes_agent_rating_v1",
+         "as_of": "2026-10-06",
+         "state": "partial",
+         "available_lenses": 5,
+         "total_lenses": 6,
+         "overall": 4.08,
+         "top_down": 4.5,
+         "bottom_up": 3.67,
+         "lenses": {
+          "macro": {
+           "value": null,
+           "state": "available",
+           "as_of": "2026-10-06",
+           "source": "stock_sentiment_score_v1",
+           "explanation": null
+          },
+          "sentiment": {
+           "value": 5,
+           "state": "partial",
+           "as_of": "2026-10-06",
+           "source": "stock_sentiment_score_v1",
+           "explanation": "Uses 1 of 4 inputs; missing: management reputation, news, industry rotation."
+          },
+          "factor": {
+           "value": 4,
+           "state": "available",
+           "as_of": "2026-10-06",
+           "source": "stock_scores_latest_v1",
+           "explanation": "Derived from the available within-market momentum, value and quality percentiles."
+          },
+          "technical": {
+           "value": 5,
+           "state": "available",
+           "as_of": "2026-10-06",
+           "source": "stock_scores_latest_v1",
+           "explanation": null
+          },
+          "fundamental": {
+           "value": 3,
+           "state": "available",
+           "as_of": "2026-10-06",
+           "source": "stock_scores_latest_v1",
+           "explanation": null
+          },
+          "risk": {
+           "value": 3,
+           "state": "available",
+           "as_of": "2026-10-06",
+           "source": "ticker_risk_metrics_latest_v1",
+           "explanation": null
+          }
+         }
+        }
+       },
+       {
+        "ticker": "BNSU",
+        "name": "Zenith First Aerospace Corp.",
+        "sector": "Industrials",
+        "industry": "Engineering & Construction",
+        "market_cap": 29285969900,
+        "market_cap_usd": 29285969900,
+        "price": 83.86,
+        "avwap": 77.8558,
+        "avwap_cushion": 0.07712,
+        "trend_run": 0.869,
+        "rsi_14": 44.6822,
+        "rsi_state": "neutral",
+        "change_pct": -0.043837,
+        "return_5d": 0.014149,
+        "ytd_return": 1.331532,
+        "ticker_url": "https://surgeflows.capital/stock/us/BNSU",
+        "tab_url": "https://surgeflows.capital/price",
+        "agent_rating": {
+         "schema_version": "notes_agent_rating_v1",
+         "as_of": "2026-10-06",
+         "state": "available",
+         "available_lenses": 6,
+         "total_lenses": 6,
+         "overall": 4.0,
+         "top_down": 3.67,
+         "bottom_up": 4.33,
+         "lenses": {
+          "macro": {
+           "value": 3,
+           "state": "available",
+           "as_of": "2026-10-06",
+           "source": "stock_sentiment_score_v1",
+           "explanation": null
+          },
+          "sentiment": {
+           "value": 5,
+           "state": "partial",
+           "as_of": "2026-10-06",
+           "source": "stock_sentiment_score_v1",
+           "explanation": "Uses 1 of 4 inputs; missing: management reputation, news, management outlook."
+          },
+          "factor": {
+           "value": 3,
+           "state": "available",
+           "as_of": "2026-10-06",
+           "source": "stock_scores_latest_v1",
+           "explanation": "Derived from the available within-market momentum, value and quality percentiles."
+          },
+          "technical": {
+           "value": 5,
+           "state": "available",
+           "as_of": "2026-10-06",
+           "source": "stock_scores_latest_v1",
+           "explanation": null
+          },
+          "fundamental": {
+           "value": 4,
+           "state": "available",
+           "as_of": "2026-10-06",
+           "source": "stock_scores_latest_v1",
+           "explanation": null
+          },
+          "risk": {
+           "value": 4,
+           "state": "available",
+           "as_of": "2026-10-06",
+           "source": "ticker_risk_metrics_latest_v1",
+           "explanation": null
+          }
+         }
+        }
+       },
+       {
+        "ticker": "TVIG",
+        "name": "Kestrel Pacific Properties, Inc.",
+        "sector": "Real Estate",
+        "industry": "REIT - Office",
+        "market_cap": 16564518361,
+        "market_cap_usd": 16564518361,
+        "price": 37.96,
+        "avwap": 34.2471,
+        "avwap_cushion": 0.108414,
+        "trend_run": 0.821,
+        "rsi_14": 48.4779,
+        "rsi_state": "neutral",
+        "change_pct": -0.004955,
+        "return_5d": -0.02869,
+        "ytd_return": 0.601406,
+        "ticker_url": "https://surgeflows.capital/stock/us/TVIG",
+        "tab_url": "https://surgeflows.capital/price",
+        "agent_rating": {
+         "schema_version": "notes_agent_rating_v1",
+         "as_of": "2026-10-06",
+         "state": "available",
+         "available_lenses": 6,
+         "total_lenses": 6,
+         "overall": 3.0,
+         "top_down": 3.33,
+         "bottom_up": 2.67,
+         "lenses": {
+          "macro": {
+           "value": 2,
+           "state": "available",
+           "as_of": "2026-10-06",
+           "source": "stock_sentiment_score_v1",
+           "explanation": null
+          },
+          "sentiment": {
+           "value": 5,
+           "state": "partial",
+           "as_of": "2026-10-06",
+           "source": "stock_sentiment_score_v1",
+           "explanation": "Uses 3 of 4 inputs; missing: management reputation."
+          },
+          "factor": {
+           "value": 3,
+           "state": "available",
+           "as_of": "2026-10-06",
+           "source": "stock_scores_latest_v1",
+           "explanation": "Derived from the available within-market momentum, value and quality percentiles."
+          },
+          "technical": {
+           "value": 5,
+           "state": "available",
+           "as_of": "2026-10-06",
+           "source": "stock_scores_latest_v1",
+           "explanation": null
+          },
+          "fundamental": {
+           "value": 2,
+           "state": "available",
+           "as_of": "2026-10-06",
+           "source": "stock_scores_latest_v1",
+           "explanation": null
+          },
+          "risk": {
+           "value": 1,
+           "state": "available",
+           "as_of": "2026-10-06",
+           "source": "ticker_risk_metrics_latest_v1",
+           "explanation": null
+          }
+         }
+        }
+       },
+       {
+        "ticker": "OXH",
+        "name": "Emberly Financial Corporation",
+        "sector": "Financial Services",
+        "industry": "Banks - Regional",
+        "market_cap": 15629466115,
+        "market_cap_usd": 15629466115,
+        "price": 70.81,
+        "avwap": 70.1156,
+        "avwap_cushion": 0.009903,
+        "trend_run": 0.7781,
+        "rsi_14": 40.6943,
+        "rsi_state": "neutral",
+        "change_pct": 0.018095,
+        "return_5d": -0.010766,
+        "ytd_return": 1.108138,
+        "ticker_url": "https://surgeflows.capital/stock/us/OXH",
+        "tab_url": "https://surgeflows.capital/price",
+        "agent_rating": {
+         "schema_version": "notes_agent_rating_v1",
+         "as_of": "2026-10-06",
+         "state": "available",
+         "available_lenses": 6,
+         "total_lenses": 6,
+         "overall": 3.5,
+         "top_down": 3.67,
+         "bottom_up": 3.33,
+         "lenses": {
+          "macro": {
+           "value": 4,
+           "state": "available",
+           "as_of": "2026-10-06",
+           "source": "stock_sentiment_score_v1",
+           "explanation": null
+          },
+          "sentiment": {
+           "value": 4,
+           "state": "partial",
+           "as_of": "2026-10-06",
+           "source": "stock_sentiment_score_v1",
+           "explanation": "Uses 3 of 4 inputs; missing: management reputation."
+          },
+          "factor": {
+           "value": 3,
+           "state": "available",
+           "as_of": "2026-10-06",
+           "source": "stock_scores_latest_v1",
+           "explanation": "Derived from the available within-market momentum, value and quality percentiles."
+          },
+          "technical": {
+           "value": 5,
+           "state": "available",
+           "as_of": "2026-10-06",
+           "source": "stock_scores_latest_v1",
+           "explanation": null
+          },
+          "fundamental": {
+           "value": 2,
+           "state": "available",
+           "as_of": "2026-10-06",
+           "source": "stock_scores_latest_v1",
+           "explanation": null
+          },
+          "risk": {
+           "value": 3,
+           "state": "available",
+           "as_of": "2026-10-05",
+           "source": "ticker_risk_metrics_latest_v1",
+           "explanation": null
+          }
+         }
+        }
+       }
+      ],
+      "error": null
+     },
+     {
+      "tab": "turnover",
+      "label": "Turnover Surge",
+      "ok": true,
+      "as_of_date": "2026-10-06",
+      "source_url": "https://surgeflows.capital/api/us/screen?sort=to_yest_mult&dir=desc&tab=turnover&limit=300",
+      "tab_url": "https://surgeflows.capital/turnover",
+      "headline": "Turnover Surge (placeholder): 407 fixture names trade at least their prior-day turnover.",
+      "filter": "market_cap_usd >= 400M AND turnover_usd >= 25M AND to_yest_mult >= 1.0",
+      "sort": "to_yest_mult desc",
+      "top_rows": [
+       {
+        "ticker": "TVIG",
+        "name": "Kestrel Pacific Properties, Inc.",
+        "sector": "Real Estate",
+        "industry": "REIT - Office",
+        "turnover": 6620519884.0,
+        "turnover_usd": 6620519884.0,
+        "market_cap": 16564518361,
+        "market_cap_usd": 16564518361,
+        "turnover_ratio": 0.399681,
+        "to_yest_mult": 7.8132,
+        "change_pct": -0.004955,
+        "return_5d": -0.02869,
+        "ytd_return": 0.601406,
+        "ticker_url": "https://surgeflows.capital/stock/us/TVIG",
+        "tab_url": "https://surgeflows.capital/turnover",
+        "agent_rating": {
+         "schema_version": "notes_agent_rating_v1",
+         "as_of": "2026-10-06",
+         "state": "available",
+         "available_lenses": 6,
+         "total_lenses": 6,
+         "overall": 3.5,
+         "top_down": 4.0,
+         "bottom_up": 3.0,
+         "lenses": {
+          "macro": {
+           "value": 4,
+           "state": "available",
+           "as_of": "2026-10-06",
+           "source": "stock_sentiment_score_v1",
+           "explanation": null
+          },
+          "sentiment": {
+           "value": 5,
+           "state": "partial",
+           "as_of": "2026-10-06",
+           "source": "stock_sentiment_score_v1",
+           "explanation": "Uses 1 of 4 inputs; missing: news, management outlook, industry rotation."
+          },
+          "factor": {
+           "value": 3,
+           "state": "available",
+           "as_of": "2026-10-06",
+           "source": "stock_scores_latest_v1",
+           "explanation": "Derived from the available within-market momentum, value and quality percentiles."
+          },
+          "technical": {
+           "value": 5,
+           "state": "available",
+           "as_of": "2026-10-06",
+           "source": "stock_scores_latest_v1",
+           "explanation": null
+          },
+          "fundamental": {
+           "value": 3,
+           "state": "available",
+           "as_of": "2026-10-06",
+           "source": "stock_scores_latest_v1",
+           "explanation": null
+          },
+          "risk": {
+           "value": 1,
+           "state": "available",
+           "as_of": "2026-10-06",
+           "source": "ticker_risk_metrics_latest_v1",
+           "explanation": null
+          }
+         }
+        }
+       },
+       {
+        "ticker": "MVID",
+        "name": "Bluestem Capital Group, Inc.",
+        "sector": "Financial Services",
+        "industry": "Insurance - Property & Casualty",
+        "turnover": 1073372681.0,
+        "turnover_usd": 1073372681.0,
+        "market_cap": 13040196101,
+        "market_cap_usd": 13040196101,
+        "turnover_ratio": 0.082313,
+        "to_yest_mult": 4.8079,
+        "change_pct": 0.030484,
+        "return_5d": -0.024934,
+        "ytd_return": -0.342504,
+        "ticker_url": "https://surgeflows.capital/stock/us/MVID",
+        "tab_url": "https://surgeflows.capital/turnover",
+        "agent_rating": {
+         "schema_version": "notes_agent_rating_v1",
+         "as_of": "2026-10-06",
+         "state": "available",
+         "available_lenses": 6,
+         "total_lenses": 6,
+         "overall": 2.0,
+         "top_down": 2.67,
+         "bottom_up": 1.33,
+         "lenses": {
+          "macro": {
+           "value": 3,
+           "state": "available",
+           "as_of": "2026-10-06",
+           "source": "stock_sentiment_score_v1",
+           "explanation": null
+          },
+          "sentiment": {
+           "value": 4,
+           "state": "partial",
+           "as_of": "2026-10-06",
+           "source": "stock_sentiment_score_v1",
+           "explanation": "Uses 1 of 4 inputs; missing: management reputation, industry rotation, management outlook."
+          },
+          "factor": {
+           "value": 1,
+           "state": "available",
+           "as_of": "2026-10-06",
+           "source": "stock_scores_latest_v1",
+           "explanation": "Derived from the available within-market momentum, value and quality percentiles."
+          },
+          "technical": {
+           "value": 2,
+           "state": "available",
+           "as_of": "2026-10-06",
+           "source": "stock_scores_latest_v1",
+           "explanation": null
+          },
+          "fundamental": {
+           "value": 1,
+           "state": "available",
+           "as_of": "2026-10-06",
+           "source": "stock_scores_latest_v1",
+           "explanation": null
+          },
+          "risk": {
+           "value": 1,
+           "state": "available",
+           "as_of": "2026-10-05",
+           "source": "ticker_risk_metrics_latest_v1",
+           "explanation": null
+          }
+         }
+        }
+       },
+       {
+        "ticker": "GGB",
+        "name": "Larkspur Resources Corp.",
+        "sector": "Energy",
+        "industry": "Uranium",
+        "turnover": 1860749307.0,
+        "turnover_usd": 1860749307.0,
+        "market_cap": 18094331277,
+        "market_cap_usd": 18094331277,
+        "turnover_ratio": 0.102836,
+        "to_yest_mult": 4.6804,
+        "change_pct": -0.03573,
+        "return_5d": -0.003502,
+        "ytd_return": -0.345872,
+        "ticker_url": "https://surgeflows.capital/stock/us/GGB",
+        "tab_url": "https://surgeflows.capital/turnover",
+        "agent_rating": {
+         "schema_version": "notes_agent_rating_v1",
+         "as_of": "2026-10-06",
+         "state": "available",
+         "available_lenses": 6,
+         "total_lenses": 6,
+         "overall": 2.67,
+         "top_down": 3.0,
+         "bottom_up": 2.33,
+         "lenses": {
+          "macro": {
+           "value": 4,
+           "state": "available",
+           "as_of": "2026-10-06",
+           "source": "stock_sentiment_score_v1",
+           "explanation": null
+          },
+          "sentiment": {
+           "value": 4,
+           "state": "partial",
+           "as_of": "2026-10-06",
+           "source": "stock_sentiment_score_v1",
+           "explanation": "Uses 1 of 4 inputs; missing: management outlook, management reputation, news."
+          },
+          "factor": {
+           "value": 1,
+           "state": "available",
+           "as_of": "2026-10-06",
+           "source": "stock_scores_latest_v1",
+           "explanation": "Derived from the available within-market momentum, value and quality percentiles."
+          },
+          "technical": {
+           "value": 3,
+           "state": "available",
+           "as_of": "2026-10-06",
+           "source": "stock_scores_latest_v1",
+           "explanation": null
+          },
+          "fundamental": {
+           "value": 2,
+           "state": "available",
+           "as_of": "2026-10-06",
+           "source": "stock_scores_latest_v1",
+           "explanation": null
+          },
+          "risk": {
+           "value": 2,
+           "state": "available",
+           "as_of": "2026-10-05",
+           "source": "ticker_risk_metrics_latest_v1",
+           "explanation": null
+          }
+         }
+        }
+       },
+       {
+        "ticker": "ALQ",
+        "name": "Granite Therapeutics, Inc.",
+        "sector": "Healthcare",
+        "industry": "Medical - Healthcare Plans",
+        "turnover": 880301378.0,
+        "turnover_usd": 880301378.0,
+        "market_cap": 12333215142,
+        "market_cap_usd": 12333215142,
+        "turnover_ratio": 0.071376,
+        "to_yest_mult": 4.2683,
+        "change_pct": 0.035513,
+        "return_5d": 0.016414,
+        "ytd_return": -0.316339,
+        "ticker_url": "https://surgeflows.capital/stock/us/ALQ",
+        "tab_url": "https://surgeflows.capital/turnover",
+        "agent_rating": {
+         "schema_version": "notes_agent_rating_v1",
+         "as_of": "2026-10-06",
+         "state": "available",
+         "available_lenses": 6,
+         "total_lenses": 6,
+         "overall": 2.83,
+         "top_down": 3.33,
+         "bottom_up": 2.33,
+         "lenses": {
+          "macro": {
+           "value": 4,
+           "state": "available",
+           "as_of": "2026-10-06",
+           "source": "stock_sentiment_score_v1",
+           "explanation": null
+          },
+          "sentiment": {
+           "value": 3,
+           "state": "partial",
+           "as_of": "2026-10-06",
+           "source": "stock_sentiment_score_v1",
+           "explanation": "Uses 3 of 4 inputs; missing: management reputation."
+          },
+          "factor": {
+           "value": 3,
+           "state": "available",
+           "as_of": "2026-10-06",
+           "source": "stock_scores_latest_v1",
+           "explanation": "Derived from the available within-market momentum, value and quality percentiles."
+          },
+          "technical": {
+           "value": 2,
+           "state": "available",
+           "as_of": "2026-10-06",
+           "source": "stock_scores_latest_v1",
+           "explanation": null
+          },
+          "fundamental": {
+           "value": 3,
+           "state": "available",
+           "as_of": "2026-10-06",
+           "source": "stock_scores_latest_v1",
+           "explanation": null
+          },
+          "risk": {
+           "value": 2,
+           "state": "available",
+           "as_of": "2026-10-05",
+           "source": "ticker_risk_metrics_latest_v1",
+           "explanation": null
+          }
+         }
+        }
+       },
+       {
+        "ticker": "OKS",
+        "name": "Tidewater Global Semiconductor Corp.",
+        "sector": "Technology",
+        "industry": "Semiconductors",
+        "turnover": 949415616.0,
+        "turnover_usd": 949415616.0,
+        "market_cap": 16986422557,
+        "market_cap_usd": 16986422557,
+        "turnover_ratio": 0.055893,
+        "to_yest_mult": 4.1843,
+        "change_pct": -0.020484,
+        "return_5d": 0.076057,
+        "ytd_return": -0.123503,
+        "ticker_url": "https://surgeflows.capital/stock/us/OKS",
+        "tab_url": "https://surgeflows.capital/turnover",
+        "agent_rating": {
+         "schema_version": "notes_agent_rating_v1",
+         "as_of": "2026-10-06",
+         "state": "available",
+         "available_lenses": 6,
+         "total_lenses": 6,
+         "overall": 2.17,
+         "top_down": 2.33,
+         "bottom_up": 2.0,
+         "lenses": {
+          "macro": {
+           "value": 3,
+           "state": "available",
+           "as_of": "2026-10-06",
+           "source": "stock_sentiment_score_v1",
+           "explanation": null
+          },
+          "sentiment": {
+           "value": 2,
+           "state": "partial",
+           "as_of": "2026-10-06",
+           "source": "stock_sentiment_score_v1",
+           "explanation": "Uses 2 of 4 inputs; missing: news, management outlook."
+          },
+          "factor": {
+           "value": 2,
+           "state": "available",
+           "as_of": "2026-10-06",
+           "source": "stock_scores_latest_v1",
+           "explanation": "Derived from the available within-market momentum, value and quality percentiles."
+          },
+          "technical": {
+           "value": 2,
+           "state": "available",
+           "as_of": "2026-10-06",
+           "source": "stock_scores_latest_v1",
+           "explanation": null
+          },
+          "fundamental": {
+           "value": 2,
+           "state": "available",
+           "as_of": "2026-10-06",
+           "source": "stock_scores_latest_v1",
+           "explanation": null
+          },
+          "risk": {
+           "value": 2,
+           "state": "available",
+           "as_of": "2026-10-05",
+           "source": "ticker_risk_metrics_latest_v1",
+           "explanation": null
+          }
+         }
+        }
+       }
+      ],
+      "error": null
+     },
+     {
+      "tab": "market_structure",
+      "label": "Market Structure",
+      "ok": true,
+      "as_of_date": "2026-10-06",
+      "source_url": "example_project.stock_data.v_sector_rolling_60d_v1 + example_project.stock_data.industry_rotation_latest_v1",
+      "tab_url": "https://surgeflows.capital/turnover",
+      "headline": "Market Structure (placeholder): Financial Services leads the fixture sector trend; Biotechnology shows the largest turnover-versus-cap inflow.",
+      "methodology": "Sector Trend = change in the 60-day moving average of sector excess returns; Industry Inflow = turnover weight minus market-cap weight.",
+      "top_rows": [
+       {
+        "structure_type": "Sector Trend",
+        "leader": "Financial Services",
+        "metric_label": "Trend",
+        "metric_value": 0.0018673073861401792,
+        "secondary_label": "60D Return",
+        "secondary_value": 0.05971056068617906,
+        "member_count": 185,
+        "as_of_date": "2026-10-06",
+        "source": "Excess Returns",
+        "tab_url": "https://surgeflows.capital/price"
+       },
+       {
+        "structure_type": "Industry Inflow",
+        "leader": "Biotechnology",
+        "metric_label": "Surprise",
+        "metric_value": 0.037324,
+        "secondary_label": "Turnover Ratio",
+        "secondary_value": 2.5492,
+        "turnover_weight_pct": 6.1416,
+        "market_cap_weight_pct": 2.4093,
+        "member_count": 54,
+        "as_of_date": "2026-09-22",
+        "source": "Industry Rotation",
+        "tab_url": "https://surgeflows.capital/turnover"
+       }
+      ],
+      "error": null
+     },
+     {
+      "tab": "whales",
+      "label": "Whales",
+      "ok": true,
+      "as_of_date": "2026-10-07",
+      "source_url": "https://surgeflows.capital/api/whales/signal-board?market=us&limit=5",
+      "tab_url": "https://surgeflows.capital/whales",
+      "headline": "Whales (placeholder): consensus leader KO in the fixture boards.",
+      "lines": [
+       "Placeholder: conviction leader is NGZV.",
+       "Placeholder: position_delta leader is KO.",
+       "Placeholder: network leader is WMT."
+      ],
+      "leaders": {
+       "consensus": [
+        {
+         "market": "us",
+         "ticker": "KO",
+         "quarter": "2026-06-30",
+         "as_of_date": "2026-06-30",
+         "n_funds_holding": 81,
+         "total_market_value": 351731347269.0,
+         "aum_weighted_portfolio_pct": 43.93192388801766,
+         "avg_portfolio_pct": 24.155958243847753,
+         "consensus_score": 11.794216959525896,
+         "consensus_percentile": 100.0,
+         "consensus_rank": 1,
+         "components_json": "{\"weights\": {\"aum_weighted_portfolio_pct\": 0.3, \"avg_portfolio_pct\": 0.1, \"log_total_market_value\": 0.2, \"n_funds_holding\": 0.4}, \"z_aum_weighted_portfolio_pct\": 6.475781697885169, \"z_avg_portfolio_pct\": 2.9898912445305967, \"z_log_total_market_value\": 1.5734154879926183, \"z_n_funds_holding\": 2.604163971062078}",
+         "methodology_version": "whale_consensus_score_v1_0",
+         "updated_at": "2026-10-07T01:18:01.583385+00:00",
+         "stock_name": null
+        },
+        {
+         "market": "us",
+         "ticker": "NGZV",
+         "quarter": "2026-06-30",
+         "as_of_date": "2026-06-30",
+         "n_funds_holding": 18,
+         "total_market_value": 20460670355.0,
+         "aum_weighted_portfolio_pct": 40.54505771370019,
+         "avg_portfolio_pct": 67.7849226256004,
+         "consensus_score": 9.301236239934124,
+         "consensus_percentile": 99.8667,
+         "consensus_rank": 2,
+         "components_json": "{\"weights\": {\"aum_weighted_portfolio_pct\": 0.3, \"avg_portfolio_pct\": 0.1, \"log_total_market_value\": 0.2, \"n_funds_holding\": 0.4}, \"z_aum_weighted_portfolio_pct\": 5.927889040930636, \"z_avg_portfolio_pct\": 9.394435734398566, \"z_log_total_market_value\": 0.47564786329713793, \"z_n_funds_holding\": -0.11465277933441752}",
+         "methodology_version": "whale_consensus_score_v1_0",
+         "updated_at": "2026-10-07T01:18:13.437339+00:00",
+         "stock_name": "Driftwood National Therapeutics, Inc."
+        },
+        {
+         "market": "us",
+         "ticker": "GYS",
+         "quarter": "2026-06-30",
+         "as_of_date": "2026-06-30",
+         "n_funds_holding": 42,
+         "total_market_value": 59516039440.0,
+         "aum_weighted_portfolio_pct": 42.59588497272454,
+         "avg_portfolio_pct": 20.159324953285275,
+         "consensus_score": 8.99259332323595,
+         "consensus_percentile": 99.7333,
+         "consensus_rank": 3,
+         "components_json": "{\"weights\": {\"aum_weighted_portfolio_pct\": 0.3, \"avg_portfolio_pct\": 0.1, \"log_total_market_value\": 0.2, \"n_funds_holding\": 0.4}, \"z_aum_weighted_portfolio_pct\": 6.259650952405651, \"z_avg_portfolio_pct\": 2.4032026517158585, \"z_log_total_market_value\": 0.8877372473888246, \"z_n_funds_holding\": 0.9210869351023426}",
+         "methodology_version": "whale_consensus_score_v1_0",
+         "updated_at": "2026-10-07T01:18:13.196212+00:00",
+         "stock_name": "Foxhollow Mining Corp."
+        },
+        {
+         "market": "us",
+         "ticker": "BA",
+         "quarter": "2026-06-30",
+         "as_of_date": "2026-06-30",
+         "n_funds_holding": 63,
+         "total_market_value": 102438138204.0,
+         "aum_weighted_portfolio_pct": 22.562317520155183,
+         "avg_portfolio_pct": 33.95261864072335,
+         "consensus_score": 7.896559285829862,
+         "consensus_percentile": 99.6,
+         "consensus_rank": 4,
+         "components_json": "{\"weights\": {\"aum_weighted_portfolio_pct\": 0.3, \"avg_portfolio_pct\": 0.1, \"log_total_market_value\": 0.2, \"n_funds_holding\": 0.4}, \"z_aum_weighted_portfolio_pct\": 3.0188247918981324, \"z_avg_portfolio_pct\": 4.427998892810211, \"z_log_total_market_value\": 1.097310471661782, \"z_n_funds_holding\": 1.827359185234508}",
+         "methodology_version": "whale_consensus_score_v1_0",
+         "updated_at": "2026-10-07T01:18:09.853470+00:00",
+         "stock_name": "The Boeing Company"
+        },
+        {
+         "market": "us",
+         "ticker": "FUG",
+         "quarter": "2026-06-30",
+         "as_of_date": "2026-06-30",
+         "n_funds_holding": 8,
+         "total_market_value": 5733775151.0,
+         "aum_weighted_portfolio_pct": 36.60520665995743,
+         "avg_portfolio_pct": 45.8154664641915,
+         "consensus_score": 6.947662452547289,
+         "consensus_percentile": 99.4667,
+         "consensus_rank": 5,
+         "components_json": "{\"weights\": {\"aum_weighted_portfolio_pct\": 0.3, \"avg_portfolio_pct\": 0.1, \"log_total_market_value\": 0.2, \"n_funds_holding\": 0.4}, \"z_aum_weighted_portfolio_pct\": 5.290540131721006, \"z_avg_portfolio_pct\": 6.169413976540949, \"z_log_total_market_value\": -0.015324444240366244, \"z_n_funds_holding\": -0.5462109936830676}",
+         "methodology_version": "whale_consensus_score_v1_0",
+         "updated_at": "2026-10-07T01:18:08.903478+00:00",
+         "stock_name": "Aspenridge Pacific Beverage Co."
+        }
+       ],
+       "conviction": [
+        {
+         "market": "us",
+         "ticker": "NGZV",
+         "quarter": "2026-06-30",
+         "as_of_date": "2026-06-30",
+         "n_funds_holding": 18,
+         "ticker_conviction_score": 3.737572911759098,
+         "ticker_conviction_percentile": 100.0,
+         "ticker_conviction_rank": 1,
+         "max_fund_conviction_z": 3.777529619285695,
+         "top_conviction_fund": "Amberfield Capital Advisors",
+         "components_json": "{\"max_fund_conviction_z\": 3.777529619285695, \"top_conviction_fund\": \"Amberfield Capital Advisors\"}",
+         "methodology_version": "whale_conviction_index_v1_0",
+         "updated_at": "2026-10-07T01:19:20.571890+00:00",
+         "stock_name": "Driftwood National Therapeutics, Inc."
+        },
+        {
+         "market": "us",
+         "ticker": "FUG",
+         "quarter": "2026-06-30",
+         "as_of_date": "2026-06-30",
+         "n_funds_holding": 8,
+         "ticker_conviction_score": 3.7004747720102897,
+         "ticker_conviction_percentile": 99.8667,
+         "ticker_conviction_rank": 2,
+         "max_fund_conviction_z": 3.8265081135732983,
+         "top_conviction_fund": "Copperleaf Equity Partners",
+         "components_json": "{\"max_fund_conviction_z\": 3.8265081135732983, \"top_conviction_fund\": \"Copperleaf Equity Partners\"}",
+         "methodology_version": "whale_conviction_index_v1_0",
+         "updated_at": "2026-10-07T01:19:07.334712+00:00",
+         "stock_name": "Aspenridge Pacific Beverage Co."
+        },
+        {
+         "market": "us",
+         "ticker": "XDVM",
+         "quarter": "2026-06-30",
+         "as_of_date": "2026-06-30",
+         "n_funds_holding": 57,
+         "ticker_conviction_score": 3.4301500203787554,
+         "ticker_conviction_percentile": 99.7333,
+         "ticker_conviction_rank": 3,
+         "max_fund_conviction_z": 3.5536589649444896,
+         "top_conviction_fund": "Copperleaf Advisors",
+         "components_json": "{\"max_fund_conviction_z\": 3.5536589649444896, \"top_conviction_fund\": \"Copperleaf Advisors\"}",
+         "methodology_version": "whale_conviction_index_v1_0",
+         "updated_at": "2026-10-07T01:19:02.755292+00:00",
+         "stock_name": null
+        },
+        {
+         "market": "us",
+         "ticker": "SPI",
+         "quarter": "2026-06-30",
+         "as_of_date": "2026-06-30",
+         "n_funds_holding": 12,
+         "ticker_conviction_score": 3.3955967582325886,
+         "ticker_conviction_percentile": 99.6,
+         "ticker_conviction_rank": 4,
+         "max_fund_conviction_z": 3.477100283580286,
+         "top_conviction_fund": "Kingsmere Equity Partners",
+         "components_json": "{\"max_fund_conviction_z\": 3.477100283580286, \"top_conviction_fund\": \"Kingsmere Equity Partners\"}",
+         "methodology_version": "whale_conviction_index_v1_0",
+         "updated_at": "2026-10-07T01:19:23.388813+00:00",
+         "stock_name": "Meridian First Semiconductor Corp."
+        },
+        {
+         "market": "us",
+         "ticker": "YLBK",
+         "quarter": "2026-06-30",
+         "as_of_date": "2026-06-30",
+         "n_funds_holding": 18,
+         "ticker_conviction_score": 3.1704809042009914,
+         "ticker_conviction_percentile": 99.4667,
+         "ticker_conviction_rank": 5,
+         "max_fund_conviction_z": 3.2693375596747116,
+         "top_conviction_fund": "Valleyview Equity Partners",
+         "components_json": "{\"max_fund_conviction_z\": 3.2693375596747116, \"top_conviction_fund\": \"Valleyview Equity Partners\"}",
+         "methodology_version": "whale_conviction_index_v1_0",
+         "updated_at": "2026-10-07T01:19:04.910964+00:00",
+         "stock_name": "Trident Global Realty Trust, Inc."
+        }
+       ],
+       "crowdedness": [
+        {
+         "market": "us",
+         "ticker": "MSFT",
+         "quarter": "2026-06-30",
+         "as_of_date": "2026-06-30",
+         "n_funds_holding": 85,
+         "n_funds_total": 104,
+         "crowdedness_pct": 0.8173076923076923,
+         "crowdedness_quintile": 1,
+         "crowdedness_rank": 1,
+         "methodology_version": "whale_crowdedness_v1_0",
+         "updated_at": "2026-10-07T01:20:25.251833+00:00",
+         "stock_name": "Microsoft Corporation"
+        },
+        {
+         "market": "us",
+         "ticker": "AMZN",
+         "quarter": "2026-06-30",
+         "as_of_date": "2026-06-30",
+         "n_funds_holding": 85,
+         "n_funds_total": 104,
+         "crowdedness_pct": 0.8173076923076923,
+         "crowdedness_quintile": 1,
+         "crowdedness_rank": 2,
+         "methodology_version": "whale_crowdedness_v1_0",
+         "updated_at": "2026-10-07T01:20:11.530302+00:00",
+         "stock_name": "Amazon.com, Inc."
+        },
+        {
+         "market": "us",
+         "ticker": "BAC",
+         "quarter": "2026-06-30",
+         "as_of_date": "2026-06-30",
+         "n_funds_holding": 85,
+         "n_funds_total": 104,
+         "crowdedness_pct": 0.8173076923076923,
+         "crowdedness_quintile": 1,
+         "crowdedness_rank": 3,
+         "methodology_version": "whale_crowdedness_v1_0",
+         "updated_at": "2026-10-07T01:20:18.207594+00:00",
+         "stock_name": "Bank of America Corporation"
+        },
+        {
+         "market": "us",
+         "ticker": "PLTR",
+         "quarter": "2026-06-30",
+         "as_of_date": "2026-06-30",
+         "n_funds_holding": 85,
+         "n_funds_total": 104,
+         "crowdedness_pct": 0.8173076923076923,
+         "crowdedness_quintile": 1,
+         "crowdedness_rank": 4,
+         "methodology_version": "whale_crowdedness_v1_0",
+         "updated_at": "2026-10-07T01:20:29.801646+00:00",
+         "stock_name": "Palantir Technologies Inc."
+        },
+        {
+         "market": "us",
+         "ticker": "CAT",
+         "quarter": "2026-06-30",
+         "as_of_date": "2026-06-30",
+         "n_funds_holding": 85,
+         "n_funds_total": 104,
+         "crowdedness_pct": 0.8173076923076923,
+         "crowdedness_quintile": 1,
+         "crowdedness_rank": 5,
+         "methodology_version": "whale_crowdedness_v1_0",
+         "updated_at": "2026-10-07T01:20:10.820005+00:00",
+         "stock_name": "Caterpillar Inc."
+        }
+       ],
+       "position_delta": [
+        {
+         "market": "us",
+         "ticker": "KO",
+         "quarter": "2026-06-30",
+         "as_of_date": "2026-06-30",
+         "n_funds_buying": 8,
+         "n_funds_selling": 4,
+         "net_shares_change": 25430287.0,
+         "gross_shares_buying": 27202251.0,
+         "gross_shares_selling": -1771964.0,
+         "delta_z": 4.0687269476469075,
+         "delta_rank": 1,
+         "delta_percentile": 100.0,
+         "methodology_version": "whale_position_delta_v1_0",
+         "updated_at": "2026-10-07T01:21:12.751949+00:00",
+         "stock_name": "The Coca-Cola Company"
+        },
+        {
+         "market": "us",
+         "ticker": "PLTR",
+         "quarter": "2026-06-30",
+         "as_of_date": "2026-06-30",
+         "n_funds_buying": 11,
+         "n_funds_selling": 1,
+         "net_shares_change": 13136098.0,
+         "gross_shares_buying": 14116328.0,
+         "gross_shares_selling": -980230.0,
+         "delta_z": 3.898050575361526,
+         "delta_rank": 2,
+         "delta_percentile": 99.8667,
+         "methodology_version": "whale_position_delta_v1_0",
+         "updated_at": "2026-10-07T01:21:01.566164+00:00",
+         "stock_name": "Palantir Technologies Inc."
+        },
+        {
+         "market": "us",
+         "ticker": "AMD",
+         "quarter": "2026-06-30",
+         "as_of_date": "2026-06-30",
+         "n_funds_buying": 5,
+         "n_funds_selling": 4,
+         "net_shares_change": 10557462.0,
+         "gross_shares_buying": 14451973.0,
+         "gross_shares_selling": -3894511.0,
+         "delta_z": 3.841587669401739,
+         "delta_rank": 3,
+         "delta_percentile": 99.7333,
+         "methodology_version": "whale_position_delta_v1_0",
+         "updated_at": "2026-10-07T01:21:13.999816+00:00",
+         "stock_name": "Advanced Micro Devices, Inc."
+        },
+        {
+         "market": "us",
+         "ticker": "AMZN",
+         "quarter": "2026-06-30",
+         "as_of_date": "2026-06-30",
+         "n_funds_buying": 6,
+         "n_funds_selling": 4,
+         "net_shares_change": 9811738.0,
+         "gross_shares_buying": 16489863.0,
+         "gross_shares_selling": -6678126.0,
+         "delta_z": 3.8226607966477912,
+         "delta_rank": 4,
+         "delta_percentile": 99.6,
+         "methodology_version": "whale_position_delta_v1_0",
+         "updated_at": "2026-10-07T01:21:08.362985+00:00",
+         "stock_name": "Amazon.com, Inc."
+        },
+        {
+         "market": "us",
+         "ticker": "ADBE",
+         "quarter": "2026-06-30",
+         "as_of_date": "2026-06-30",
+         "n_funds_buying": 4,
+         "n_funds_selling": 0,
+         "net_shares_change": 4833437.0,
+         "gross_shares_buying": 4833437.0,
+         "gross_shares_selling": 0.0,
+         "delta_z": 3.639725918762192,
+         "delta_rank": 5,
+         "delta_percentile": 99.4667,
+         "methodology_version": "whale_position_delta_v1_0",
+         "updated_at": "2026-10-07T01:21:13.825023+00:00",
+         "stock_name": "Adobe Inc."
+        }
+       ],
+       "network": [
+        {
+         "market": "us",
+         "ticker": "WMT",
+         "quarter": "2026-06-30",
+         "as_of_date": "2026-06-30",
+         "degree": 711,
+         "weighted_degree": 2949.0,
+         "eigenvector_centrality": 0.24220298782550753,
+         "community_id": 0,
+         "n_tickers_in_community": 41,
+         "n_communities": 8,
+         "modularity": 0.1874,
+         "methodology_version": "whale_network_v1_0",
+         "updated_at": "2026-10-06T23:58:30.206104+00:00",
+         "stock_name": "Walmart Inc."
+        },
+        {
+         "market": "us",
+         "ticker": "KO",
+         "quarter": "2026-06-30",
+         "as_of_date": "2026-06-30",
+         "degree": 747,
+         "weighted_degree": 2526.0,
+         "eigenvector_centrality": 0.2074539326981542,
+         "community_id": 0,
+         "n_tickers_in_community": 41,
+         "n_communities": 8,
+         "modularity": 0.1874,
+         "methodology_version": "whale_network_v1_0",
+         "updated_at": "2026-10-06T23:58:27.288576+00:00",
+         "stock_name": "The Coca-Cola Company"
+        },
+        {
+         "market": "us",
+         "ticker": "NVDA",
+         "quarter": "2026-06-30",
+         "as_of_date": "2026-06-30",
+         "degree": 614,
+         "weighted_degree": 2501.0,
+         "eigenvector_centrality": 0.20542996930137453,
+         "community_id": 1,
+         "n_tickers_in_community": 49,
+         "n_communities": 8,
+         "modularity": 0.1874,
+         "methodology_version": "whale_network_v1_0",
+         "updated_at": "2026-10-06T23:58:24.126654+00:00",
+         "stock_name": "NVIDIA Corporation"
+        },
+        {
+         "market": "us",
+         "ticker": "BAC",
+         "quarter": "2026-06-30",
+         "as_of_date": "2026-06-30",
+         "degree": 636,
+         "weighted_degree": 2331.0,
+         "eigenvector_centrality": 0.1914403637882797,
+         "community_id": 4,
+         "n_tickers_in_community": 51,
+         "n_communities": 8,
+         "modularity": 0.1874,
+         "methodology_version": "whale_network_v1_0",
+         "updated_at": "2026-10-06T23:58:25.211875+00:00",
+         "stock_name": "Bank of America Corporation"
+        },
+        {
+         "market": "us",
+         "ticker": "UNH",
+         "quarter": "2026-06-30",
+         "as_of_date": "2026-06-30",
+         "degree": 573,
+         "weighted_degree": 2281.0,
+         "eigenvector_centrality": 0.1873425095272763,
+         "community_id": 2,
+         "n_tickers_in_community": 52,
+         "n_communities": 8,
+         "modularity": 0.1874,
+         "methodology_version": "whale_network_v1_0",
+         "updated_at": "2026-10-06T23:58:26.524752+00:00",
+         "stock_name": "UnitedHealth Group Incorporated"
+        }
+       ],
+       "ll_predictive": [
+        {
+         "market": "us",
+         "ticker": "BAC",
+         "quarter": "2026-06-30",
+         "as_of_date": "2026-06-30",
+         "n_funds_holding_q": 85,
+         "n_funds_holding_q_minus_1": 36,
+         "owner_count_change": 49,
+         "portfolio_weight_change": 67.45806579976376,
+         "ll_score_z": 15.939596593869858,
+         "ll_rank": 1,
+         "ll_percentile": 100.0,
+         "methodology_version": "whale_ll_predictive_v1_0",
+         "updated_at": "2026-10-07T01:22:26.371432+00:00",
+         "stock_name": "Bank of America Corporation"
+        },
+        {
+         "market": "us",
+         "ticker": "INTC",
+         "quarter": "2026-06-30",
+         "as_of_date": "2026-06-30",
+         "n_funds_holding_q": 67,
+         "n_funds_holding_q_minus_1": 31,
+         "owner_count_change": 36,
+         "portfolio_weight_change": 84.06632179183754,
+         "ll_score_z": 13.94437573716357,
+         "ll_rank": 2,
+         "ll_percentile": 99.8667,
+         "methodology_version": "whale_ll_predictive_v1_0",
+         "updated_at": "2026-10-07T01:22:13.652341+00:00",
+         "stock_name": "Intel Corporation"
+        },
+        {
+         "market": "us",
+         "ticker": "PLTR",
+         "quarter": "2026-06-30",
+         "as_of_date": "2026-06-30",
+         "n_funds_holding_q": 85,
+         "n_funds_holding_q_minus_1": 48,
+         "owner_count_change": 37,
+         "portfolio_weight_change": 77.03413728668725,
+         "ll_score_z": 13.668229669946468,
+         "ll_rank": 3,
+         "ll_percentile": 99.7333,
+         "methodology_version": "whale_ll_predictive_v1_0",
+         "updated_at": "2026-10-07T01:22:02.093186+00:00",
+         "stock_name": "Palantir Technologies Inc."
+        },
+        {
+         "market": "us",
+         "ticker": "CAT",
+         "quarter": "2026-06-30",
+         "as_of_date": "2026-06-30",
+         "n_funds_holding_q": 85,
+         "n_funds_holding_q_minus_1": 47,
+         "owner_count_change": 38,
+         "portfolio_weight_change": 62.89683006454231,
+         "ll_score_z": 12.861634659462165,
+         "ll_rank": 4,
+         "ll_percentile": 99.6,
+         "methodology_version": "whale_ll_predictive_v1_0",
+         "updated_at": "2026-10-07T01:22:19.725413+00:00",
+         "stock_name": "Caterpillar Inc."
+        },
+        {
+         "market": "us",
+         "ticker": "WMT",
+         "quarter": "2026-06-30",
+         "as_of_date": "2026-06-30",
+         "n_funds_holding_q": 83,
+         "n_funds_holding_q_minus_1": 54,
+         "owner_count_change": 29,
+         "portfolio_weight_change": 71.37418274706651,
+         "ll_score_z": 11.254812936515656,
+         "ll_rank": 5,
+         "ll_percentile": 99.4667,
+         "methodology_version": "whale_ll_predictive_v1_0",
+         "updated_at": "2026-10-07T01:22:10.608003+00:00",
+         "stock_name": "Walmart Inc."
+        }
+       ]
+      }
+     },
+     {
+      "tab": "fundamental",
+      "label": "Fundamental Valuation",
+      "ok": true,
+      "as_of_date": "2026-10-06",
+      "source_url": "https://surgeflows.capital/api/us/screen?tab=fundamental&limit=300",
+      "tab_url": "https://surgeflows.capital/fundamentals",
+      "headline": "Fundamental Valuation (placeholder): 218 fixture names pass the strict filter.",
+      "filter": "market_cap_usd >= 400M; strict first: ytd_return >= 0 AND change_pct >= 0 AND revenue_growth > 0 AND profit_margin > 0; fill to 5 by composite_quality",
+      "sort": "strict_pass desc, composite_quality desc",
+      "top_rows": [
+       {
+        "ticker": "BYT",
+        "name": "Wavecrest National Software, Inc.",
+        "sector": "Technology",
+        "industry": "Computer Hardware",
+        "market_cap": 101650415852,
+        "market_cap_usd": 101650415852,
+        "revenue_growth": 2.0387,
+        "profit_margin": 0.4169,
+        "composite_quality": 0.849868,
+        "change_pct": 0.009293,
+        "return_5d": -0.043177,
+        "ytd_return": 0.16281,
+        "ep": 0.1927,
+        "cfop": 0.2223,
+        "ticker_url": "https://surgeflows.capital/stock/us/BYT",
+        "tab_url": "https://surgeflows.capital/fundamentals",
+        "agent_rating": {
+         "schema_version": "notes_agent_rating_v1",
+         "as_of": "2026-10-06",
+         "state": "available",
+         "available_lenses": 6,
+         "total_lenses": 6,
+         "overall": 3.33,
+         "top_down": 3.33,
+         "bottom_up": 3.33,
+         "lenses": {
+          "macro": {
+           "value": 3,
+           "state": "available",
+           "as_of": "2026-10-06",
+           "source": "stock_sentiment_score_v1",
+           "explanation": null
+          },
+          "sentiment": {
+           "value": 2,
+           "state": "partial",
+           "as_of": "2026-10-06",
+           "source": "stock_sentiment_score_v1",
+           "explanation": "Uses 3 of 4 inputs; missing: news."
+          },
+          "factor": {
+           "value": 5,
+           "state": "available",
+           "as_of": "2026-10-06",
+           "source": "stock_scores_latest_v1",
+           "explanation": "Derived from the available within-market momentum, value and quality percentiles."
+          },
+          "technical": {
+           "value": 2,
+           "state": "available",
+           "as_of": "2026-10-06",
+           "source": "stock_scores_latest_v1",
+           "explanation": null
+          },
+          "fundamental": {
+           "value": 3,
+           "state": "available",
+           "as_of": "2026-10-06",
+           "source": "stock_scores_latest_v1",
+           "explanation": null
+          },
+          "risk": {
+           "value": 5,
+           "state": "available",
+           "as_of": "2026-10-06",
+           "source": "ticker_risk_metrics_latest_v1",
+           "explanation": null
+          }
+         }
+        }
+       },
+       {
+        "ticker": "XHEY",
+        "name": "Willowby Realty Trust, Inc.",
+        "sector": "Real Estate",
+        "industry": "Real Estate - Services",
+        "market_cap": 60162458539,
+        "market_cap_usd": 60162458539,
+        "revenue_growth": 3.1405,
+        "profit_margin": 0.2025,
+        "composite_quality": 0.636024,
+        "change_pct": 0.008263,
+        "return_5d": -0.015507,
+        "ytd_return": 0.140625,
+        "ep": 0.0706,
+        "cfop": 0.0608,
+        "ticker_url": "https://surgeflows.capital/stock/us/XHEY",
+        "tab_url": "https://surgeflows.capital/fundamentals",
+        "agent_rating": {
+         "schema_version": "notes_agent_rating_v1",
+         "as_of": "2026-10-06",
+         "state": "available",
+         "available_lenses": 6,
+         "total_lenses": 6,
+         "overall": 3.67,
+         "top_down": 3.67,
+         "bottom_up": 3.67,
+         "lenses": {
+          "macro": {
+           "value": 4,
+           "state": "available",
+           "as_of": "2026-10-06",
+           "source": "stock_sentiment_score_v1",
+           "explanation": null
+          },
+          "sentiment": {
+           "value": 3,
+           "state": "partial",
+           "as_of": "2026-10-06",
+           "source": "stock_sentiment_score_v1",
+           "explanation": "Uses 3 of 4 inputs; missing: management reputation."
+          },
+          "factor": {
+           "value": 4,
+           "state": "available",
+           "as_of": "2026-10-06",
+           "source": "stock_scores_latest_v1",
+           "explanation": "Derived from the available within-market momentum, value and quality percentiles."
+          },
+          "technical": {
+           "value": 4,
+           "state": "available",
+           "as_of": "2026-10-06",
+           "source": "stock_scores_latest_v1",
+           "explanation": null
+          },
+          "fundamental": {
+           "value": 4,
+           "state": "available",
+           "as_of": "2026-10-06",
+           "source": "stock_scores_latest_v1",
+           "explanation": null
+          },
+          "risk": {
+           "value": 3,
+           "state": "available",
+           "as_of": "2026-10-05",
+           "source": "ticker_risk_metrics_latest_v1",
+           "explanation": null
+          }
+         }
+        }
+       },
+       {
+        "ticker": "YLBK",
+        "name": "Trident Global Realty Trust, Inc.",
+        "sector": "Real Estate",
+        "industry": "REIT - Specialty",
+        "market_cap": 99255569889,
+        "market_cap_usd": 99255569889,
+        "revenue_growth": 2.5949,
+        "profit_margin": 0.2153,
+        "composite_quality": 0.558705,
+        "change_pct": 0.003824,
+        "return_5d": 0.017225,
+        "ytd_return": 0.605564,
+        "ep": 0.0161,
+        "cfop": 0.015,
+        "ticker_url": "https://surgeflows.capital/stock/us/YLBK",
+        "tab_url": "https://surgeflows.capital/fundamentals",
+        "agent_rating": {
+         "schema_version": "notes_agent_rating_v1",
+         "as_of": "2026-10-06",
+         "state": "available",
+         "available_lenses": 6,
+         "total_lenses": 6,
+         "overall": 3.83,
+         "top_down": 4.0,
+         "bottom_up": 3.67,
+         "lenses": {
+          "macro": {
+           "value": 4,
+           "state": "available",
+           "as_of": "2026-10-06",
+           "source": "stock_sentiment_score_v1",
+           "explanation": null
+          },
+          "sentiment": {
+           "value": 4,
+           "state": "partial",
+           "as_of": "2026-10-06",
+           "source": "stock_sentiment_score_v1",
+           "explanation": "Uses 3 of 4 inputs; missing: management reputation."
+          },
+          "factor": {
+           "value": 4,
+           "state": "available",
+           "as_of": "2026-10-06",
+           "source": "stock_scores_latest_v1",
+           "explanation": "Derived from the available within-market momentum, value and quality percentiles."
+          },
+          "technical": {
+           "value": 4,
+           "state": "available",
+           "as_of": "2026-10-06",
+           "source": "stock_scores_latest_v1",
+           "explanation": null
+          },
+          "fundamental": {
+           "value": 4,
+           "state": "available",
+           "as_of": "2026-10-06",
+           "source": "stock_scores_latest_v1",
+           "explanation": null
+          },
+          "risk": {
+           "value": 3,
+           "state": "available",
+           "as_of": "2026-10-06",
+           "source": "ticker_risk_metrics_latest_v1",
+           "explanation": null
+          }
+         }
+        }
+       },
+       {
+        "ticker": "GIAG",
+        "name": "Orion Properties, Inc.",
+        "sector": "Real Estate",
+        "industry": "Real Estate - Development",
+        "market_cap": 55474361293,
+        "market_cap_usd": 55474361293,
+        "revenue_growth": 1.8554,
+        "profit_margin": 0.2793,
+        "composite_quality": 0.518184,
+        "change_pct": 0.014229,
+        "return_5d": -0.001771,
+        "ytd_return": 0.140427,
+        "ep": 0.0345,
+        "cfop": 0.0286,
+        "ticker_url": "https://surgeflows.capital/stock/us/GIAG",
+        "tab_url": "https://surgeflows.capital/fundamentals",
+        "agent_rating": {
+         "schema_version": "notes_agent_rating_v1",
+         "as_of": "2026-10-06",
+         "state": "available",
+         "available_lenses": 6,
+         "total_lenses": 6,
+         "overall": 2.83,
+         "top_down": 2.0,
+         "bottom_up": 3.67,
+         "lenses": {
+          "macro": {
+           "value": 2,
+           "state": "available",
+           "as_of": "2026-10-06",
+           "source": "stock_sentiment_score_v1",
+           "explanation": null
+          },
+          "sentiment": {
+           "value": 1,
+           "state": "partial",
+           "as_of": "2026-10-06",
+           "source": "stock_sentiment_score_v1",
+           "explanation": "Uses 1 of 4 inputs; missing: news, management reputation, management outlook."
+          },
+          "factor": {
+           "value": 3,
+           "state": "available",
+           "as_of": "2026-10-06",
+           "source": "stock_scores_latest_v1",
+           "explanation": "Derived from the available within-market momentum, value and quality percentiles."
+          },
+          "technical": {
+           "value": 2,
+           "state": "available",
+           "as_of": "2026-10-06",
+           "source": "stock_scores_latest_v1",
+           "explanation": null
+          },
+          "fundamental": {
+           "value": 4,
+           "state": "available",
+           "as_of": "2026-10-06",
+           "source": "stock_scores_latest_v1",
+           "explanation": null
+          },
+          "risk": {
+           "value": 5,
+           "state": "available",
+           "as_of": "2026-10-06",
+           "source": "ticker_risk_metrics_latest_v1",
+           "explanation": null
+          }
+         }
+        }
+       },
+       {
+        "ticker": "AXK",
+        "name": "Amberly Global Industries, Inc.",
+        "sector": "Industrials",
+        "industry": "Engineering & Construction",
+        "market_cap": 62278050327,
+        "market_cap_usd": 62278050327,
+        "revenue_growth": 1.7475,
+        "profit_margin": 0.287,
+        "composite_quality": 0.501525,
+        "change_pct": 0.008971,
+        "return_5d": 0.041021,
+        "ytd_return": 0.134198,
+        "ep": 0.0889,
+        "cfop": 0.069,
+        "ticker_url": "https://surgeflows.capital/stock/us/AXK",
+        "tab_url": "https://surgeflows.capital/fundamentals",
+        "agent_rating": {
+         "schema_version": "notes_agent_rating_v1",
+         "as_of": "2026-10-06",
+         "state": "available",
+         "available_lenses": 6,
+         "total_lenses": 6,
+         "overall": 3.5,
+         "top_down": 3.33,
+         "bottom_up": 3.67,
+         "lenses": {
+          "macro": {
+           "value": 2,
+           "state": "available",
+           "as_of": "2026-10-06",
+           "source": "stock_sentiment_score_v1",
+           "explanation": null
+          },
+          "sentiment": {
+           "value": 4,
+           "state": "partial",
+           "as_of": "2026-10-06",
+           "source": "stock_sentiment_score_v1",
+           "explanation": "Uses 3 of 4 inputs; missing: management reputation."
+          },
+          "factor": {
+           "value": 4,
+           "state": "available",
+           "as_of": "2026-10-06",
+           "source": "stock_scores_latest_v1",
+           "explanation": "Derived from the available within-market momentum, value and quality percentiles."
+          },
+          "technical": {
+           "value": 4,
+           "state": "available",
+           "as_of": "2026-10-06",
+           "source": "stock_scores_latest_v1",
+           "explanation": null
+          },
+          "fundamental": {
+           "value": 3,
+           "state": "available",
+           "as_of": "2026-10-06",
+           "source": "stock_scores_latest_v1",
+           "explanation": null
+          },
+          "risk": {
+           "value": 4,
+           "state": "available",
+           "as_of": "2026-10-06",
+           "source": "ticker_risk_metrics_latest_v1",
+           "explanation": null
+          }
+         }
+        }
+       }
+      ],
+      "error": null
+     },
+     {
+      "tab": "macro",
+      "label": "Macro Risk",
+      "ok": true,
+      "as_of_date": "2026-09-30",
+      "source_url": "example_project.stock_data.macro_cycle_composites_v2",
+      "headline": "Macro Risk (placeholder): leading -0.46, coincident -0.11, lagging +0.30.",
+      "lines": [
+       "Placeholder line: composite scores are synthetic fixture values.",
+       "Placeholder line: composite scores are synthetic fixture values.",
+       "Placeholder line: composite scores are synthetic fixture values."
+      ],
+      "scores": {
+       "leading": -0.4643,
+       "coincident": -0.1147,
+       "lagging": 0.3035
+      }
+     },
+     {
+      "tab": "ml_clusters",
+      "label": "ML Market Map",
+      "ok": true,
+      "headline": "ML Market Map (placeholder): 10 clusters; largest is 'low volatility (1y) · low volatility (3m) · low idio vol'.",
+      "lines": [
+       "Placeholder line 1: see the ml/clusters fixture for the numbers.",
+       "Placeholder line 2: see the ml/clusters fixture for the numbers.",
+       "Placeholder line 3: see the ml/clusters fixture for the numbers."
+      ],
+      "tab_url": "https://surgeflows.capital/ml?market=us",
+      "as_of_date": "2026-10-05"
+     },
+     {
+      "tab": "ai_agents",
+      "label": "AI Analyst Team",
+      "ok": true,
+      "headline": "AI Analyst Team (placeholder): see the ai/ratings fixture for the checkpoint.",
+      "lines": [
+       "Placeholder line 1: synthetic council summary.",
+       "Placeholder line 2: synthetic council summary.",
+       "Placeholder line 3: synthetic council summary.",
+       "Placeholder line 4: synthetic council summary.",
+       "Placeholder line 5: synthetic council summary."
+      ],
+      "tab_url": "https://surgeflows.capital/ai",
+      "as_of_date": "2026-10-06"
+     },
+     {
+      "tab": "news",
+      "label": "News & Sentiment",
+      "ok": true,
+      "source_url": "https://surgeflows.capital/api/news/feed?market=us&limit=3",
+      "tab_url": "https://surgeflows.capital/news",
+      "headline": "News & Sentiment (placeholder): 40 fixture articles, mean score +0.05.",
+      "lines": [
+       "Placeholder line: headlines are synthetic.",
+       "Placeholder line: scores are synthetic."
+      ],
+      "articles": [
+       {
+        "article_id": "40604cf527572f74b66905d8a877405e",
+        "published_utc": "2026-10-06T22:16:55Z",
+        "title": "Synthetic wrap: US stocks mixed in the fixture session",
+        "description": "Synthetic wrap: US stocks mixed in the fixture session (placeholder text, not a real article).",
+        "publisher_name": "GlobeNewswire Inc.",
+        "article_url": "https://example.com/us/polygon/40604cf527572f74b66905d8a877405e",
+        "tickers": "[]",
+        "ticker_count": 0,
+        "keywords": "[\"dividends\", \"earnings\", \"trading ideas\"]",
+        "sentiment_score": 0.0,
+        "sentiment_label": "neutral",
+        "provider": "polygon",
+        "source_family": "polygon_news",
+        "language": "en",
+        "article_type": "news",
+        "sentiment_available": true,
+        "content_available": false
+       },
+       {
+        "article_id": "16a575cb5cf0094978ce337ca36d2ae6",
+        "published_utc": "2026-10-06T22:04:59Z",
+        "title": "Synthetic headline: Meta Platforms, Inc. rises 0.3% on 0.7x prior-day turnover",
+        "description": "Synthetic headline: Meta Platforms, Inc. rises 0.3% on 0.7x prior-day turnover. Placeholder text generated from fixture numbers, not a real article.",
+        "publisher_name": "Benzinga",
+        "article_url": "https://example.com/us/benzinga/16a575cb5cf0094978ce337ca36d2ae6",
+        "tickers": "[\"META\", \"EUW\"]",
+        "ticker_count": 2,
+        "keywords": "[\"trading ideas\", \"earnings\", \"dividends\"]",
+        "sentiment_score": -0.2,
+        "sentiment_label": "negative",
+        "provider": "benzinga",
+        "source_family": "vendor_news",
+        "language": "en",
+        "article_type": "news",
+        "sentiment_available": true,
+        "content_available": true
+       },
+       {
+        "article_id": "d1a0773fd4e519b5d7cfaf93873c87e1",
+        "published_utc": "2026-10-06 21:32:48",
+        "title": "Synthetic wrap: US stocks close higher in the fixture session",
+        "description": "Synthetic wrap: US stocks close higher in the fixture session (placeholder text, not a real article).",
+        "publisher_name": "Financial Modeling Prep",
+        "article_url": "https://example.com/us/fmp/d1a0773fd4e519b5d7cfaf93873c87e1",
+        "tickers": "[]",
+        "ticker_count": 0,
+        "keywords": "[\"technology\", \"earnings\", \"dividends\"]",
+        "sentiment_score": 0.5,
+        "sentiment_label": "positive",
+        "provider": "fmp",
+        "source_family": "fmp_stock_news",
+        "language": "en",
+        "article_type": "stock",
+        "sentiment_available": true,
+        "content_available": true
+       }
+      ],
+      "error": null
+     }
+    ],
+    "source_status": {
+     "market": "us",
+     "section_count": 9,
+     "ok_sections": 9
+    }
+   }
+  ],
+  "methodology_version": "daily_notes_v1_0",
+  "agent_rating_contract": {
+   "schema_version": "notes_agent_rating_v1",
+   "status": "available",
+   "scale": {
+    "min": 1,
+    "max": 5
+   },
+   "top_down": [
+    "macro",
+    "sentiment",
+    "factor"
+   ],
+   "bottom_up": [
+    "technical",
+    "fundamental",
+    "risk"
+   ],
+   "method": "Deterministic within-market evidence lenses, materialised daily. Research diagnostics, not votes."
+  },
+  "disclosure": "Research context only. Notes summarise SurgeFlow dashboard data and are not investment advice. Fixture notes are synthetic placeholders."
+ }
+}

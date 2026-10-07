@@ -1,0 +1,1827 @@
+{
+ "ok": true,
+ "schema_version": "surgeflow.daily_notes.v1",
+ "source": "/api/notes/daily",
+ "market": "hk",
+ "data": {
+  "ok": true,
+  "count": 1,
+  "as_of_date": "2026-10-07",
+  "market": "hk",
+  "notes": [
+   {
+    "as_of_date": "2026-10-07",
+    "generated_at": "2026-10-07T01:20:37.448120+00:00",
+    "scope": "market",
+    "market": "hk",
+    "title": "Hong Kong Daily Notes — 2026-10-07",
+    "subtitle": "Daily conclusion for Hong Kong, ready to copy.",
+    "website_url": "https://surgeflows.capital/notes",
+    "x_post": "Hong Kong market watch - 2026-10-07\nPlaceholder post generated from fixture data.\nPrice Momentum (placeholder): 285 fixture names pass the filter; top trend_run 0.83.\nTurnover Surge (placeholder): 76 fixture names trade at least their prior-day turnover.\nMarket Structure (placeholder): Financial Services leads the fixture sector trend; Banks -\nhttps://surgeflows.capital/notes",
+    "reddit_post": "# Hong Kong Daily Notes — 2026-10-07\n\nSource dashboard: https://surgeflows.capital/notes\n\n## Price Momentum\nPrice Momentum (placeholder): 285 fixture names pass the filter; top trend_run 0.83.\n\n## Turnover Surge\nTurnover Surge (placeholder): 76 fixture names trade at least their prior-day turnover.\n\n## Market Structure\nMarket Structure (placeholder): Financial Services leads the fixture sector trend; Banks - Diversified shows the largest turnover-versus-cap inflow.\n\n## Whales\nWhales (placeholder): consensus leader 01211 in the fixture boards.\n- Placeholder: conviction leader is 06571.\n- Placeholder: position_delta leader is 00388.\n- Placeholder: network leader is 01299.\n\n## Fundamental Valuation\nFundamental Valuation (placeholder): 68 fixture names pass the strict filter.\n\n## Macro Risk\nMacro Risk (placeholder): leading -0.81, coincident +0.21, lagging +0.71.\n- Placeholder line: composite scores are synthetic fixture values.\n\n## ML Market Map\nML Market Map (placeholder): 7 clusters; largest is 'poor risk-adj return · falling (3m) · deep pullbacks (21d)'.\n- Placeholder line 1: see the ml/clusters fixture for the numbers.\n- Placeholder line 2: see the ml/clusters fixture for the numbers.\n- Placeholder line 3: see the ml/clusters fixture for the numbers.\n\n## News & Sentiment\nNews & Sentiment (placeholder): 40 fixture articles, mean score +0.03.\n- Placeholder line: headlines are synthetic.\n- Placeholder line: scores are synthetic.\n",
+    "copy_markdown": "# Hong Kong Daily Notes — 2026-10-07\n\nSource dashboard: https://surgeflows.capital/notes\n\n## Price Momentum\nPrice Momentum (placeholder): 285 fixture names pass the filter; top trend_run 0.83.\n\n## Turnover Surge\nTurnover Surge (placeholder): 76 fixture names trade at least their prior-day turnover.\n\n## Market Structure\nMarket Structure (placeholder): Financial Services leads the fixture sector trend; Banks - Diversified shows the largest turnover-versus-cap inflow.\n\n## Whales\nWhales (placeholder): consensus leader 01211 in the fixture boards.\n- Placeholder: conviction leader is 06571.\n- Placeholder: position_delta leader is 00388.\n- Placeholder: network leader is 01299.\n\n## Fundamental Valuation\nFundamental Valuation (placeholder): 68 fixture names pass the strict filter.\n\n## Macro Risk\nMacro Risk (placeholder): leading -0.81, coincident +0.21, lagging +0.71.\n- Placeholder line: composite scores are synthetic fixture values.\n\n## ML Market Map\nML Market Map (placeholder): 7 clusters; largest is 'poor risk-adj return · falling (3m) · deep pullbacks (21d)'.\n- Placeholder line 1: see the ml/clusters fixture for the numbers.\n- Placeholder line 2: see the ml/clusters fixture for the numbers.\n- Placeholder line 3: see the ml/clusters fixture for the numbers.\n\n## News & Sentiment\nNews & Sentiment (placeholder): 40 fixture articles, mean score +0.03.\n- Placeholder line: headlines are synthetic.\n- Placeholder line: scores are synthetic.\n",
+    "methodology_version": "daily_notes_v1_0",
+    "updated_at": "2026-10-07T01:20:37.448120+00:00",
+    "sections": [
+     {
+      "tab": "ma_breakthrough",
+      "label": "Price Momentum",
+      "ok": true,
+      "as_of_date": "2026-10-06",
+      "source_url": "https://surgeflows.capital/api/hk/screen?sort=trend_run&dir=desc&tab=ma_breakthrough&limit=300",
+      "tab_url": "https://surgeflows.capital/price",
+      "headline": "Price Momentum (placeholder): 285 fixture names pass the filter; top trend_run 0.83.",
+      "filter": "market_cap_usd >= 400M AND rsi_state != overbought AND price >= avwap",
+      "sort": "trend_run desc",
+      "top_rows": [
+       {
+        "ticker": "05336",
+        "name": "星汇机械控股",
+        "sector": "Industrials",
+        "industry": "Conglomerates",
+        "market_cap": 31598119057,
+        "market_cap_usd": 4060985112,
+        "price": 12.59,
+        "avwap": 11.9549,
+        "avwap_cushion": 0.053128,
+        "trend_run": 0.8264,
+        "rsi_14": 51.9563,
+        "rsi_state": "neutral",
+        "change_pct": 0.037736,
+        "return_5d": 0.010055,
+        "ytd_return": 1.361145,
+        "ticker_url": "https://surgeflows.capital/stock/hk/05336",
+        "tab_url": "https://surgeflows.capital/price",
+        "trend_making_streak_days": 8,
+        "agent_rating": {
+         "schema_version": "notes_agent_rating_v1",
+         "as_of": "2026-10-06",
+         "state": "available",
+         "available_lenses": 6,
+         "total_lenses": 6,
+         "overall": 4.5,
+         "top_down": 4.67,
+         "bottom_up": 4.33,
+         "lenses": {
+          "macro": {
+           "value": 5,
+           "state": "available",
+           "as_of": "2026-10-06",
+           "source": "stock_sentiment_score_v1",
+           "explanation": null
+          },
+          "sentiment": {
+           "value": 4,
+           "state": "partial",
+           "as_of": "2026-10-06",
+           "source": "stock_sentiment_score_v1",
+           "explanation": "Uses 2 of 4 inputs; missing: industry rotation, management outlook."
+          },
+          "factor": {
+           "value": 5,
+           "state": "available",
+           "as_of": "2026-10-06",
+           "source": "stock_scores_latest_v1",
+           "explanation": "Derived from the available within-market momentum, value and quality percentiles."
+          },
+          "technical": {
+           "value": 5,
+           "state": "available",
+           "as_of": "2026-10-06",
+           "source": "stock_scores_latest_v1",
+           "explanation": null
+          },
+          "fundamental": {
+           "value": 5,
+           "state": "available",
+           "as_of": "2026-10-06",
+           "source": "stock_scores_latest_v1",
+           "explanation": null
+          },
+          "risk": {
+           "value": 3,
+           "state": "available",
+           "as_of": "2026-10-06",
+           "source": "ticker_risk_metrics_latest_v1",
+           "explanation": null
+          }
+         }
+        }
+       },
+       {
+        "ticker": "05180",
+        "name": "元福机械控股",
+        "sector": "Industrials",
+        "industry": "Industrial - Machinery",
+        "market_cap": 33091349181,
+        "market_cap_usd": 4252894804,
+        "price": 16.53,
+        "avwap": 15.6399,
+        "avwap_cushion": 0.056915,
+        "trend_run": 0.752,
+        "rsi_14": 61.9099,
+        "rsi_state": "neutral",
+        "change_pct": 0.065531,
+        "return_5d": 0.152061,
+        "ytd_return": 0.816164,
+        "ticker_url": "https://surgeflows.capital/stock/hk/05180",
+        "tab_url": "https://surgeflows.capital/price",
+        "agent_rating": {
+         "schema_version": "notes_agent_rating_v1",
+         "as_of": "2026-10-06",
+         "state": "available",
+         "available_lenses": 6,
+         "total_lenses": 6,
+         "overall": 3.5,
+         "top_down": 3.0,
+         "bottom_up": 4.0,
+         "lenses": {
+          "macro": {
+           "value": 3,
+           "state": "available",
+           "as_of": "2026-10-06",
+           "source": "stock_sentiment_score_v1",
+           "explanation": null
+          },
+          "sentiment": {
+           "value": 2,
+           "state": "partial",
+           "as_of": "2026-10-06",
+           "source": "stock_sentiment_score_v1",
+           "explanation": "Uses 3 of 4 inputs; missing: industry rotation."
+          },
+          "factor": {
+           "value": 4,
+           "state": "available",
+           "as_of": "2026-10-06",
+           "source": "stock_scores_latest_v1",
+           "explanation": "Derived from the available within-market momentum, value and quality percentiles."
+          },
+          "technical": {
+           "value": 5,
+           "state": "available",
+           "as_of": "2026-10-06",
+           "source": "stock_scores_latest_v1",
+           "explanation": null
+          },
+          "fundamental": {
+           "value": 4,
+           "state": "available",
+           "as_of": "2026-10-06",
+           "source": "stock_scores_latest_v1",
+           "explanation": null
+          },
+          "risk": {
+           "value": 3,
+           "state": "available",
+           "as_of": "2026-10-05",
+           "source": "ticker_risk_metrics_latest_v1",
+           "explanation": null
+          }
+         }
+        }
+       },
+       {
+        "ticker": "02236",
+        "name": "凯金网络",
+        "sector": "Communication Services",
+        "industry": "Advertising Agencies",
+        "market_cap": 116267684221,
+        "market_cap_usd": 14942703829,
+        "price": 5.816,
+        "avwap": 5.1811,
+        "avwap_cushion": 0.122542,
+        "trend_run": 0.7447,
+        "rsi_14": 47.3212,
+        "rsi_state": "neutral",
+        "change_pct": 0.023759,
+        "return_5d": 0.063084,
+        "ytd_return": 0.815726,
+        "ticker_url": "https://surgeflows.capital/stock/hk/02236",
+        "tab_url": "https://surgeflows.capital/price",
+        "agent_rating": {
+         "schema_version": "notes_agent_rating_v1",
+         "as_of": "2026-10-06",
+         "state": "available",
+         "available_lenses": 6,
+         "total_lenses": 6,
+         "overall": 4.0,
+         "top_down": 4.33,
+         "bottom_up": 3.67,
+         "lenses": {
+          "macro": {
+           "value": 3,
+           "state": "available",
+           "as_of": "2026-10-06",
+           "source": "stock_sentiment_score_v1",
+           "explanation": null
+          },
+          "sentiment": {
+           "value": 5,
+           "state": "partial",
+           "as_of": "2026-10-06",
+           "source": "stock_sentiment_score_v1",
+           "explanation": "Uses 1 of 4 inputs; missing: management outlook, industry rotation, news."
+          },
+          "factor": {
+           "value": 5,
+           "state": "available",
+           "as_of": "2026-10-06",
+           "source": "stock_scores_latest_v1",
+           "explanation": "Derived from the available within-market momentum, value and quality percentiles."
+          },
+          "technical": {
+           "value": 5,
+           "state": "available",
+           "as_of": "2026-10-06",
+           "source": "stock_scores_latest_v1",
+           "explanation": null
+          },
+          "fundamental": {
+           "value": 4,
+           "state": "available",
+           "as_of": "2026-10-06",
+           "source": "stock_scores_latest_v1",
+           "explanation": null
+          },
+          "risk": {
+           "value": 2,
+           "state": "available",
+           "as_of": "2026-10-06",
+           "source": "ticker_risk_metrics_latest_v1",
+           "explanation": null
+          }
+         }
+        }
+       },
+       {
+        "ticker": "09915",
+        "name": "泰益服饰控股",
+        "sector": "Consumer Cyclical",
+        "industry": "Auto - Parts",
+        "market_cap": 42911099347,
+        "market_cap_usd": 5514927495,
+        "price": 38.67,
+        "avwap": 37.3784,
+        "avwap_cushion": 0.034555,
+        "trend_run": 0.6921,
+        "rsi_14": 60.0816,
+        "rsi_state": "neutral",
+        "change_pct": 0.004092,
+        "return_5d": -0.012747,
+        "ytd_return": 0.760328,
+        "ticker_url": "https://surgeflows.capital/stock/hk/09915",
+        "tab_url": "https://surgeflows.capital/price",
+        "agent_rating": {
+         "schema_version": "notes_agent_rating_v1",
+         "as_of": "2026-10-06",
+         "state": "available",
+         "available_lenses": 6,
+         "total_lenses": 6,
+         "overall": 3.67,
+         "top_down": 3.67,
+         "bottom_up": 3.67,
+         "lenses": {
+          "macro": {
+           "value": 2,
+           "state": "available",
+           "as_of": "2026-10-06",
+           "source": "stock_sentiment_score_v1",
+           "explanation": null
+          },
+          "sentiment": {
+           "value": 4,
+           "state": "partial",
+           "as_of": "2026-10-06",
+           "source": "stock_sentiment_score_v1",
+           "explanation": "Uses 3 of 4 inputs; missing: management reputation."
+          },
+          "factor": {
+           "value": 5,
+           "state": "available",
+           "as_of": "2026-10-06",
+           "source": "stock_scores_latest_v1",
+           "explanation": "Derived from the available within-market momentum, value and quality percentiles."
+          },
+          "technical": {
+           "value": 5,
+           "state": "available",
+           "as_of": "2026-10-06",
+           "source": "stock_scores_latest_v1",
+           "explanation": null
+          },
+          "fundamental": {
+           "value": 3,
+           "state": "available",
+           "as_of": "2026-10-06",
+           "source": "stock_scores_latest_v1",
+           "explanation": null
+          },
+          "risk": {
+           "value": 3,
+           "state": "available",
+           "as_of": "2026-10-06",
+           "source": "ticker_risk_metrics_latest_v1",
+           "explanation": null
+          }
+         }
+        }
+       },
+       {
+        "ticker": "03189",
+        "name": "海达汽车",
+        "sector": "Consumer Cyclical",
+        "industry": "Auto - Parts",
+        "market_cap": 36826029750,
+        "market_cap_usd": 4732875342,
+        "price": 81.73,
+        "avwap": 75.8533,
+        "avwap_cushion": 0.077474,
+        "trend_run": 0.6859,
+        "rsi_14": 42.7214,
+        "rsi_state": "neutral",
+        "change_pct": 0.054524,
+        "return_5d": 0.011724,
+        "ytd_return": 0.886585,
+        "ticker_url": "https://surgeflows.capital/stock/hk/03189",
+        "tab_url": "https://surgeflows.capital/price",
+        "agent_rating": {
+         "schema_version": "notes_agent_rating_v1",
+         "as_of": "2026-10-06",
+         "state": "partial",
+         "available_lenses": 5,
+         "total_lenses": 6,
+         "overall": 4.08,
+         "top_down": 4.67,
+         "bottom_up": 3.5,
+         "lenses": {
+          "macro": {
+           "value": 5,
+           "state": "available",
+           "as_of": "2026-10-06",
+           "source": "stock_sentiment_score_v1",
+           "explanation": null
+          },
+          "sentiment": {
+           "value": 4,
+           "state": "partial",
+           "as_of": "2026-10-06",
+           "source": "stock_sentiment_score_v1",
+           "explanation": "Uses 3 of 4 inputs; missing: news."
+          },
+          "factor": {
+           "value": 5,
+           "state": "available",
+           "as_of": "2026-10-06",
+           "source": "stock_scores_latest_v1",
+           "explanation": "Derived from the available within-market momentum, value and quality percentiles."
+          },
+          "technical": {
+           "value": 5,
+           "state": "available",
+           "as_of": "2026-10-06",
+           "source": "stock_scores_latest_v1",
+           "explanation": null
+          },
+          "fundamental": {
+           "value": null,
+           "state": "available",
+           "as_of": "2026-10-06",
+           "source": "stock_scores_latest_v1",
+           "explanation": null
+          },
+          "risk": {
+           "value": 2,
+           "state": "available",
+           "as_of": "2026-10-06",
+           "source": "ticker_risk_metrics_latest_v1",
+           "explanation": null
+          }
+         }
+        }
+       }
+      ],
+      "error": null
+     },
+     {
+      "tab": "turnover",
+      "label": "Turnover Surge",
+      "ok": true,
+      "as_of_date": "2026-10-06",
+      "source_url": "https://surgeflows.capital/api/hk/screen?sort=to_yest_mult&dir=desc&tab=turnover&limit=300",
+      "tab_url": "https://surgeflows.capital/turnover",
+      "headline": "Turnover Surge (placeholder): 76 fixture names trade at least their prior-day turnover.",
+      "filter": "market_cap_usd >= 400M AND turnover_usd >= 25M AND to_yest_mult >= 1.0",
+      "sort": "to_yest_mult desc",
+      "top_rows": [
+       {
+        "ticker": "07815",
+        "name": "达联电气",
+        "sector": "Industrials",
+        "industry": "Engineering & Construction",
+        "turnover": 1041088354.0,
+        "turnover_usd": 133800506.0,
+        "market_cap": 31701632740,
+        "market_cap_usd": 4074288674,
+        "turnover_ratio": 0.03284,
+        "to_yest_mult": 5.8412,
+        "change_pct": 0.033493,
+        "return_5d": 0.095428,
+        "ytd_return": 0.139778,
+        "ticker_url": "https://surgeflows.capital/stock/hk/07815",
+        "tab_url": "https://surgeflows.capital/turnover",
+        "agent_rating": {
+         "schema_version": "notes_agent_rating_v1",
+         "as_of": "2026-10-06",
+         "state": "available",
+         "available_lenses": 6,
+         "total_lenses": 6,
+         "overall": 3.0,
+         "top_down": 3.33,
+         "bottom_up": 2.67,
+         "lenses": {
+          "macro": {
+           "value": 3,
+           "state": "available",
+           "as_of": "2026-10-06",
+           "source": "stock_sentiment_score_v1",
+           "explanation": null
+          },
+          "sentiment": {
+           "value": 5,
+           "state": "partial",
+           "as_of": "2026-10-06",
+           "source": "stock_sentiment_score_v1",
+           "explanation": "Uses 1 of 4 inputs; missing: management reputation, management outlook, news."
+          },
+          "factor": {
+           "value": 2,
+           "state": "available",
+           "as_of": "2026-10-06",
+           "source": "stock_scores_latest_v1",
+           "explanation": "Derived from the available within-market momentum, value and quality percentiles."
+          },
+          "technical": {
+           "value": 4,
+           "state": "available",
+           "as_of": "2026-10-06",
+           "source": "stock_scores_latest_v1",
+           "explanation": null
+          },
+          "fundamental": {
+           "value": 2,
+           "state": "available",
+           "as_of": "2026-10-06",
+           "source": "stock_scores_latest_v1",
+           "explanation": null
+          },
+          "risk": {
+           "value": 2,
+           "state": "available",
+           "as_of": "2026-10-05",
+           "source": "ticker_risk_metrics_latest_v1",
+           "explanation": null
+          }
+         }
+        }
+       },
+       {
+        "ticker": "01398",
+        "name": "工商银行",
+        "sector": "Financial Services",
+        "industry": "Banks - Diversified",
+        "turnover": 12856044385.0,
+        "turnover_usd": 1652256729.0,
+        "market_cap": 1527940863454,
+        "market_cap_usd": 196370710773,
+        "turnover_ratio": 0.008414,
+        "to_yest_mult": 5.1507,
+        "change_pct": 0.018306,
+        "return_5d": -0.017898,
+        "ytd_return": 0.102575,
+        "ticker_url": "https://surgeflows.capital/stock/hk/01398",
+        "tab_url": "https://surgeflows.capital/turnover",
+        "agent_rating": {
+         "schema_version": "notes_agent_rating_v1",
+         "as_of": "2026-10-06",
+         "state": "available",
+         "available_lenses": 6,
+         "total_lenses": 6,
+         "overall": 3.17,
+         "top_down": 3.0,
+         "bottom_up": 3.33,
+         "lenses": {
+          "macro": {
+           "value": 4,
+           "state": "available",
+           "as_of": "2026-10-06",
+           "source": "stock_sentiment_score_v1",
+           "explanation": null
+          },
+          "sentiment": {
+           "value": 2,
+           "state": "partial",
+           "as_of": "2026-10-06",
+           "source": "stock_sentiment_score_v1",
+           "explanation": "Uses 3 of 4 inputs; missing: industry rotation."
+          },
+          "factor": {
+           "value": 3,
+           "state": "available",
+           "as_of": "2026-10-06",
+           "source": "stock_scores_latest_v1",
+           "explanation": "Derived from the available within-market momentum, value and quality percentiles."
+          },
+          "technical": {
+           "value": 3,
+           "state": "available",
+           "as_of": "2026-10-06",
+           "source": "stock_scores_latest_v1",
+           "explanation": null
+          },
+          "fundamental": {
+           "value": 4,
+           "state": "available",
+           "as_of": "2026-10-06",
+           "source": "stock_scores_latest_v1",
+           "explanation": null
+          },
+          "risk": {
+           "value": 3,
+           "state": "available",
+           "as_of": "2026-10-06",
+           "source": "ticker_risk_metrics_latest_v1",
+           "explanation": null
+          }
+         }
+        }
+       },
+       {
+        "ticker": "00746",
+        "name": "盛金机械",
+        "sector": "Industrials",
+        "industry": "Specialty Business Services",
+        "turnover": 406980074.0,
+        "turnover_usd": 52305013.0,
+        "market_cap": 35338844414,
+        "market_cap_usd": 4541742525,
+        "turnover_ratio": 0.011517,
+        "to_yest_mult": 4.621,
+        "change_pct": 0.043246,
+        "return_5d": 0.113132,
+        "ytd_return": 0.754429,
+        "ticker_url": "https://surgeflows.capital/stock/hk/00746",
+        "tab_url": "https://surgeflows.capital/turnover",
+        "agent_rating": {
+         "schema_version": "notes_agent_rating_v1",
+         "as_of": "2026-10-06",
+         "state": "available",
+         "available_lenses": 6,
+         "total_lenses": 6,
+         "overall": 3.17,
+         "top_down": 3.33,
+         "bottom_up": 3.0,
+         "lenses": {
+          "macro": {
+           "value": 2,
+           "state": "available",
+           "as_of": "2026-10-06",
+           "source": "stock_sentiment_score_v1",
+           "explanation": null
+          },
+          "sentiment": {
+           "value": 5,
+           "state": "partial",
+           "as_of": "2026-10-06",
+           "source": "stock_sentiment_score_v1",
+           "explanation": "Uses 3 of 4 inputs; missing: management reputation."
+          },
+          "factor": {
+           "value": 3,
+           "state": "available",
+           "as_of": "2026-10-06",
+           "source": "stock_scores_latest_v1",
+           "explanation": "Derived from the available within-market momentum, value and quality percentiles."
+          },
+          "technical": {
+           "value": 5,
+           "state": "available",
+           "as_of": "2026-10-06",
+           "source": "stock_scores_latest_v1",
+           "explanation": null
+          },
+          "fundamental": {
+           "value": 2,
+           "state": "available",
+           "as_of": "2026-10-06",
+           "source": "stock_scores_latest_v1",
+           "explanation": null
+          },
+          "risk": {
+           "value": 2,
+           "state": "available",
+           "as_of": "2026-10-06",
+           "source": "ticker_risk_metrics_latest_v1",
+           "explanation": null
+          }
+         }
+        }
+       },
+       {
+        "ticker": "04148",
+        "name": "昌隆煤业控股",
+        "sector": "Energy",
+        "industry": "Oil & Gas Midstream",
+        "turnover": 2077069774.0,
+        "turnover_usd": 266944669.0,
+        "market_cap": 56191125736,
+        "market_cap_usd": 7221674323,
+        "turnover_ratio": 0.036964,
+        "to_yest_mult": 4.0316,
+        "change_pct": 0.023018,
+        "return_5d": -0.01917,
+        "ytd_return": 0.244541,
+        "ticker_url": "https://surgeflows.capital/stock/hk/04148",
+        "tab_url": "https://surgeflows.capital/turnover",
+        "agent_rating": {
+         "schema_version": "notes_agent_rating_v1",
+         "as_of": "2026-10-06",
+         "state": "available",
+         "available_lenses": 6,
+         "total_lenses": 6,
+         "overall": 3.5,
+         "top_down": 3.33,
+         "bottom_up": 3.67,
+         "lenses": {
+          "macro": {
+           "value": 2,
+           "state": "available",
+           "as_of": "2026-10-06",
+           "source": "stock_sentiment_score_v1",
+           "explanation": null
+          },
+          "sentiment": {
+           "value": 4,
+           "state": "partial",
+           "as_of": "2026-10-06",
+           "source": "stock_sentiment_score_v1",
+           "explanation": "Uses 2 of 4 inputs; missing: industry rotation, management outlook."
+          },
+          "factor": {
+           "value": 4,
+           "state": "available",
+           "as_of": "2026-10-06",
+           "source": "stock_scores_latest_v1",
+           "explanation": "Derived from the available within-market momentum, value and quality percentiles."
+          },
+          "technical": {
+           "value": 5,
+           "state": "available",
+           "as_of": "2026-10-06",
+           "source": "stock_scores_latest_v1",
+           "explanation": null
+          },
+          "fundamental": {
+           "value": 3,
+           "state": "available",
+           "as_of": "2026-10-06",
+           "source": "stock_scores_latest_v1",
+           "explanation": null
+          },
+          "risk": {
+           "value": 3,
+           "state": "available",
+           "as_of": "2026-10-06",
+           "source": "ticker_risk_metrics_latest_v1",
+           "explanation": null
+          }
+         }
+        }
+       },
+       {
+        "ticker": "02044",
+        "name": "隆康银行",
+        "sector": "Financial Services",
+        "industry": "Asset Management - Global",
+        "turnover": 1096849081.0,
+        "turnover_usd": 140966865.0,
+        "market_cap": 104433698240,
+        "market_cap_usd": 13421801879,
+        "turnover_ratio": 0.010503,
+        "to_yest_mult": 4.0168,
+        "change_pct": 0.00429,
+        "return_5d": -0.037906,
+        "ytd_return": -0.460621,
+        "ticker_url": "https://surgeflows.capital/stock/hk/02044",
+        "tab_url": "https://surgeflows.capital/turnover",
+        "agent_rating": {
+         "schema_version": "notes_agent_rating_v1",
+         "as_of": "2026-10-06",
+         "state": "available",
+         "available_lenses": 6,
+         "total_lenses": 6,
+         "overall": 2.17,
+         "top_down": 2.0,
+         "bottom_up": 2.33,
+         "lenses": {
+          "macro": {
+           "value": 1,
+           "state": "available",
+           "as_of": "2026-10-06",
+           "source": "stock_sentiment_score_v1",
+           "explanation": null
+          },
+          "sentiment": {
+           "value": 2,
+           "state": "partial",
+           "as_of": "2026-10-06",
+           "source": "stock_sentiment_score_v1",
+           "explanation": "Uses 3 of 4 inputs; missing: industry rotation."
+          },
+          "factor": {
+           "value": 3,
+           "state": "available",
+           "as_of": "2026-10-06",
+           "source": "stock_scores_latest_v1",
+           "explanation": "Derived from the available within-market momentum, value and quality percentiles."
+          },
+          "technical": {
+           "value": 1,
+           "state": "available",
+           "as_of": "2026-10-06",
+           "source": "stock_scores_latest_v1",
+           "explanation": null
+          },
+          "fundamental": {
+           "value": 3,
+           "state": "available",
+           "as_of": "2026-10-06",
+           "source": "stock_scores_latest_v1",
+           "explanation": null
+          },
+          "risk": {
+           "value": 3,
+           "state": "available",
+           "as_of": "2026-10-06",
+           "source": "ticker_risk_metrics_latest_v1",
+           "explanation": null
+          }
+         }
+        }
+       }
+      ],
+      "error": null
+     },
+     {
+      "tab": "market_structure",
+      "label": "Market Structure",
+      "ok": true,
+      "as_of_date": "2026-10-06",
+      "source_url": "example_project.stock_data.v_sector_rolling_60d_v1 + example_project.stock_data.industry_rotation_latest_v1",
+      "tab_url": "https://surgeflows.capital/turnover",
+      "headline": "Market Structure (placeholder): Financial Services leads the fixture sector trend; Banks - Diversified shows the largest turnover-versus-cap inflow.",
+      "methodology": "Sector Trend = change in the 60-day moving average of sector excess returns; Industry Inflow = turnover weight minus market-cap weight.",
+      "top_rows": [
+       {
+        "structure_type": "Sector Trend",
+        "leader": "Financial Services",
+        "metric_label": "Trend",
+        "metric_value": 0.001932287238978233,
+        "secondary_label": "60D Return",
+        "secondary_value": 0.06508299832483519,
+        "member_count": 44,
+        "as_of_date": "2026-10-06",
+        "source": "Excess Returns",
+        "tab_url": "https://surgeflows.capital/price"
+       },
+       {
+        "structure_type": "Industry Inflow",
+        "leader": "Banks - Diversified",
+        "metric_label": "Surprise",
+        "metric_value": 0.081293,
+        "secondary_label": "Turnover Ratio",
+        "secondary_value": 1.9091,
+        "turnover_weight_pct": 17.0711,
+        "market_cap_weight_pct": 8.9418,
+        "member_count": 12,
+        "as_of_date": "2026-09-21",
+        "source": "Industry Rotation",
+        "tab_url": "https://surgeflows.capital/turnover"
+       }
+      ],
+      "error": null
+     },
+     {
+      "tab": "whales",
+      "label": "Whales",
+      "ok": true,
+      "as_of_date": "2026-10-07",
+      "source_url": "https://surgeflows.capital/api/whales/signal-board?market=hk&limit=5",
+      "tab_url": "https://surgeflows.capital/whales",
+      "headline": "Whales (placeholder): consensus leader 01211 in the fixture boards.",
+      "lines": [
+       "Placeholder: conviction leader is 06571.",
+       "Placeholder: position_delta leader is 00388.",
+       "Placeholder: network leader is 01299."
+      ],
+      "leaders": {
+       "consensus": [
+        {
+         "market": "hk",
+         "ticker": "01211",
+         "quarter": "2026-10-07",
+         "as_of_date": "2026-10-07",
+         "n_funds_holding": 8,
+         "total_market_value": 60435097862.0,
+         "aum_weighted_portfolio_pct": 15.64473937395837,
+         "avg_portfolio_pct": 9.042087976372736,
+         "consensus_score": 8.888893423401386,
+         "consensus_percentile": 100.0,
+         "consensus_rank": 1,
+         "components_json": "{\"weights\": {\"aum_weighted_portfolio_pct\": 0.3, \"avg_portfolio_pct\": 0.1, \"log_total_market_value\": 0.2, \"n_funds_holding\": 0.4}, \"z_aum_weighted_portfolio_pct\": 3.3367669022940594, \"z_avg_portfolio_pct\": 1.9422063807600174, \"z_log_total_market_value\": 1.7757916504296694, \"z_n_funds_holding\": 2.698055255709105}",
+         "methodology_version": "whale_consensus_score_v1_0",
+         "updated_at": "2026-10-07T01:18:05.665526+00:00",
+         "stock_name": "比亚迪股份"
+        },
+        {
+         "market": "hk",
+         "ticker": "05434",
+         "quarter": "2026-10-07",
+         "as_of_date": "2026-10-07",
+         "n_funds_holding": 3,
+         "total_market_value": 8291796537.0,
+         "aum_weighted_portfolio_pct": 14.586593186698215,
+         "avg_portfolio_pct": 16.17934702845865,
+         "consensus_score": 5.679615244363854,
+         "consensus_percentile": 99.7872,
+         "consensus_rank": 2,
+         "components_json": "{\"weights\": {\"aum_weighted_portfolio_pct\": 0.3, \"avg_portfolio_pct\": 0.1, \"log_total_market_value\": 0.2, \"n_funds_holding\": 0.4}, \"z_aum_weighted_portfolio_pct\": 3.0581403590796006, \"z_avg_portfolio_pct\": 4.179647502835118, \"z_log_total_market_value\": 0.5925693090375381, \"z_n_funds_holding\": 0.2648775707659623}",
+         "methodology_version": "whale_consensus_score_v1_0",
+         "updated_at": "2026-10-07T01:18:30.235068+00:00",
+         "stock_name": "金恒重工"
+        },
+        {
+         "market": "hk",
+         "ticker": "01299",
+         "quarter": "2026-10-07",
+         "as_of_date": "2026-10-07",
+         "n_funds_holding": 8,
+         "total_market_value": 82390482452.0,
+         "aum_weighted_portfolio_pct": 2.176303797081386,
+         "avg_portfolio_pct": 2.129254552326136,
+         "consensus_score": 5.157724218242165,
+         "consensus_percentile": 99.5745,
+         "consensus_rank": 3,
+         "components_json": "{\"weights\": {\"aum_weighted_portfolio_pct\": 0.3, \"avg_portfolio_pct\": 0.1, \"log_total_market_value\": 0.2, \"n_funds_holding\": 0.4}, \"z_aum_weighted_portfolio_pct\": -0.20968413866143829, \"z_avg_portfolio_pct\": -0.22488012403718827, \"z_log_total_market_value\": 1.9603961223294815, \"z_n_funds_holding\": 2.698055255709105}",
+         "methodology_version": "whale_consensus_score_v1_0",
+         "updated_at": "2026-10-07T01:18:11.481906+00:00",
+         "stock_name": "友邦保险"
+        },
+        {
+         "market": "hk",
+         "ticker": "06571",
+         "quarter": "2026-10-07",
+         "as_of_date": "2026-10-07",
+         "n_funds_holding": 1,
+         "total_market_value": 937023424.0,
+         "aum_weighted_portfolio_pct": 19.993128577037382,
+         "avg_portfolio_pct": 16.40072591302264,
+         "consensus_score": 5.034497600035591,
+         "consensus_percentile": 99.3617,
+         "consensus_rank": 4,
+         "components_json": "{\"weights\": {\"aum_weighted_portfolio_pct\": 0.3, \"avg_portfolio_pct\": 0.1, \"log_total_market_value\": 0.2, \"n_funds_holding\": 0.4}, \"z_aum_weighted_portfolio_pct\": 4.481766210321715, \"z_avg_portfolio_pct\": 4.249047004277877, \"z_log_total_market_value\": -0.7062231444729369, \"z_n_funds_holding\": -0.7083935032112949}",
+         "methodology_version": "whale_consensus_score_v1_0",
+         "updated_at": "2026-10-07T01:18:10.353595+00:00",
+         "stock_name": "通通置业控股"
+        },
+        {
+         "market": "hk",
+         "ticker": "00700",
+         "quarter": "2026-10-07",
+         "as_of_date": "2026-10-07",
+         "n_funds_holding": 6,
+         "total_market_value": 686015769241.0,
+         "aum_weighted_portfolio_pct": 2.686925901329899,
+         "avg_portfolio_pct": 3.0688945351942998,
+         "consensus_score": 4.95669290779748,
+         "consensus_percentile": 99.1489,
+         "consensus_rank": 5,
+         "components_json": "{\"weights\": {\"aum_weighted_portfolio_pct\": 0.3, \"avg_portfolio_pct\": 0.1, \"log_total_market_value\": 0.2, \"n_funds_holding\": 0.4}, \"z_aum_weighted_portfolio_pct\": -0.07522930292268126, \"z_avg_portfolio_pct\": 0.06968521572033871, \"z_log_total_market_value\": 3.2229211627226224, \"z_n_funds_holding\": 1.7247841817318483}",
+         "methodology_version": "whale_consensus_score_v1_0",
+         "updated_at": "2026-10-07T01:18:21.268045+00:00",
+         "stock_name": "腾讯控股"
+        }
+       ],
+       "conviction": [
+        {
+         "market": "hk",
+         "ticker": "06571",
+         "quarter": "2026-10-07",
+         "as_of_date": "2026-10-07",
+         "n_funds_holding": 1,
+         "ticker_conviction_score": 2.957535712184851,
+         "ticker_conviction_percentile": 100.0,
+         "ticker_conviction_rank": 1,
+         "max_fund_conviction_z": 2.99360545932068,
+         "top_conviction_fund": "Lantau Ridge Capital Limited",
+         "components_json": "{\"max_fund_conviction_z\": 2.99360545932068, \"top_conviction_fund\": \"Lantau Ridge Capital Limited\"}",
+         "methodology_version": "whale_conviction_index_v1_0",
+         "updated_at": "2026-10-07T01:19:08.768217+00:00",
+         "stock_name": "通通置业控股"
+        },
+        {
+         "market": "hk",
+         "ticker": "02451",
+         "quarter": "2026-10-07",
+         "as_of_date": "2026-10-07",
+         "n_funds_holding": 1,
+         "ticker_conviction_score": 2.685759485635411,
+         "ticker_conviction_percentile": 99.7872,
+         "ticker_conviction_rank": 2,
+         "max_fund_conviction_z": 2.7943990875587215,
+         "top_conviction_fund": "Lantau Crest Capital Limited",
+         "components_json": "{\"max_fund_conviction_z\": 2.7943990875587215, \"top_conviction_fund\": \"Lantau Crest Capital Limited\"}",
+         "methodology_version": "whale_conviction_index_v1_0",
+         "updated_at": "2026-10-07T01:19:13.106652+00:00",
+         "stock_name": "元金家电"
+        },
+        {
+         "market": "hk",
+         "ticker": "01421",
+         "quarter": "2026-10-07",
+         "as_of_date": "2026-10-07",
+         "n_funds_holding": 1,
+         "ticker_conviction_score": 2.5787594012245023,
+         "ticker_conviction_percentile": 99.5745,
+         "ticker_conviction_rank": 3,
+         "max_fund_conviction_z": 2.6863422356107427,
+         "top_conviction_fund": "Kowloon Garden Asset Management Limited",
+         "components_json": "{\"max_fund_conviction_z\": 2.6863422356107427, \"top_conviction_fund\": \"Kowloon Garden Asset Management Limited\"}",
+         "methodology_version": "whale_conviction_index_v1_0",
+         "updated_at": "2026-10-07T01:19:07.131038+00:00",
+         "stock_name": "盛新发展控股"
+        },
+        {
+         "market": "hk",
+         "ticker": "08451",
+         "quarter": "2026-10-07",
+         "as_of_date": "2026-10-07",
+         "n_funds_holding": 2,
+         "ticker_conviction_score": 2.5330369212212753,
+         "ticker_conviction_percentile": 99.3617,
+         "ticker_conviction_rank": 4,
+         "max_fund_conviction_z": 2.5365896931384726,
+         "top_conviction_fund": "Victoria Tower Investment Partners",
+         "components_json": "{\"max_fund_conviction_z\": 2.5365896931384726, \"top_conviction_fund\": \"Victoria Tower Investment Partners\"}",
+         "methodology_version": "whale_conviction_index_v1_0",
+         "updated_at": "2026-10-07T01:19:22.808505+00:00",
+         "stock_name": "新天生物控股"
+        },
+        {
+         "market": "hk",
+         "ticker": "01381",
+         "quarter": "2026-10-07",
+         "as_of_date": "2026-10-07",
+         "n_funds_holding": 1,
+         "ticker_conviction_score": 2.3544873020985415,
+         "ticker_conviction_percentile": 99.1489,
+         "ticker_conviction_rank": 5,
+         "max_fund_conviction_z": 2.376374333812511,
+         "top_conviction_fund": "Jade Summit Capital Limited",
+         "components_json": "{\"max_fund_conviction_z\": 2.376374333812511, \"top_conviction_fund\": \"Jade Summit Capital Limited\"}",
+         "methodology_version": "whale_conviction_index_v1_0",
+         "updated_at": "2026-10-07T01:19:06.079868+00:00",
+         "stock_name": "联东智能"
+        }
+       ],
+       "crowdedness": [
+        {
+         "market": "hk",
+         "ticker": "09988",
+         "quarter": "2026-10-07",
+         "as_of_date": "2026-10-07",
+         "n_funds_holding": 8,
+         "n_funds_total": 702,
+         "crowdedness_pct": 0.011396011396011397,
+         "crowdedness_quintile": 1,
+         "crowdedness_rank": 1,
+         "methodology_version": "whale_crowdedness_v1_0",
+         "updated_at": "2026-10-07T01:20:03.093271+00:00",
+         "stock_name": "阿里巴巴-W"
+        },
+        {
+         "market": "hk",
+         "ticker": "00941",
+         "quarter": "2026-10-07",
+         "as_of_date": "2026-10-07",
+         "n_funds_holding": 8,
+         "n_funds_total": 702,
+         "crowdedness_pct": 0.011396011396011397,
+         "crowdedness_quintile": 1,
+         "crowdedness_rank": 2,
+         "methodology_version": "whale_crowdedness_v1_0",
+         "updated_at": "2026-10-07T01:20:09.039952+00:00",
+         "stock_name": "中国移动"
+        },
+        {
+         "market": "hk",
+         "ticker": "01299",
+         "quarter": "2026-10-07",
+         "as_of_date": "2026-10-07",
+         "n_funds_holding": 8,
+         "n_funds_total": 702,
+         "crowdedness_pct": 0.011396011396011397,
+         "crowdedness_quintile": 1,
+         "crowdedness_rank": 3,
+         "methodology_version": "whale_crowdedness_v1_0",
+         "updated_at": "2026-10-07T01:20:28.190790+00:00",
+         "stock_name": "友邦保险"
+        },
+        {
+         "market": "hk",
+         "ticker": "02318",
+         "quarter": "2026-10-07",
+         "as_of_date": "2026-10-07",
+         "n_funds_holding": 8,
+         "n_funds_total": 702,
+         "crowdedness_pct": 0.011396011396011397,
+         "crowdedness_quintile": 1,
+         "crowdedness_rank": 4,
+         "methodology_version": "whale_crowdedness_v1_0",
+         "updated_at": "2026-10-07T01:20:04.852226+00:00",
+         "stock_name": "中国平安"
+        },
+        {
+         "market": "hk",
+         "ticker": "01211",
+         "quarter": "2026-10-07",
+         "as_of_date": "2026-10-07",
+         "n_funds_holding": 8,
+         "n_funds_total": 702,
+         "crowdedness_pct": 0.011396011396011397,
+         "crowdedness_quintile": 1,
+         "crowdedness_rank": 5,
+         "methodology_version": "whale_crowdedness_v1_0",
+         "updated_at": "2026-10-07T01:20:15.692897+00:00",
+         "stock_name": "比亚迪股份"
+        }
+       ],
+       "position_delta": [
+        {
+         "market": "hk",
+         "ticker": "00388",
+         "quarter": "2026-10-07",
+         "as_of_date": "2026-10-07",
+         "n_funds_buying": 4,
+         "n_funds_selling": 0,
+         "net_shares_change": 9474388262.0,
+         "gross_shares_buying": 9474388262.0,
+         "gross_shares_selling": 0.0,
+         "delta_z": 3.9727895500234967,
+         "delta_rank": 1,
+         "delta_percentile": 100.0,
+         "methodology_version": "whale_position_delta_v1_0",
+         "updated_at": "2026-10-07T01:21:22.935710+00:00",
+         "stock_name": "香港交易所"
+        },
+        {
+         "market": "hk",
+         "ticker": "02073",
+         "quarter": "2026-10-07",
+         "as_of_date": "2026-10-07",
+         "n_funds_buying": 1,
+         "n_funds_selling": 0,
+         "net_shares_change": 5100520062.0,
+         "gross_shares_buying": 5100520062.0,
+         "gross_shares_selling": 0.0,
+         "delta_z": 3.773503883510138,
+         "delta_rank": 2,
+         "delta_percentile": 99.7872,
+         "methodology_version": "whale_position_delta_v1_0",
+         "updated_at": "2026-10-07T01:21:20.916504+00:00",
+         "stock_name": "鼎福农业控股"
+        },
+        {
+         "market": "hk",
+         "ticker": "08451",
+         "quarter": "2026-10-07",
+         "as_of_date": "2026-10-07",
+         "n_funds_buying": 3,
+         "n_funds_selling": 0,
+         "net_shares_change": 1646383122.0,
+         "gross_shares_buying": 1646383122.0,
+         "gross_shares_selling": 0.0,
+         "delta_z": 3.4096044717658174,
+         "delta_rank": 3,
+         "delta_percentile": 99.5745,
+         "methodology_version": "whale_position_delta_v1_0",
+         "updated_at": "2026-10-07T01:21:06.624675+00:00",
+         "stock_name": "新天生物控股"
+        },
+        {
+         "market": "hk",
+         "ticker": "00285",
+         "quarter": "2026-10-07",
+         "as_of_date": "2026-10-07",
+         "n_funds_buying": 3,
+         "n_funds_selling": 0,
+         "net_shares_change": 933849809.0,
+         "gross_shares_buying": 933849809.0,
+         "gross_shares_selling": 0.0,
+         "delta_z": 3.227127095318508,
+         "delta_rank": 4,
+         "delta_percentile": 99.3617,
+         "methodology_version": "whale_position_delta_v1_0",
+         "updated_at": "2026-10-07T01:21:17.099241+00:00",
+         "stock_name": "盛华建设"
+        },
+        {
+         "market": "hk",
+         "ticker": "03827",
+         "quarter": "2026-10-07",
+         "as_of_date": "2026-10-07",
+         "n_funds_buying": 1,
+         "n_funds_selling": 0,
+         "net_shares_change": 705964666.0,
+         "gross_shares_buying": 705964666.0,
+         "gross_shares_selling": 0.0,
+         "delta_z": 3.1370983821113034,
+         "delta_rank": 5,
+         "delta_percentile": 99.1489,
+         "methodology_version": "whale_position_delta_v1_0",
+         "updated_at": "2026-10-07T01:21:13.331630+00:00",
+         "stock_name": "汇宏化工"
+        }
+       ],
+       "network": [
+        {
+         "market": "hk",
+         "ticker": "01299",
+         "quarter": "2026-10-07",
+         "as_of_date": "2026-10-07",
+         "degree": 180,
+         "weighted_degree": 775.0,
+         "eigenvector_centrality": 0.3108557710724353,
+         "community_id": 1,
+         "n_tickers_in_community": 19,
+         "n_communities": 281,
+         "modularity": 0.1133,
+         "methodology_version": "whale_network_v1_0",
+         "updated_at": "2026-10-06T23:58:07.184840+00:00",
+         "stock_name": "友邦保险"
+        },
+        {
+         "market": "hk",
+         "ticker": "00700",
+         "quarter": "2026-10-07",
+         "as_of_date": "2026-10-07",
+         "degree": 146,
+         "weighted_degree": 667.0,
+         "eigenvector_centrality": 0.26767455381173455,
+         "community_id": 0,
+         "n_tickers_in_community": 12,
+         "n_communities": 281,
+         "modularity": 0.1133,
+         "methodology_version": "whale_network_v1_0",
+         "updated_at": "2026-10-06T23:58:11.755221+00:00",
+         "stock_name": "腾讯控股"
+        },
+        {
+         "market": "hk",
+         "ticker": "02318",
+         "quarter": "2026-10-07",
+         "as_of_date": "2026-10-07",
+         "degree": 151,
+         "weighted_degree": 598.0,
+         "eigenvector_centrality": 0.2400142052509095,
+         "community_id": 0,
+         "n_tickers_in_community": 12,
+         "n_communities": 281,
+         "modularity": 0.1133,
+         "methodology_version": "whale_network_v1_0",
+         "updated_at": "2026-10-06T23:58:19.790919+00:00",
+         "stock_name": "中国平安"
+        },
+        {
+         "market": "hk",
+         "ticker": "02382",
+         "quarter": "2026-10-07",
+         "as_of_date": "2026-10-07",
+         "degree": 116,
+         "weighted_degree": 511.0,
+         "eigenvector_centrality": 0.2052459778136105,
+         "community_id": 5,
+         "n_tickers_in_community": 11,
+         "n_communities": 281,
+         "modularity": 0.1133,
+         "methodology_version": "whale_network_v1_0",
+         "updated_at": "2026-10-06T23:58:05.503052+00:00",
+         "stock_name": "舜宇光学科技"
+        },
+        {
+         "market": "hk",
+         "ticker": "01211",
+         "quarter": "2026-10-07",
+         "as_of_date": "2026-10-07",
+         "degree": 156,
+         "weighted_degree": 501.0,
+         "eigenvector_centrality": 0.2012138059415666,
+         "community_id": 4,
+         "n_tickers_in_community": 14,
+         "n_communities": 281,
+         "modularity": 0.1133,
+         "methodology_version": "whale_network_v1_0",
+         "updated_at": "2026-10-06T23:58:02.820275+00:00",
+         "stock_name": "比亚迪股份"
+        }
+       ],
+       "ll_predictive": [
+        {
+         "market": "hk",
+         "ticker": "01299",
+         "quarter": "2026-10-07",
+         "as_of_date": "2026-10-07",
+         "n_funds_holding_q": 8,
+         "n_funds_holding_q_minus_1": 0,
+         "owner_count_change": 8,
+         "portfolio_weight_change": 23.613073616098188,
+         "ll_score_z": 11.429003307115126,
+         "ll_rank": 1,
+         "ll_percentile": 100.0,
+         "methodology_version": "whale_ll_predictive_v1_0",
+         "updated_at": "2026-10-07T01:22:07.650932+00:00",
+         "stock_name": "友邦保险"
+        },
+        {
+         "market": "hk",
+         "ticker": "09988",
+         "quarter": "2026-10-07",
+         "as_of_date": "2026-10-07",
+         "n_funds_holding_q": 8,
+         "n_funds_holding_q_minus_1": 0,
+         "owner_count_change": 8,
+         "portfolio_weight_change": 23.065318373564928,
+         "ll_score_z": 11.284457678065433,
+         "ll_rank": 2,
+         "ll_percentile": 99.7872,
+         "methodology_version": "whale_ll_predictive_v1_0",
+         "updated_at": "2026-10-07T01:22:11.351634+00:00",
+         "stock_name": "阿里巴巴-W"
+        },
+        {
+         "market": "hk",
+         "ticker": "01211",
+         "quarter": "2026-10-07",
+         "as_of_date": "2026-10-07",
+         "n_funds_holding_q": 8,
+         "n_funds_holding_q_minus_1": 0,
+         "owner_count_change": 8,
+         "portfolio_weight_change": 9.774482962391195,
+         "ll_score_z": 7.777175563851128,
+         "ll_rank": 3,
+         "ll_percentile": 99.5745,
+         "methodology_version": "whale_ll_predictive_v1_0",
+         "updated_at": "2026-10-07T01:22:06.976654+00:00",
+         "stock_name": "比亚迪股份"
+        },
+        {
+         "market": "hk",
+         "ticker": "02020",
+         "quarter": "2026-10-07",
+         "as_of_date": "2026-10-07",
+         "n_funds_holding_q": 6,
+         "n_funds_holding_q_minus_1": 0,
+         "owner_count_change": 6,
+         "portfolio_weight_change": 16.237038188557506,
+         "ll_score_z": 7.723313155475239,
+         "ll_rank": 4,
+         "ll_percentile": 99.3617,
+         "methodology_version": "whale_ll_predictive_v1_0",
+         "updated_at": "2026-10-07T01:22:13.920124+00:00",
+         "stock_name": "安踏体育"
+        },
+        {
+         "market": "hk",
+         "ticker": "00700",
+         "quarter": "2026-10-07",
+         "as_of_date": "2026-10-07",
+         "n_funds_holding_q": 6,
+         "n_funds_holding_q_minus_1": 0,
+         "owner_count_change": 6,
+         "portfolio_weight_change": 14.528123760758884,
+         "ll_score_z": 7.272352412834337,
+         "ll_rank": 5,
+         "ll_percentile": 99.1489,
+         "methodology_version": "whale_ll_predictive_v1_0",
+         "updated_at": "2026-10-07T01:22:10.392557+00:00",
+         "stock_name": "腾讯控股"
+        }
+       ]
+      }
+     },
+     {
+      "tab": "fundamental",
+      "label": "Fundamental Valuation",
+      "ok": true,
+      "as_of_date": "2026-10-06",
+      "source_url": "https://surgeflows.capital/api/hk/screen?tab=fundamental&limit=300",
+      "tab_url": "https://surgeflows.capital/fundamentals",
+      "headline": "Fundamental Valuation (placeholder): 68 fixture names pass the strict filter.",
+      "filter": "market_cap_usd >= 400M; strict first: ytd_return >= 0 AND change_pct >= 0 AND revenue_growth > 0 AND profit_margin > 0; fill to 5 by composite_quality",
+      "sort": "strict_pass desc, composite_quality desc",
+      "top_rows": [
+       {
+        "ticker": "04624",
+        "name": "正瑞石化控股",
+        "sector": "Energy",
+        "industry": "Oil & Gas Integrated",
+        "market_cap": 187473967601,
+        "market_cap_usd": 24094123765,
+        "revenue_growth": 5.0,
+        "profit_margin": 0.33,
+        "composite_quality": 1.650128,
+        "change_pct": 0.058492,
+        "return_5d": 0.010982,
+        "ytd_return": 0.063621,
+        "ep": 0.0592,
+        "cfop": 0.05,
+        "ticker_url": "https://surgeflows.capital/stock/hk/04624",
+        "tab_url": "https://surgeflows.capital/fundamentals",
+        "agent_rating": {
+         "schema_version": "notes_agent_rating_v1",
+         "as_of": "2026-10-06",
+         "state": "available",
+         "available_lenses": 6,
+         "total_lenses": 6,
+         "overall": 3.33,
+         "top_down": 3.0,
+         "bottom_up": 3.67,
+         "lenses": {
+          "macro": {
+           "value": 2,
+           "state": "available",
+           "as_of": "2026-10-06",
+           "source": "stock_sentiment_score_v1",
+           "explanation": null
+          },
+          "sentiment": {
+           "value": 4,
+           "state": "partial",
+           "as_of": "2026-10-06",
+           "source": "stock_sentiment_score_v1",
+           "explanation": "Uses 2 of 4 inputs; missing: news, industry rotation."
+          },
+          "factor": {
+           "value": 3,
+           "state": "available",
+           "as_of": "2026-10-06",
+           "source": "stock_scores_latest_v1",
+           "explanation": "Derived from the available within-market momentum, value and quality percentiles."
+          },
+          "technical": {
+           "value": 4,
+           "state": "available",
+           "as_of": "2026-10-06",
+           "source": "stock_scores_latest_v1",
+           "explanation": null
+          },
+          "fundamental": {
+           "value": 5,
+           "state": "available",
+           "as_of": "2026-10-06",
+           "source": "stock_scores_latest_v1",
+           "explanation": null
+          },
+          "risk": {
+           "value": 2,
+           "state": "available",
+           "as_of": "2026-10-05",
+           "source": "ticker_risk_metrics_latest_v1",
+           "explanation": null
+          }
+         }
+        }
+       },
+       {
+        "ticker": "03061",
+        "name": "天瑞置业",
+        "sector": "Real Estate",
+        "industry": "Real Estate - Diversified",
+        "market_cap": 205876027333,
+        "market_cap_usd": 26459153483,
+        "revenue_growth": 2.7621,
+        "profit_margin": 0.2885,
+        "composite_quality": 0.796754,
+        "change_pct": 0.017524,
+        "return_5d": -0.023721,
+        "ytd_return": 0.165852,
+        "ep": 0.0849,
+        "cfop": 0.0788,
+        "ticker_url": "https://surgeflows.capital/stock/hk/03061",
+        "tab_url": "https://surgeflows.capital/fundamentals",
+        "agent_rating": {
+         "schema_version": "notes_agent_rating_v1",
+         "as_of": "2026-10-06",
+         "state": "partial",
+         "available_lenses": 5,
+         "total_lenses": 6,
+         "overall": 3.0,
+         "top_down": 3.0,
+         "bottom_up": 3.0,
+         "lenses": {
+          "macro": {
+           "value": 4,
+           "state": "available",
+           "as_of": "2026-10-06",
+           "source": "stock_sentiment_score_v1",
+           "explanation": null
+          },
+          "sentiment": {
+           "value": 2,
+           "state": "partial",
+           "as_of": "2026-10-06",
+           "source": "stock_sentiment_score_v1",
+           "explanation": "Uses 1 of 4 inputs; missing: industry rotation, management reputation, management outlook."
+          },
+          "factor": {
+           "value": 3,
+           "state": "available",
+           "as_of": "2026-10-06",
+           "source": "stock_scores_latest_v1",
+           "explanation": "Derived from the available within-market momentum, value and quality percentiles."
+          },
+          "technical": {
+           "value": 4,
+           "state": "available",
+           "as_of": "2026-10-06",
+           "source": "stock_scores_latest_v1",
+           "explanation": null
+          },
+          "fundamental": {
+           "value": null,
+           "state": "available",
+           "as_of": "2026-10-06",
+           "source": "stock_scores_latest_v1",
+           "explanation": null
+          },
+          "risk": {
+           "value": 2,
+           "state": "available",
+           "as_of": "2026-10-05",
+           "source": "ticker_risk_metrics_latest_v1",
+           "explanation": null
+          }
+         }
+        }
+       },
+       {
+        "ticker": "01024",
+        "name": "快手-W",
+        "sector": "Communication Services",
+        "industry": "Internet Content & Information",
+        "market_cap": 473298648783,
+        "market_cap_usd": 60828265211,
+        "revenue_growth": 3.2692,
+        "profit_margin": 0.1797,
+        "composite_quality": 0.587539,
+        "change_pct": 0.029561,
+        "return_5d": -0.008699,
+        "ytd_return": 0.175273,
+        "ep": 0.0176,
+        "cfop": 0.026,
+        "ticker_url": "https://surgeflows.capital/stock/hk/01024",
+        "tab_url": "https://surgeflows.capital/fundamentals",
+        "agent_rating": {
+         "schema_version": "notes_agent_rating_v1",
+         "as_of": "2026-10-06",
+         "state": "available",
+         "available_lenses": 6,
+         "total_lenses": 6,
+         "overall": 3.0,
+         "top_down": 2.67,
+         "bottom_up": 3.33,
+         "lenses": {
+          "macro": {
+           "value": 2,
+           "state": "available",
+           "as_of": "2026-10-06",
+           "source": "stock_sentiment_score_v1",
+           "explanation": null
+          },
+          "sentiment": {
+           "value": 3,
+           "state": "partial",
+           "as_of": "2026-10-06",
+           "source": "stock_sentiment_score_v1",
+           "explanation": "Uses 2 of 4 inputs; missing: news, industry rotation."
+          },
+          "factor": {
+           "value": 3,
+           "state": "available",
+           "as_of": "2026-10-06",
+           "source": "stock_scores_latest_v1",
+           "explanation": "Derived from the available within-market momentum, value and quality percentiles."
+          },
+          "technical": {
+           "value": 3,
+           "state": "available",
+           "as_of": "2026-10-06",
+           "source": "stock_scores_latest_v1",
+           "explanation": null
+          },
+          "fundamental": {
+           "value": 3,
+           "state": "available",
+           "as_of": "2026-10-06",
+           "source": "stock_scores_latest_v1",
+           "explanation": null
+          },
+          "risk": {
+           "value": 4,
+           "state": "available",
+           "as_of": "2026-10-05",
+           "source": "ticker_risk_metrics_latest_v1",
+           "explanation": null
+          }
+         }
+        }
+       },
+       {
+        "ticker": "01381",
+        "name": "联东智能",
+        "sector": "Technology",
+        "industry": "Semiconductors",
+        "market_cap": 90905677795,
+        "market_cap_usd": 11683182896,
+        "revenue_growth": 4.425,
+        "profit_margin": 0.1325,
+        "composite_quality": 0.586507,
+        "change_pct": 0.016696,
+        "return_5d": 0.010618,
+        "ytd_return": 0.63619,
+        "ep": 0.0352,
+        "cfop": 0.0432,
+        "ticker_url": "https://surgeflows.capital/stock/hk/01381",
+        "tab_url": "https://surgeflows.capital/fundamentals",
+        "agent_rating": {
+         "schema_version": "notes_agent_rating_v1",
+         "as_of": "2026-10-06",
+         "state": "available",
+         "available_lenses": 6,
+         "total_lenses": 6,
+         "overall": 3.83,
+         "top_down": 4.0,
+         "bottom_up": 3.67,
+         "lenses": {
+          "macro": {
+           "value": 3,
+           "state": "available",
+           "as_of": "2026-10-06",
+           "source": "stock_sentiment_score_v1",
+           "explanation": null
+          },
+          "sentiment": {
+           "value": 5,
+           "state": "available",
+           "as_of": "2026-10-06",
+           "source": "stock_sentiment_score_v1",
+           "explanation": null
+          },
+          "factor": {
+           "value": 4,
+           "state": "available",
+           "as_of": "2026-10-06",
+           "source": "stock_scores_latest_v1",
+           "explanation": "Derived from the available within-market momentum, value and quality percentiles."
+          },
+          "technical": {
+           "value": 5,
+           "state": "available",
+           "as_of": "2026-10-06",
+           "source": "stock_scores_latest_v1",
+           "explanation": null
+          },
+          "fundamental": {
+           "value": 4,
+           "state": "available",
+           "as_of": "2026-10-06",
+           "source": "stock_scores_latest_v1",
+           "explanation": null
+          },
+          "risk": {
+           "value": 2,
+           "state": "available",
+           "as_of": "2026-10-05",
+           "source": "ticker_risk_metrics_latest_v1",
+           "explanation": null
+          }
+         }
+        }
+       },
+       {
+        "ticker": "00700",
+        "name": "腾讯控股",
+        "sector": "Communication Services",
+        "industry": "Internet Content & Information",
+        "market_cap": 3322623588497,
+        "market_cap_usd": 427023042128,
+        "revenue_growth": 3.1656,
+        "profit_margin": 0.1776,
+        "composite_quality": 0.562304,
+        "change_pct": 0.006273,
+        "return_5d": 0.024118,
+        "ytd_return": 0.128881,
+        "ep": 0.0345,
+        "cfop": 0.026,
+        "ticker_url": "https://surgeflows.capital/stock/hk/00700",
+        "tab_url": "https://surgeflows.capital/fundamentals",
+        "agent_rating": {
+         "schema_version": "notes_agent_rating_v1",
+         "as_of": "2026-10-06",
+         "state": "available",
+         "available_lenses": 6,
+         "total_lenses": 6,
+         "overall": 3.5,
+         "top_down": 3.0,
+         "bottom_up": 4.0,
+         "lenses": {
+          "macro": {
+           "value": 3,
+           "state": "available",
+           "as_of": "2026-10-06",
+           "source": "stock_sentiment_score_v1",
+           "explanation": null
+          },
+          "sentiment": {
+           "value": 4,
+           "state": "partial",
+           "as_of": "2026-10-06",
+           "source": "stock_sentiment_score_v1",
+           "explanation": "Uses 3 of 4 inputs; missing: news."
+          },
+          "factor": {
+           "value": 2,
+           "state": "available",
+           "as_of": "2026-10-06",
+           "source": "stock_scores_latest_v1",
+           "explanation": "Derived from the available within-market momentum, value and quality percentiles."
+          },
+          "technical": {
+           "value": 4,
+           "state": "available",
+           "as_of": "2026-10-06",
+           "source": "stock_scores_latest_v1",
+           "explanation": null
+          },
+          "fundamental": {
+           "value": 4,
+           "state": "available",
+           "as_of": "2026-10-06",
+           "source": "stock_scores_latest_v1",
+           "explanation": null
+          },
+          "risk": {
+           "value": 4,
+           "state": "available",
+           "as_of": "2026-10-05",
+           "source": "ticker_risk_metrics_latest_v1",
+           "explanation": null
+          }
+         }
+        }
+       }
+      ],
+      "error": null
+     },
+     {
+      "tab": "macro",
+      "label": "Macro Risk",
+      "ok": true,
+      "as_of_date": "2026-09-30",
+      "source_url": "example_project.stock_data.macro_cycle_composites_v2",
+      "headline": "Macro Risk (placeholder): leading -0.81, coincident +0.21, lagging +0.71.",
+      "lines": [
+       "Placeholder line: composite scores are synthetic fixture values."
+      ],
+      "scores": {
+       "leading": -0.8138,
+       "coincident": 0.2126,
+       "lagging": 0.707
+      }
+     },
+     {
+      "tab": "ml_clusters",
+      "label": "ML Market Map",
+      "ok": true,
+      "headline": "ML Market Map (placeholder): 7 clusters; largest is 'poor risk-adj return · falling (3m) · deep pullbacks (21d)'.",
+      "lines": [
+       "Placeholder line 1: see the ml/clusters fixture for the numbers.",
+       "Placeholder line 2: see the ml/clusters fixture for the numbers.",
+       "Placeholder line 3: see the ml/clusters fixture for the numbers."
+      ],
+      "tab_url": "https://surgeflows.capital/ml?market=hk",
+      "as_of_date": "2026-10-06"
+     },
+     {
+      "tab": "news",
+      "label": "News & Sentiment",
+      "ok": true,
+      "source_url": "https://surgeflows.capital/api/news/feed?market=hk&limit=3",
+      "tab_url": "https://surgeflows.capital/news",
+      "headline": "News & Sentiment (placeholder): 40 fixture articles, mean score +0.03.",
+      "lines": [
+       "Placeholder line: headlines are synthetic.",
+       "Placeholder line: scores are synthetic."
+      ],
+      "articles": [
+       {
+        "article_id": "c15a5eb895848dd5f38ae3fdc33dfdbb",
+        "published_utc": "2026-10-07T04:49:57Z",
+        "title": "合成樣本：恒指窄幅上落",
+        "description": "合成樣本：恒指窄幅上落 (placeholder text, not a real article).",
+        "publisher_name": "香港電台 財經",
+        "article_url": "https://example.com/hk/rthk_hk_finance/c15a5eb895848dd5f38ae3fdc33dfdbb",
+        "tickers": "[]",
+        "ticker_count": 0,
+        "keywords": "[\"no_ticker_match\"]",
+        "sentiment_score": 0.0,
+        "sentiment_label": "neutral",
+        "provider": "rthk_hk_finance",
+        "source_family": "media_rss_rthk_hk_finance",
+        "language": "zh",
+        "article_type": "media",
+        "sentiment_available": true,
+        "content_available": true
+       },
+       {
+        "article_id": "94805768fd53fcfcb593f2fe59034314",
+        "published_utc": "2026-10-07T04:25:32Z",
+        "title": "盛中置业 - 合成樣本公告",
+        "description": "盛中置业 - 合成樣本公告",
+        "publisher_name": "HKEXnews",
+        "article_url": "https://example.com/hk/hkexnews/94805768fd53fcfcb593f2fe59034314",
+        "tickers": "[\"03280\"]",
+        "ticker_count": 1,
+        "keywords": "[\"ticker_matched\"]",
+        "sentiment_score": 0.6,
+        "sentiment_label": "positive",
+        "provider": "hkexnews",
+        "source_family": "hkexnews_titles",
+        "language": "zh",
+        "article_type": "disclosure",
+        "sentiment_available": true,
+        "content_available": true
+       },
+       {
+        "article_id": "ee58c8f328e6f6f2e48ab5b54ae19be9",
+        "published_utc": "2026-10-07T03:19:11Z",
+        "title": "创科实业 - 合成樣本公告",
+        "description": "创科实业 - 合成樣本公告",
+        "publisher_name": "HKEXnews",
+        "article_url": "https://example.com/hk/hkexnews/ee58c8f328e6f6f2e48ab5b54ae19be9",
+        "tickers": "[\"00669\", \"02965\", \"03756\"]",
+        "ticker_count": 3,
+        "keywords": "[\"ticker_matched\"]",
+        "sentiment_score": -0.2,
+        "sentiment_label": "negative",
+        "provider": "hkexnews",
+        "source_family": "hkexnews_titles",
+        "language": "zh",
+        "article_type": "disclosure",
+        "sentiment_available": true,
+        "content_available": true
+       }
+      ],
+      "error": null
+     }
+    ],
+    "source_status": {
+     "market": "hk",
+     "section_count": 8,
+     "ok_sections": 8
+    }
+   }
+  ],
+  "methodology_version": "daily_notes_v1_0",
+  "agent_rating_contract": {
+   "schema_version": "notes_agent_rating_v1",
+   "status": "available",
+   "scale": {
+    "min": 1,
+    "max": 5
+   },
+   "top_down": [
+    "macro",
+    "sentiment",
+    "factor"
+   ],
+   "bottom_up": [
+    "technical",
+    "fundamental",
+    "risk"
+   ],
+   "method": "Deterministic within-market evidence lenses, materialised daily. Research diagnostics, not votes."
+  },
+  "disclosure": "Research context only. Notes summarise SurgeFlow dashboard data and are not investment advice. Fixture notes are synthetic placeholders."
+ }
+}

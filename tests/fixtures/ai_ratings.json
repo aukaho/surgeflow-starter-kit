@@ -1,0 +1,1326 @@
+{
+ "ok": true,
+ "schema_version": "surgeflow.ai_ratings.v1",
+ "source": "/api/fund/hotlist-checkpoint",
+ "market": "us",
+ "note": "Automated research documentation; not investment advice or a solicitation.",
+ "data": {
+  "checkpoint_id": "flow_capital_live_v22_20260904T0215",
+  "checkpoint_time": "2026-09-04T02:15:00+00:00",
+  "checkpoint_index": 2,
+  "as_of_date": "2026-09-03",
+  "market": "us",
+  "decision_session_date": "2026-09-03",
+  "hotlist_size": 12,
+  "names": [
+   {
+    "ticker": "NGIK",
+    "composite_score": 73.5,
+    "in_top5": true,
+    "duration_on_list_days": 4,
+    "headline_comment": "Placeholder summary for NGIK: synthetic composite 73.5; strongest seat technical, most cautious seat risk.",
+    "per_analyst": {
+     "technical": {
+      "score": 87.0,
+      "comment": "Placeholder technical note for NGIK: synthetic score 87/100, supportive read."
+     },
+     "factor": {
+      "score": 44.0,
+      "comment": "Placeholder factor note for NGIK: synthetic score 44/100, mixed read."
+     },
+     "risk": {
+      "score": null,
+      "comment": "Placeholder: no risk evidence was routed for NGIK in this synthetic checkpoint, so no score."
+     },
+     "sentiment": {
+      "score": 81.0,
+      "comment": "Placeholder sentiment note for NGIK: synthetic score 81/100, supportive read."
+     },
+     "fundamental": {
+      "score": 82.0,
+      "comment": "Placeholder fundamental note for NGIK: synthetic score 82/100, supportive read."
+     },
+     "macro": {
+      "score": null,
+      "comment": "Placeholder: no macro evidence was routed for NGIK in this synthetic checkpoint, so no score."
+     }
+    },
+    "rank": 1,
+    "long": true,
+    "short": false,
+    "return_since": {
+     "anchor_close": 25.14,
+     "anchor_date": "2026-09-03",
+     "return_since_pct": 11.97,
+     "current_price": 28.15,
+     "current_source": "live",
+     "anchor_status": "anchored",
+     "direction": "long"
+    },
+    "pick_ledger": {
+     "pick_id": "flow_capital_live_v22_20260904T0215:NGIK",
+     "checkpoint_id": "flow_capital_live_v22_20260904T0215",
+     "picked_at": "2026-09-04T02:15:00+00:00",
+     "session_date": "2026-09-03",
+     "direction": "long",
+     "hotlist_first_seen_at": "2026-09-03T17:17:51+00:00",
+     "hotlist_last_seen_at": "2026-09-03T19:55:38+00:00",
+     "hotlist_snapshot_minutes": 69,
+     "best_hotlist_rank": 1425,
+     "entry_mark": {
+      "price": 26.0119,
+      "snapshot_ts": "2026-09-03T19:55:38+00:00",
+      "rank": 1195,
+      "projected_yest": 3.286804,
+      "intraday_return_pct": 5.1576,
+      "source": "nearest_hotlist_snapshot"
+     },
+     "return_anchor": {
+      "price": 25.14,
+      "date": "2026-09-03",
+      "status": "anchored"
+     },
+     "stop": {
+      "state": "working",
+      "stop_hit": false,
+      "hard_stop_pct": -8.0,
+      "warning_pct": -5.0,
+      "stop_price": 23.1288,
+      "message": "Paper stop not hit."
+     },
+     "decision": {
+      "direction": "paper long",
+      "summary": "Placeholder summary for NGIK: synthetic composite 73.5; strongest seat technical, most cautious seat risk.",
+      "strongest_agents": [
+       {
+        "agent": "technical",
+        "score": 87.0,
+        "comment": "Placeholder technical note for NGIK: synthetic score 87/100, supportive read."
+       },
+       {
+        "agent": "fundamental",
+        "score": 82.0,
+        "comment": "Placeholder fundamental note for NGIK: synthetic score 82/100, supportive read."
+       },
+       {
+        "agent": "sentiment",
+        "score": 81.0,
+        "comment": "Placeholder sentiment note for NGIK: synthetic score 81/100, supportive read."
+       }
+      ],
+      "caution_agents": [
+       {
+        "agent": "risk",
+        "score": null,
+        "comment": "Placeholder: no risk evidence was routed for NGIK in this synthetic checkpoint, so no score."
+       },
+       {
+        "agent": "macro",
+        "score": null,
+        "comment": "Placeholder: no macro evidence was routed for NGIK in this synthetic checkpoint, so no score."
+       },
+       {
+        "agent": "factor",
+        "score": 44.0,
+        "comment": "Placeholder factor note for NGIK: synthetic score 44/100, mixed read."
+       }
+      ]
+     },
+     "reflection": null
+    }
+   },
+   {
+    "ticker": "XCCK",
+    "composite_score": 47.25,
+    "in_top5": true,
+    "duration_on_list_days": 1,
+    "headline_comment": "Placeholder summary for XCCK: synthetic composite 47.25; strongest seat fundamental, most cautious seat risk.",
+    "per_analyst": {
+     "macro": {
+      "score": null,
+      "comment": "Placeholder: no macro evidence was routed for XCCK in this synthetic checkpoint, so no score."
+     },
+     "risk": {
+      "score": null,
+      "comment": "Placeholder: no risk evidence was routed for XCCK in this synthetic checkpoint, so no score."
+     },
+     "fundamental": {
+      "score": 65.0,
+      "comment": "Placeholder fundamental note for XCCK: synthetic score 65/100, supportive read."
+     },
+     "sentiment": {
+      "score": 42.0,
+      "comment": "Placeholder sentiment note for XCCK: synthetic score 42/100, mixed read."
+     },
+     "factor": {
+      "score": 35.0,
+      "comment": "Placeholder factor note for XCCK: synthetic score 35/100, mixed read."
+     },
+     "technical": {
+      "score": 47.0,
+      "comment": "Placeholder technical note for XCCK: synthetic score 47/100, mixed read."
+     }
+    },
+    "rank": 2,
+    "long": false,
+    "short": false,
+    "return_since": null,
+    "pick_ledger": {
+     "pick_id": "flow_capital_live_v22_20260904T0215:XCCK",
+     "checkpoint_id": "flow_capital_live_v22_20260904T0215",
+     "picked_at": "2026-09-04T02:15:00+00:00",
+     "session_date": "2026-09-03",
+     "direction": "watch",
+     "hotlist_first_seen_at": "2026-09-03T16:05:51+00:00",
+     "hotlist_last_seen_at": "2026-09-03T17:21:51+00:00",
+     "hotlist_snapshot_minutes": 36,
+     "best_hotlist_rank": 604,
+     "entry_mark": {
+      "price": 10.3424,
+      "snapshot_ts": "2026-09-03T17:21:51+00:00",
+      "rank": 949,
+      "projected_yest": 4.110508,
+      "intraday_return_pct": 17.3762,
+      "source": "nearest_hotlist_snapshot"
+     },
+     "return_anchor": {
+      "price": null,
+      "date": null,
+      "status": null
+     },
+     "stop": {
+      "state": "watch_only",
+      "stop_hit": false,
+      "hard_stop_pct": -8.0,
+      "warning_pct": -5.0,
+      "message": "Watch only: not in the paper long/short book, so no stop applies."
+     },
+     "decision": {
+      "direction": "watch only",
+      "summary": "Placeholder summary for XCCK: synthetic composite 47.25; strongest seat fundamental, most cautious seat risk.",
+      "strongest_agents": [
+       {
+        "agent": "fundamental",
+        "score": 65.0,
+        "comment": "Placeholder fundamental note for XCCK: synthetic score 65/100, supportive read."
+       },
+       {
+        "agent": "technical",
+        "score": 47.0,
+        "comment": "Placeholder technical note for XCCK: synthetic score 47/100, mixed read."
+       },
+       {
+        "agent": "sentiment",
+        "score": 42.0,
+        "comment": "Placeholder sentiment note for XCCK: synthetic score 42/100, mixed read."
+       }
+      ],
+      "caution_agents": [
+       {
+        "agent": "risk",
+        "score": null,
+        "comment": "Placeholder: no risk evidence was routed for XCCK in this synthetic checkpoint, so no score."
+       },
+       {
+        "agent": "macro",
+        "score": null,
+        "comment": "Placeholder: no macro evidence was routed for XCCK in this synthetic checkpoint, so no score."
+       },
+       {
+        "agent": "factor",
+        "score": 35.0,
+        "comment": "Placeholder factor note for XCCK: synthetic score 35/100, mixed read."
+       }
+      ]
+     },
+     "reflection": null
+    }
+   },
+   {
+    "ticker": "IZH",
+    "composite_score": 41.5,
+    "in_top5": true,
+    "duration_on_list_days": 3,
+    "headline_comment": "Placeholder summary for IZH: synthetic composite 41.5; strongest seat technical, most cautious seat risk.",
+    "per_analyst": {
+     "risk": {
+      "score": null,
+      "comment": "Placeholder: no risk evidence was routed for IZH in this synthetic checkpoint, so no score."
+     },
+     "sentiment": {
+      "score": 30.0,
+      "comment": "Placeholder sentiment note for IZH: synthetic score 30/100, cautious read."
+     },
+     "fundamental": {
+      "score": 35.0,
+      "comment": "Placeholder fundamental note for IZH: synthetic score 35/100, mixed read."
+     },
+     "macro": {
+      "score": null,
+      "comment": "Placeholder: no macro evidence was routed for IZH in this synthetic checkpoint, so no score."
+     },
+     "factor": {
+      "score": 33.0,
+      "comment": "Placeholder factor note for IZH: synthetic score 33/100, cautious read."
+     },
+     "technical": {
+      "score": 68.0,
+      "comment": "Placeholder technical note for IZH: synthetic score 68/100, supportive read."
+     }
+    },
+    "rank": 3,
+    "long": false,
+    "short": false,
+    "return_since": null,
+    "pick_ledger": {
+     "pick_id": "flow_capital_live_v22_20260904T0215:IZH",
+     "checkpoint_id": "flow_capital_live_v22_20260904T0215",
+     "picked_at": "2026-09-04T02:15:00+00:00",
+     "session_date": "2026-09-03",
+     "direction": "watch",
+     "hotlist_first_seen_at": "2026-09-03T17:25:08+00:00",
+     "hotlist_last_seen_at": "2026-09-03T18:20:08+00:00",
+     "hotlist_snapshot_minutes": 55,
+     "best_hotlist_rank": 1879,
+     "entry_mark": {
+      "price": 13.239,
+      "snapshot_ts": "2026-09-03T18:20:08+00:00",
+      "rank": 1483,
+      "projected_yest": 4.847416,
+      "intraday_return_pct": 16.8846,
+      "source": "nearest_hotlist_snapshot"
+     },
+     "return_anchor": {
+      "price": null,
+      "date": null,
+      "status": null
+     },
+     "stop": {
+      "state": "watch_only",
+      "stop_hit": false,
+      "hard_stop_pct": -8.0,
+      "warning_pct": -5.0,
+      "message": "Watch only: not in the paper long/short book, so no stop applies."
+     },
+     "decision": {
+      "direction": "watch only",
+      "summary": "Placeholder summary for IZH: synthetic composite 41.5; strongest seat technical, most cautious seat risk.",
+      "strongest_agents": [
+       {
+        "agent": "technical",
+        "score": 68.0,
+        "comment": "Placeholder technical note for IZH: synthetic score 68/100, supportive read."
+       },
+       {
+        "agent": "fundamental",
+        "score": 35.0,
+        "comment": "Placeholder fundamental note for IZH: synthetic score 35/100, mixed read."
+       },
+       {
+        "agent": "factor",
+        "score": 33.0,
+        "comment": "Placeholder factor note for IZH: synthetic score 33/100, cautious read."
+       }
+      ],
+      "caution_agents": [
+       {
+        "agent": "risk",
+        "score": null,
+        "comment": "Placeholder: no risk evidence was routed for IZH in this synthetic checkpoint, so no score."
+       },
+       {
+        "agent": "macro",
+        "score": null,
+        "comment": "Placeholder: no macro evidence was routed for IZH in this synthetic checkpoint, so no score."
+       },
+       {
+        "agent": "sentiment",
+        "score": 30.0,
+        "comment": "Placeholder sentiment note for IZH: synthetic score 30/100, cautious read."
+       }
+      ]
+     },
+     "reflection": null
+    }
+   },
+   {
+    "ticker": "YQVA",
+    "composite_score": 36.75,
+    "in_top5": true,
+    "duration_on_list_days": 3,
+    "headline_comment": "Placeholder summary for YQVA: synthetic composite 36.75; strongest seat fundamental, most cautious seat sentiment.",
+    "per_analyst": {
+     "risk": {
+      "score": 38.0,
+      "comment": "Placeholder risk note for YQVA: synthetic score 38/100, mixed read."
+     },
+     "technical": {
+      "score": 40.0,
+      "comment": "Placeholder technical note for YQVA: synthetic score 40/100, mixed read."
+     },
+     "sentiment": {
+      "score": 9.0,
+      "comment": "Placeholder sentiment note for YQVA: synthetic score 9/100, cautious read."
+     },
+     "factor": {
+      "score": 37.0,
+      "comment": "Placeholder factor note for YQVA: synthetic score 37/100, mixed read."
+     },
+     "macro": {
+      "score": 35.0,
+      "comment": "Placeholder macro note for YQVA: synthetic score 35/100, mixed read."
+     },
+     "fundamental": {
+      "score": 61.0,
+      "comment": "Placeholder fundamental note for YQVA: synthetic score 61/100, supportive read."
+     }
+    },
+    "rank": 4,
+    "long": false,
+    "short": false,
+    "return_since": null,
+    "pick_ledger": {
+     "pick_id": "flow_capital_live_v22_20260904T0215:YQVA",
+     "checkpoint_id": "flow_capital_live_v22_20260904T0215",
+     "picked_at": "2026-09-04T02:15:00+00:00",
+     "session_date": "2026-09-03",
+     "direction": "watch",
+     "hotlist_first_seen_at": "2026-09-03T13:31:43+00:00",
+     "hotlist_last_seen_at": "2026-09-03T13:56:43+00:00",
+     "hotlist_snapshot_minutes": 64,
+     "best_hotlist_rank": 1435,
+     "entry_mark": {
+      "price": 6.0311,
+      "snapshot_ts": "2026-09-03T13:56:43+00:00",
+      "rank": 1696,
+      "projected_yest": 15.227698,
+      "intraday_return_pct": 8.0622,
+      "source": "nearest_hotlist_snapshot"
+     },
+     "return_anchor": {
+      "price": null,
+      "date": null,
+      "status": null
+     },
+     "stop": {
+      "state": "watch_only",
+      "stop_hit": false,
+      "hard_stop_pct": -8.0,
+      "warning_pct": -5.0,
+      "message": "Watch only: not in the paper long/short book, so no stop applies."
+     },
+     "decision": {
+      "direction": "watch only",
+      "summary": "Placeholder summary for YQVA: synthetic composite 36.75; strongest seat fundamental, most cautious seat sentiment.",
+      "strongest_agents": [
+       {
+        "agent": "fundamental",
+        "score": 61.0,
+        "comment": "Placeholder fundamental note for YQVA: synthetic score 61/100, supportive read."
+       },
+       {
+        "agent": "technical",
+        "score": 40.0,
+        "comment": "Placeholder technical note for YQVA: synthetic score 40/100, mixed read."
+       },
+       {
+        "agent": "risk",
+        "score": 38.0,
+        "comment": "Placeholder risk note for YQVA: synthetic score 38/100, mixed read."
+       }
+      ],
+      "caution_agents": [
+       {
+        "agent": "sentiment",
+        "score": 9.0,
+        "comment": "Placeholder sentiment note for YQVA: synthetic score 9/100, cautious read."
+       },
+       {
+        "agent": "macro",
+        "score": 35.0,
+        "comment": "Placeholder macro note for YQVA: synthetic score 35/100, mixed read."
+       },
+       {
+        "agent": "factor",
+        "score": 37.0,
+        "comment": "Placeholder factor note for YQVA: synthetic score 37/100, mixed read."
+       }
+      ]
+     },
+     "reflection": null
+    }
+   },
+   {
+    "ticker": "WKWP",
+    "composite_score": 31.0,
+    "in_top5": true,
+    "duration_on_list_days": 4,
+    "headline_comment": "Placeholder summary for WKWP: synthetic composite 31; strongest seat sentiment, most cautious seat risk.",
+    "per_analyst": {
+     "factor": {
+      "score": 31.0,
+      "comment": "Placeholder factor note for WKWP: synthetic score 31/100, cautious read."
+     },
+     "technical": {
+      "score": 12.0,
+      "comment": "Placeholder technical note for WKWP: synthetic score 12/100, cautious read."
+     },
+     "macro": {
+      "score": null,
+      "comment": "Placeholder: no macro evidence was routed for WKWP in this synthetic checkpoint, so no score."
+     },
+     "risk": {
+      "score": null,
+      "comment": "Placeholder: no risk evidence was routed for WKWP in this synthetic checkpoint, so no score."
+     },
+     "fundamental": {
+      "score": 26.0,
+      "comment": "Placeholder fundamental note for WKWP: synthetic score 26/100, cautious read."
+     },
+     "sentiment": {
+      "score": 55.0,
+      "comment": "Placeholder sentiment note for WKWP: synthetic score 55/100, mixed read."
+     }
+    },
+    "rank": 5,
+    "long": false,
+    "short": false,
+    "return_since": null,
+    "pick_ledger": {
+     "pick_id": "flow_capital_live_v22_20260904T0215:WKWP",
+     "checkpoint_id": "flow_capital_live_v22_20260904T0215",
+     "picked_at": "2026-09-04T02:15:00+00:00",
+     "session_date": "2026-09-03",
+     "direction": "watch",
+     "hotlist_first_seen_at": "2026-09-03T16:08:50+00:00",
+     "hotlist_last_seen_at": "2026-09-03T19:27:50+00:00",
+     "hotlist_snapshot_minutes": 55,
+     "best_hotlist_rank": 552,
+     "entry_mark": {
+      "price": 19.8893,
+      "snapshot_ts": "2026-09-03T19:27:50+00:00",
+      "rank": 2116,
+      "projected_yest": 14.983769,
+      "intraday_return_pct": 4.7282,
+      "source": "nearest_hotlist_snapshot"
+     },
+     "return_anchor": {
+      "price": null,
+      "date": null,
+      "status": null
+     },
+     "stop": {
+      "state": "watch_only",
+      "stop_hit": false,
+      "hard_stop_pct": -8.0,
+      "warning_pct": -5.0,
+      "message": "Watch only: not in the paper long/short book, so no stop applies."
+     },
+     "decision": {
+      "direction": "watch only",
+      "summary": "Placeholder summary for WKWP: synthetic composite 31; strongest seat sentiment, most cautious seat risk.",
+      "strongest_agents": [
+       {
+        "agent": "sentiment",
+        "score": 55.0,
+        "comment": "Placeholder sentiment note for WKWP: synthetic score 55/100, mixed read."
+       },
+       {
+        "agent": "factor",
+        "score": 31.0,
+        "comment": "Placeholder factor note for WKWP: synthetic score 31/100, cautious read."
+       },
+       {
+        "agent": "fundamental",
+        "score": 26.0,
+        "comment": "Placeholder fundamental note for WKWP: synthetic score 26/100, cautious read."
+       }
+      ],
+      "caution_agents": [
+       {
+        "agent": "risk",
+        "score": null,
+        "comment": "Placeholder: no risk evidence was routed for WKWP in this synthetic checkpoint, so no score."
+       },
+       {
+        "agent": "macro",
+        "score": null,
+        "comment": "Placeholder: no macro evidence was routed for WKWP in this synthetic checkpoint, so no score."
+       },
+       {
+        "agent": "technical",
+        "score": 12.0,
+        "comment": "Placeholder technical note for WKWP: synthetic score 12/100, cautious read."
+       }
+      ]
+     },
+     "reflection": null
+    }
+   },
+   {
+    "ticker": "WMFH",
+    "composite_score": 27.5,
+    "in_top5": false,
+    "duration_on_list_days": 2,
+    "headline_comment": "Placeholder summary for WMFH: synthetic composite 27.5; strongest seat factor, most cautious seat fundamental.",
+    "per_analyst": {
+     "factor": {
+      "score": 34.0,
+      "comment": "Placeholder factor note for WMFH: synthetic score 34/100, cautious read."
+     },
+     "sentiment": {
+      "score": 29.0,
+      "comment": "Placeholder sentiment note for WMFH: synthetic score 29/100, cautious read."
+     },
+     "technical": {
+      "score": 34.0,
+      "comment": "Placeholder technical note for WMFH: synthetic score 34/100, cautious read."
+     },
+     "fundamental": {
+      "score": 13.0,
+      "comment": "Placeholder fundamental note for WMFH: synthetic score 13/100, cautious read."
+     }
+    },
+    "rank": 6,
+    "long": false,
+    "short": false,
+    "return_since": null,
+    "pick_ledger": {
+     "pick_id": "flow_capital_live_v22_20260904T0215:WMFH",
+     "checkpoint_id": "flow_capital_live_v22_20260904T0215",
+     "picked_at": "2026-09-04T02:15:00+00:00",
+     "session_date": "2026-09-03",
+     "direction": "watch",
+     "hotlist_first_seen_at": "2026-09-03T13:56:34+00:00",
+     "hotlist_last_seen_at": "2026-09-03T16:53:34+00:00",
+     "hotlist_snapshot_minutes": 23,
+     "best_hotlist_rank": 951,
+     "entry_mark": {
+      "price": 20.7175,
+      "snapshot_ts": "2026-09-03T16:53:34+00:00",
+      "rank": 1080,
+      "projected_yest": 6.252021,
+      "intraday_return_pct": 10.9039,
+      "source": "nearest_hotlist_snapshot"
+     },
+     "return_anchor": {
+      "price": null,
+      "date": null,
+      "status": null
+     },
+     "stop": {
+      "state": "watch_only",
+      "stop_hit": false,
+      "hard_stop_pct": -8.0,
+      "warning_pct": -5.0,
+      "message": "Watch only: not in the paper long/short book, so no stop applies."
+     },
+     "decision": {
+      "direction": "watch only",
+      "summary": "Placeholder summary for WMFH: synthetic composite 27.5; strongest seat factor, most cautious seat fundamental.",
+      "strongest_agents": [
+       {
+        "agent": "factor",
+        "score": 34.0,
+        "comment": "Placeholder factor note for WMFH: synthetic score 34/100, cautious read."
+       },
+       {
+        "agent": "technical",
+        "score": 34.0,
+        "comment": "Placeholder technical note for WMFH: synthetic score 34/100, cautious read."
+       },
+       {
+        "agent": "sentiment",
+        "score": 29.0,
+        "comment": "Placeholder sentiment note for WMFH: synthetic score 29/100, cautious read."
+       }
+      ],
+      "caution_agents": [
+       {
+        "agent": "fundamental",
+        "score": 13.0,
+        "comment": "Placeholder fundamental note for WMFH: synthetic score 13/100, cautious read."
+       },
+       {
+        "agent": "sentiment",
+        "score": 29.0,
+        "comment": "Placeholder sentiment note for WMFH: synthetic score 29/100, cautious read."
+       },
+       {
+        "agent": "factor",
+        "score": 34.0,
+        "comment": "Placeholder factor note for WMFH: synthetic score 34/100, cautious read."
+       }
+      ]
+     },
+     "reflection": null
+    }
+   },
+   {
+    "ticker": "WIQU",
+    "composite_score": 22.25,
+    "in_top5": false,
+    "duration_on_list_days": 3,
+    "headline_comment": "Placeholder summary for WIQU: synthetic composite 22.25; strongest seat technical, most cautious seat fundamental.",
+    "per_analyst": {
+     "technical": {
+      "score": 30.0,
+      "comment": "Placeholder technical note for WIQU: synthetic score 30/100, cautious read."
+     },
+     "factor": {
+      "score": 26.0,
+      "comment": "Placeholder factor note for WIQU: synthetic score 26/100, cautious read."
+     },
+     "fundamental": {
+      "score": 12.0,
+      "comment": "Placeholder fundamental note for WIQU: synthetic score 12/100, cautious read."
+     },
+     "sentiment": {
+      "score": 21.0,
+      "comment": "Placeholder sentiment note for WIQU: synthetic score 21/100, cautious read."
+     }
+    },
+    "rank": 7,
+    "long": false,
+    "short": false,
+    "return_since": null,
+    "pick_ledger": {
+     "pick_id": "flow_capital_live_v22_20260904T0215:WIQU",
+     "checkpoint_id": "flow_capital_live_v22_20260904T0215",
+     "picked_at": "2026-09-04T02:15:00+00:00",
+     "session_date": "2026-09-03",
+     "direction": "watch",
+     "hotlist_first_seen_at": "2026-09-03T16:40:52+00:00",
+     "hotlist_last_seen_at": "2026-09-03T19:17:52+00:00",
+     "hotlist_snapshot_minutes": 52,
+     "best_hotlist_rank": 1266,
+     "entry_mark": {
+      "price": 9.6107,
+      "snapshot_ts": "2026-09-03T19:17:52+00:00",
+      "rank": 1636,
+      "projected_yest": 4.515027,
+      "intraday_return_pct": 6.6464,
+      "source": "nearest_hotlist_snapshot"
+     },
+     "return_anchor": {
+      "price": null,
+      "date": null,
+      "status": null
+     },
+     "stop": {
+      "state": "watch_only",
+      "stop_hit": false,
+      "hard_stop_pct": -8.0,
+      "warning_pct": -5.0,
+      "message": "Watch only: not in the paper long/short book, so no stop applies."
+     },
+     "decision": {
+      "direction": "watch only",
+      "summary": "Placeholder summary for WIQU: synthetic composite 22.25; strongest seat technical, most cautious seat fundamental.",
+      "strongest_agents": [
+       {
+        "agent": "technical",
+        "score": 30.0,
+        "comment": "Placeholder technical note for WIQU: synthetic score 30/100, cautious read."
+       },
+       {
+        "agent": "factor",
+        "score": 26.0,
+        "comment": "Placeholder factor note for WIQU: synthetic score 26/100, cautious read."
+       },
+       {
+        "agent": "sentiment",
+        "score": 21.0,
+        "comment": "Placeholder sentiment note for WIQU: synthetic score 21/100, cautious read."
+       }
+      ],
+      "caution_agents": [
+       {
+        "agent": "fundamental",
+        "score": 12.0,
+        "comment": "Placeholder fundamental note for WIQU: synthetic score 12/100, cautious read."
+       },
+       {
+        "agent": "sentiment",
+        "score": 21.0,
+        "comment": "Placeholder sentiment note for WIQU: synthetic score 21/100, cautious read."
+       },
+       {
+        "agent": "factor",
+        "score": 26.0,
+        "comment": "Placeholder factor note for WIQU: synthetic score 26/100, cautious read."
+       }
+      ]
+     },
+     "reflection": null
+    }
+   },
+   {
+    "ticker": "WLS",
+    "composite_score": 19.5,
+    "in_top5": false,
+    "duration_on_list_days": 3,
+    "headline_comment": "Placeholder summary for WLS: synthetic composite 19.5; strongest seat sentiment, most cautious seat factor.",
+    "per_analyst": {
+     "factor": {
+      "score": 10.0,
+      "comment": "Placeholder factor note for WLS: synthetic score 10/100, cautious read."
+     },
+     "fundamental": {
+      "score": 18.0,
+      "comment": null
+     },
+     "sentiment": {
+      "score": 28.0,
+      "comment": null
+     },
+     "technical": {
+      "score": 22.0,
+      "comment": null
+     }
+    },
+    "rank": 8,
+    "long": false,
+    "short": true,
+    "return_since": {
+     "anchor_close": 37.82,
+     "anchor_date": "2026-09-03",
+     "return_since_pct": 22.34,
+     "current_price": 29.37,
+     "current_source": "live",
+     "anchor_status": "anchored",
+     "direction": "short"
+    },
+    "pick_ledger": {
+     "pick_id": "flow_capital_live_v22_20260904T0215:WLS",
+     "checkpoint_id": "flow_capital_live_v22_20260904T0215",
+     "picked_at": "2026-09-04T02:15:00+00:00",
+     "session_date": "2026-09-03",
+     "direction": "short",
+     "hotlist_first_seen_at": null,
+     "hotlist_last_seen_at": null,
+     "hotlist_snapshot_minutes": null,
+     "best_hotlist_rank": null,
+     "entry_mark": {
+      "price": null,
+      "snapshot_ts": null,
+      "rank": null,
+      "projected_yest": null,
+      "intraday_return_pct": null,
+      "source": "nearest_hotlist_snapshot"
+     },
+     "return_anchor": {
+      "price": 37.82,
+      "date": "2026-09-03",
+      "status": "anchored"
+     },
+     "stop": {
+      "state": "working",
+      "stop_hit": false,
+      "hard_stop_pct": -8.0,
+      "warning_pct": -5.0,
+      "stop_price": 40.8456,
+      "message": "Paper stop not hit."
+     },
+     "decision": {
+      "direction": "paper short",
+      "summary": "Placeholder summary for WLS: synthetic composite 19.5; strongest seat sentiment, most cautious seat factor.",
+      "strongest_agents": [
+       {
+        "agent": "sentiment",
+        "score": 28.0,
+        "comment": "Placeholder sentiment note for WLS: synthetic score 28/100, cautious read."
+       },
+       {
+        "agent": "technical",
+        "score": 22.0,
+        "comment": "Placeholder technical note for WLS: synthetic score 22/100, cautious read."
+       },
+       {
+        "agent": "fundamental",
+        "score": 18.0,
+        "comment": "Placeholder fundamental note for WLS: synthetic score 18/100, cautious read."
+       }
+      ],
+      "caution_agents": [
+       {
+        "agent": "factor",
+        "score": 10.0,
+        "comment": "Placeholder factor note for WLS: synthetic score 10/100, cautious read."
+       },
+       {
+        "agent": "fundamental",
+        "score": 18.0,
+        "comment": "Placeholder fundamental note for WLS: synthetic score 18/100, cautious read."
+       },
+       {
+        "agent": "technical",
+        "score": 22.0,
+        "comment": "Placeholder technical note for WLS: synthetic score 22/100, cautious read."
+       }
+      ]
+     },
+     "reflection": null
+    }
+   },
+   {
+    "ticker": "QPOJ",
+    "composite_score": 15.0,
+    "in_top5": false,
+    "duration_on_list_days": 3,
+    "headline_comment": "Placeholder summary for QPOJ: synthetic composite 15; strongest seat fundamental, most cautious seat technical.",
+    "per_analyst": {
+     "factor": {
+      "score": 16.0,
+      "comment": "Placeholder factor note for QPOJ: synthetic score 16/100, cautious read."
+     },
+     "sentiment": {
+      "score": 10.0,
+      "comment": null
+     },
+     "fundamental": {
+      "score": 33.0,
+      "comment": null
+     },
+     "technical": {
+      "score": 1.0,
+      "comment": null
+     }
+    },
+    "rank": 9,
+    "long": false,
+    "short": true,
+    "return_since": {
+     "anchor_close": 17.59,
+     "anchor_date": "2026-09-03",
+     "return_since_pct": -1.08,
+     "current_price": 17.78,
+     "current_source": "live",
+     "anchor_status": "anchored",
+     "direction": "short"
+    },
+    "pick_ledger": {
+     "pick_id": "flow_capital_live_v22_20260904T0215:QPOJ",
+     "checkpoint_id": "flow_capital_live_v22_20260904T0215",
+     "picked_at": "2026-09-04T02:15:00+00:00",
+     "session_date": "2026-09-03",
+     "direction": "short",
+     "hotlist_first_seen_at": null,
+     "hotlist_last_seen_at": null,
+     "hotlist_snapshot_minutes": null,
+     "best_hotlist_rank": null,
+     "entry_mark": {
+      "price": null,
+      "snapshot_ts": null,
+      "rank": null,
+      "projected_yest": null,
+      "intraday_return_pct": null,
+      "source": "nearest_hotlist_snapshot"
+     },
+     "return_anchor": {
+      "price": 17.59,
+      "date": "2026-09-03",
+      "status": "anchored"
+     },
+     "stop": {
+      "state": "working",
+      "stop_hit": false,
+      "hard_stop_pct": -8.0,
+      "warning_pct": -5.0,
+      "stop_price": 18.9972,
+      "message": "Paper stop not hit."
+     },
+     "decision": {
+      "direction": "paper short",
+      "summary": "Placeholder summary for QPOJ: synthetic composite 15; strongest seat fundamental, most cautious seat technical.",
+      "strongest_agents": [
+       {
+        "agent": "fundamental",
+        "score": 33.0,
+        "comment": "Placeholder fundamental note for QPOJ: synthetic score 33/100, cautious read."
+       },
+       {
+        "agent": "factor",
+        "score": 16.0,
+        "comment": "Placeholder factor note for QPOJ: synthetic score 16/100, cautious read."
+       },
+       {
+        "agent": "sentiment",
+        "score": 10.0,
+        "comment": "Placeholder sentiment note for QPOJ: synthetic score 10/100, cautious read."
+       }
+      ],
+      "caution_agents": [
+       {
+        "agent": "technical",
+        "score": 1.0,
+        "comment": "Placeholder technical note for QPOJ: synthetic score 1/100, cautious read."
+       },
+       {
+        "agent": "sentiment",
+        "score": 10.0,
+        "comment": "Placeholder sentiment note for QPOJ: synthetic score 10/100, cautious read."
+       },
+       {
+        "agent": "factor",
+        "score": 16.0,
+        "comment": "Placeholder factor note for QPOJ: synthetic score 16/100, cautious read."
+       }
+      ]
+     },
+     "reflection": null
+    }
+   },
+   {
+    "ticker": "BHEA",
+    "composite_score": 12.25,
+    "in_top5": false,
+    "duration_on_list_days": 4,
+    "headline_comment": "Placeholder summary for BHEA: synthetic composite 12.25; strongest seat sentiment, most cautious seat factor.",
+    "per_analyst": {
+     "technical": {
+      "score": 8.0,
+      "comment": null
+     },
+     "sentiment": {
+      "score": 31.0,
+      "comment": null
+     },
+     "factor": {
+      "score": 0.0,
+      "comment": "Placeholder factor note for BHEA: synthetic score 0/100, cautious read."
+     },
+     "fundamental": {
+      "score": 10.0,
+      "comment": null
+     }
+    },
+    "rank": 10,
+    "long": false,
+    "short": true,
+    "return_since": {
+     "anchor_close": 27.79,
+     "anchor_date": "2026-09-03",
+     "return_since_pct": 9.03,
+     "current_price": 25.28,
+     "current_source": "live",
+     "anchor_status": "anchored",
+     "direction": "short"
+    },
+    "pick_ledger": {
+     "pick_id": "flow_capital_live_v22_20260904T0215:BHEA",
+     "checkpoint_id": "flow_capital_live_v22_20260904T0215",
+     "picked_at": "2026-09-04T02:15:00+00:00",
+     "session_date": "2026-09-03",
+     "direction": "short",
+     "hotlist_first_seen_at": null,
+     "hotlist_last_seen_at": null,
+     "hotlist_snapshot_minutes": null,
+     "best_hotlist_rank": null,
+     "entry_mark": {
+      "price": null,
+      "snapshot_ts": null,
+      "rank": null,
+      "projected_yest": null,
+      "intraday_return_pct": null,
+      "source": "nearest_hotlist_snapshot"
+     },
+     "return_anchor": {
+      "price": 27.79,
+      "date": "2026-09-03",
+      "status": "anchored"
+     },
+     "stop": {
+      "state": "working",
+      "stop_hit": false,
+      "hard_stop_pct": -8.0,
+      "warning_pct": -5.0,
+      "stop_price": 30.0132,
+      "message": "Paper stop not hit."
+     },
+     "decision": {
+      "direction": "paper short",
+      "summary": "Placeholder summary for BHEA: synthetic composite 12.25; strongest seat sentiment, most cautious seat factor.",
+      "strongest_agents": [
+       {
+        "agent": "sentiment",
+        "score": 31.0,
+        "comment": "Placeholder sentiment note for BHEA: synthetic score 31/100, cautious read."
+       },
+       {
+        "agent": "fundamental",
+        "score": 10.0,
+        "comment": "Placeholder fundamental note for BHEA: synthetic score 10/100, cautious read."
+       },
+       {
+        "agent": "technical",
+        "score": 8.0,
+        "comment": "Placeholder technical note for BHEA: synthetic score 8/100, cautious read."
+       }
+      ],
+      "caution_agents": [
+       {
+        "agent": "factor",
+        "score": 0.0,
+        "comment": "Placeholder factor note for BHEA: synthetic score 0/100, cautious read."
+       },
+       {
+        "agent": "technical",
+        "score": 8.0,
+        "comment": "Placeholder technical note for BHEA: synthetic score 8/100, cautious read."
+       },
+       {
+        "agent": "fundamental",
+        "score": 10.0,
+        "comment": "Placeholder fundamental note for BHEA: synthetic score 10/100, cautious read."
+       }
+      ]
+     },
+     "reflection": null
+    }
+   },
+   {
+    "ticker": "HEGS",
+    "composite_score": 10.5,
+    "in_top5": false,
+    "duration_on_list_days": 2,
+    "headline_comment": "Placeholder summary for HEGS: synthetic composite 10.5; strongest seat factor, most cautious seat fundamental.",
+    "per_analyst": {
+     "fundamental": {
+      "score": 0.0,
+      "comment": null
+     },
+     "sentiment": {
+      "score": 10.0,
+      "comment": null
+     },
+     "technical": {
+      "score": 6.0,
+      "comment": null
+     },
+     "factor": {
+      "score": 26.0,
+      "comment": "Placeholder factor note for HEGS: synthetic score 26/100, cautious read."
+     }
+    },
+    "rank": 11,
+    "long": false,
+    "short": true,
+    "return_since": {
+     "anchor_close": 16.54,
+     "anchor_date": "2026-09-03",
+     "return_since_pct": 15.96,
+     "current_price": 13.9,
+     "current_source": "live",
+     "anchor_status": "anchored",
+     "direction": "short"
+    },
+    "pick_ledger": {
+     "pick_id": "flow_capital_live_v22_20260904T0215:HEGS",
+     "checkpoint_id": "flow_capital_live_v22_20260904T0215",
+     "picked_at": "2026-09-04T02:15:00+00:00",
+     "session_date": "2026-09-03",
+     "direction": "short",
+     "hotlist_first_seen_at": null,
+     "hotlist_last_seen_at": null,
+     "hotlist_snapshot_minutes": null,
+     "best_hotlist_rank": null,
+     "entry_mark": {
+      "price": null,
+      "snapshot_ts": null,
+      "rank": null,
+      "projected_yest": null,
+      "intraday_return_pct": null,
+      "source": "nearest_hotlist_snapshot"
+     },
+     "return_anchor": {
+      "price": 16.54,
+      "date": "2026-09-03",
+      "status": "anchored"
+     },
+     "stop": {
+      "state": "working",
+      "stop_hit": false,
+      "hard_stop_pct": -8.0,
+      "warning_pct": -5.0,
+      "stop_price": 17.8632,
+      "message": "Paper stop not hit."
+     },
+     "decision": {
+      "direction": "paper short",
+      "summary": "Placeholder summary for HEGS: synthetic composite 10.5; strongest seat factor, most cautious seat fundamental.",
+      "strongest_agents": [
+       {
+        "agent": "factor",
+        "score": 26.0,
+        "comment": "Placeholder factor note for HEGS: synthetic score 26/100, cautious read."
+       },
+       {
+        "agent": "sentiment",
+        "score": 10.0,
+        "comment": "Placeholder sentiment note for HEGS: synthetic score 10/100, cautious read."
+       },
+       {
+        "agent": "technical",
+        "score": 6.0,
+        "comment": "Placeholder technical note for HEGS: synthetic score 6/100, cautious read."
+       }
+      ],
+      "caution_agents": [
+       {
+        "agent": "fundamental",
+        "score": 0.0,
+        "comment": "Placeholder fundamental note for HEGS: synthetic score 0/100, cautious read."
+       },
+       {
+        "agent": "technical",
+        "score": 6.0,
+        "comment": "Placeholder technical note for HEGS: synthetic score 6/100, cautious read."
+       },
+       {
+        "agent": "sentiment",
+        "score": 10.0,
+        "comment": "Placeholder sentiment note for HEGS: synthetic score 10/100, cautious read."
+       }
+      ]
+     },
+     "reflection": null
+    }
+   },
+   {
+    "ticker": "ZCMB",
+    "composite_score": 8.0,
+    "in_top5": false,
+    "duration_on_list_days": 4,
+    "headline_comment": "Placeholder summary for ZCMB: synthetic composite 8; strongest seat sentiment, most cautious seat fundamental.",
+    "per_analyst": {
+     "fundamental": {
+      "score": 0.0,
+      "comment": null
+     },
+     "sentiment": {
+      "score": 32.0,
+      "comment": null
+     },
+     "technical": {
+      "score": 0.0,
+      "comment": null
+     },
+     "factor": {
+      "score": 0.0,
+      "comment": "Placeholder factor note for ZCMB: synthetic score 0/100, cautious read."
+     }
+    },
+    "rank": 12,
+    "long": false,
+    "short": true,
+    "return_since": {
+     "anchor_close": 14.58,
+     "anchor_date": "2026-09-03",
+     "return_since_pct": -30.04,
+     "current_price": 18.96,
+     "current_source": "live",
+     "anchor_status": "anchored",
+     "direction": "short"
+    },
+    "pick_ledger": {
+     "pick_id": "flow_capital_live_v22_20260904T0215:ZCMB",
+     "checkpoint_id": "flow_capital_live_v22_20260904T0215",
+     "picked_at": "2026-09-04T02:15:00+00:00",
+     "session_date": "2026-09-03",
+     "direction": "short",
+     "hotlist_first_seen_at": null,
+     "hotlist_last_seen_at": null,
+     "hotlist_snapshot_minutes": null,
+     "best_hotlist_rank": null,
+     "entry_mark": {
+      "price": null,
+      "snapshot_ts": null,
+      "rank": null,
+      "projected_yest": null,
+      "intraday_return_pct": null,
+      "source": "nearest_hotlist_snapshot"
+     },
+     "return_anchor": {
+      "price": 14.58,
+      "date": "2026-09-03",
+      "status": "anchored"
+     },
+     "stop": {
+      "state": "stopped_out",
+      "stop_hit": true,
+      "hard_stop_pct": -8.0,
+      "warning_pct": -5.0,
+      "stop_price": 15.7464,
+      "message": "Paper stop hit: direction-adjusted return is -30.04%, below the -8% guardrail."
+     },
+     "decision": {
+      "direction": "paper short",
+      "summary": "Placeholder summary for ZCMB: synthetic composite 8; strongest seat sentiment, most cautious seat fundamental.",
+      "strongest_agents": [
+       {
+        "agent": "sentiment",
+        "score": 32.0,
+        "comment": "Placeholder sentiment note for ZCMB: synthetic score 32/100, cautious read."
+       },
+       {
+        "agent": "fundamental",
+        "score": 0.0,
+        "comment": "Placeholder fundamental note for ZCMB: synthetic score 0/100, cautious read."
+       },
+       {
+        "agent": "factor",
+        "score": 0.0,
+        "comment": "Placeholder factor note for ZCMB: synthetic score 0/100, cautious read."
+       }
+      ],
+      "caution_agents": [
+       {
+        "agent": "fundamental",
+        "score": 0.0,
+        "comment": "Placeholder fundamental note for ZCMB: synthetic score 0/100, cautious read."
+       },
+       {
+        "agent": "factor",
+        "score": 0.0,
+        "comment": "Placeholder factor note for ZCMB: synthetic score 0/100, cautious read."
+       },
+       {
+        "agent": "technical",
+        "score": 0.0,
+        "comment": "Placeholder technical note for ZCMB: synthetic score 0/100, cautious read."
+       }
+      ]
+     },
+     "reflection": "Placeholder reflection: the paper leg breached its hard stop; review the thesis against the caution seats."
+    }
+   }
+  ],
+  "top5": [
+   "NGIK",
+   "XCCK",
+   "IZH",
+   "YQVA",
+   "WKWP"
+  ],
+  "left_convictions": [],
+  "stop_reflections": [
+   {
+    "ticker": "ZCMB",
+    "direction": "short",
+    "return_since_pct": -30.04,
+    "picked_at": "2026-09-04T02:15:00+00:00",
+    "message": "Placeholder: stop-loss review required because the paper leg breached the hard stop; compare the thesis with the caution seats before the next revision."
+   }
+  ],
+  "analysts": [
+   "factor",
+   "fundamental",
+   "technical",
+   "sentiment",
+   "macro",
+   "risk"
+  ],
+  "source": "panel_tables"
+ }
+}

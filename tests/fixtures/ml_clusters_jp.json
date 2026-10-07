@@ -1,0 +1,1897 @@
+{
+ "ok": true,
+ "schema_version": "surgeflow.ml_clusters.v1",
+ "source": "/api/ml/latest",
+ "market": "jp",
+ "data": {
+  "available": true,
+  "market": "jp",
+  "run": {
+   "run_id": "ml_jp_2026-10-06_163724",
+   "market": "jp",
+   "as_of_date": "2026-10-06",
+   "age_days": 1,
+   "stale": false,
+   "run_finished_at": "2026-10-06T16:37:40.335871+00:00",
+   "universe_ticker_count": 954,
+   "eligible_count": 900,
+   "clustered_ticker_count": 900,
+   "avg_coverage_ratio": 0.89,
+   "has_prior_comparison": true,
+   "quality": {
+    "k": 9,
+    "silhouette": 0.131,
+    "realized_max_cluster_share": 0.2967,
+    "balance_cap": 0.4,
+    "balance_cap_satisfied": true,
+    "size_entropy": 2.0417,
+    "effective_clusters": 7.7,
+    "n_clusters": 9,
+    "k_scan": [
+     {
+      "k": 6,
+      "silhouette": 0.1736,
+      "max_share": 0.4122
+     },
+     {
+      "k": 7,
+      "silhouette": 0.1998,
+      "max_share": 0.4167
+     },
+     {
+      "k": 8,
+      "silhouette": 0.1327,
+      "max_share": 0.2844
+     },
+     {
+      "k": 9,
+      "silhouette": 0.1362,
+      "max_share": 0.2
+     },
+     {
+      "k": 10,
+      "silhouette": 0.1673,
+      "max_share": 0.3156
+     }
+    ],
+    "cluster_sizes": [
+     267,
+     105,
+     103,
+     99,
+     80,
+     78,
+     76,
+     48,
+     44
+    ],
+    "anomaly_intensity": {
+     "recon_median": 0.07,
+     "recon_p95": 0.132702,
+     "recon_p99": 0.893321,
+     "centroid_median": 3.62662,
+     "centroid_p95": 5.73194,
+     "pct_vs_trailing": 0.4728,
+     "trailing_runs": 20,
+     "legs_correlation": 0.8289,
+     "note": "recon_p95 is the run's 95th-percentile PCA reconstruction error; pct_vs_trailing ranks it against the trailing runs. Synthetic fixture values."
+    },
+    "interpretation": "Silhouette measures how well separated the consensus partition is (-1..1, higher is better). Values near 0.1-0.2 are typical for overlapping equity styles."
+   },
+   "partition_stability": null
+  },
+  "clusters": [
+   {
+    "cluster_id": 0,
+    "cluster_name": "low volatility (1y) · low idio vol · high margin",
+    "ticker_count": 267,
+    "sector_mix": {
+     "Industrials": 101,
+     "Communication Services": 33,
+     "Basic Materials": 26,
+     "Consumer Cyclical": 25,
+     "Technology": 23,
+     "Financial Services": 20
+    },
+    "representative_tickers": [
+     "3090",
+     "7997",
+     "8267",
+     "9482",
+     "1721",
+     "8190",
+     "2591",
+     "5428"
+    ],
+    "top_features": {
+     "rv_252": -0.96,
+     "rv_20": -0.94,
+     "residual_vol_252_d": -0.93,
+     "profit_margin": 0.9,
+     "rv_63": -0.88,
+     "beta_252_d": -0.87
+    },
+    "jaccard_vs_prior": null,
+    "membership_entrants": null,
+    "membership_leavers": null
+   },
+   {
+    "cluster_id": 2,
+    "cluster_name": "favorable excursion edge · rising (3m) · wide 1y upside range",
+    "ticker_count": 105,
+    "sector_mix": {
+     "Industrials": 45,
+     "Technology": 14,
+     "Communication Services": 14,
+     "Consumer Cyclical": 12,
+     "Basic Materials": 9,
+     "Real Estate": 3
+    },
+    "representative_tickers": [
+     "5138",
+     "7820",
+     "9960",
+     "4896",
+     "2317",
+     "7147",
+     "5861",
+     "6556"
+    ],
+    "top_features": {
+     "pa_edge_21d": 1.67,
+     "ret_63d": 1.62,
+     "pa_mfe_52w": 1.61,
+     "ret_126d": 1.61,
+     "pa_edge_52w": 1.57,
+     "pa_mfe_21d": 1.57
+    },
+    "jaccard_vs_prior": null,
+    "membership_entrants": null,
+    "membership_leavers": null
+   },
+   {
+    "cluster_id": 1,
+    "cluster_name": "high growth · rising earnings · strong 1y momentum",
+    "ticker_count": 103,
+    "sector_mix": {
+     "Industrials": 43,
+     "Consumer Cyclical": 19,
+     "Communication Services": 12,
+     "Technology": 12,
+     "Healthcare": 5,
+     "Basic Materials": 4
+    },
+    "representative_tickers": [
+     "5588",
+     "9414",
+     "1310",
+     "4886",
+     "4407",
+     "8264",
+     "2113",
+     "3469"
+    ],
+    "top_features": {
+     "revenue_growth": 1.75,
+     "cfo_growth": 1.23,
+     "ni_growth": 1.15,
+     "ret_252d": 0.68,
+     "pa_mfe_21d": 0.61,
+     "pa_mfe_52w": 0.58
+    },
+    "jaccard_vs_prior": null,
+    "membership_entrants": null,
+    "membership_leavers": null
+   },
+   {
+    "cluster_id": 3,
+    "cluster_name": "falling (3m) · poor risk-adj return · deep pullbacks (21d)",
+    "ticker_count": 99,
+    "sector_mix": {
+     "Industrials": 32,
+     "Communication Services": 13,
+     "Basic Materials": 11,
+     "Consumer Cyclical": 11,
+     "Technology": 9,
+     "Real Estate": 6
+    },
+    "representative_tickers": [
+     "8727",
+     "7376",
+     "264A",
+     "9200",
+     "7596",
+     "3156",
+     "9378",
+     "8163"
+    ],
+    "top_features": {
+     "ret_63d": -1.56,
+     "rolling_sharpe_63": -1.53,
+     "pa_edge_52w": -1.45,
+     "ret_126d": -1.45,
+     "distance_from_high_252": -1.44,
+     "pa_edge_21d": -1.32
+    },
+    "jaccard_vs_prior": null,
+    "membership_entrants": null,
+    "membership_leavers": null
+   },
+   {
+    "cluster_id": 5,
+    "cluster_name": "cheap (high B/P) · high cash yield · cheap (high E/P)",
+    "ticker_count": 80,
+    "sector_mix": {
+     "Industrials": 21,
+     "Consumer Cyclical": 14,
+     "Communication Services": 14,
+     "Basic Materials": 10,
+     "Financial Services": 7,
+     "Healthcare": 4
+    },
+    "representative_tickers": [
+     "8315",
+     "4241",
+     "2648",
+     "2921",
+     "3830",
+     "572A",
+     "7061",
+     "8520"
+    ],
+    "top_features": {
+     "val_bp_z": 2.13,
+     "val_cfop_z": 1.48,
+     "val_ep_z": 1.41,
+     "revenue_growth": -0.66,
+     "turnover_to_mcap": -0.59,
+     "pa_sir_infectious": -0.5
+    },
+    "jaccard_vs_prior": null,
+    "membership_entrants": null,
+    "membership_leavers": null
+   },
+   {
+    "cluster_id": 4,
+    "cluster_name": "expensive (low E/P) · low cash yield · low margin",
+    "ticker_count": 78,
+    "sector_mix": {
+     "Industrials": 26,
+     "Communication Services": 12,
+     "Consumer Cyclical": 12,
+     "Technology": 9,
+     "Financial Services": 6,
+     "Consumer Defensive": 4
+    },
+    "representative_tickers": [
+     "2020",
+     "9622",
+     "5069",
+     "6124",
+     "9935",
+     "2985",
+     "2600",
+     "8435"
+    ],
+    "top_features": {
+     "val_ep_z": -1.94,
+     "val_cfop_z": -1.87,
+     "profit_margin": -1.76,
+     "ni_growth": -1.63,
+     "val_bp_z": -1.4,
+     "cfo_growth": -1.3
+    },
+    "jaccard_vs_prior": null,
+    "membership_entrants": null,
+    "membership_leavers": null
+   },
+   {
+    "cluster_id": 9,
+    "cluster_name": "deep drawdown · poor risk-adj return · deep pullbacks (21d)",
+    "ticker_count": 76,
+    "sector_mix": {
+     "Industrials": 30,
+     "Communication Services": 13,
+     "Consumer Cyclical": 7,
+     "Basic Materials": 7,
+     "Real Estate": 4,
+     "Technology": 4
+    },
+    "representative_tickers": [
+     "5878",
+     "2994",
+     "8483",
+     "7867",
+     "3608",
+     "5681",
+     "6743",
+     "3139"
+    ],
+    "top_features": {
+     "max_drawdown_252": -1.52,
+     "distance_from_high_252": -1.52,
+     "rolling_sharpe_63": -1.49,
+     "pa_mae_21d": -1.46,
+     "pa_mae_52w": -1.43,
+     "downside_vol_63": 1.41
+    },
+    "jaccard_vs_prior": null,
+    "membership_entrants": null,
+    "membership_leavers": null
+   },
+   {
+    "cluster_id": 6,
+    "cluster_name": "wide upside excursions (21d) · attention spent · high turnover",
+    "ticker_count": 48,
+    "sector_mix": {
+     "Industrials": 16,
+     "Technology": 7,
+     "Communication Services": 6,
+     "Basic Materials": 5,
+     "Consumer Cyclical": 5,
+     "Healthcare": 3
+    },
+    "representative_tickers": [
+     "8965",
+     "7230",
+     "445A",
+     "6012",
+     "3783",
+     "9483",
+     "3530",
+     "9607"
+    ],
+    "top_features": {
+     "pa_mfe_21d": 2.07,
+     "pa_sir_infectious": 2.03,
+     "pa_sir_recovered": 1.97,
+     "turnover_to_mcap": 1.88,
+     "ret_20d": 1.74,
+     "vol_of_vol_63": 1.63
+    },
+    "jaccard_vs_prior": null,
+    "membership_entrants": null,
+    "membership_leavers": null
+   },
+   {
+    "cluster_id": 8,
+    "cluster_name": "high leverage · cheap (high B/P) · falling earnings",
+    "ticker_count": 44,
+    "sector_mix": {
+     "Industrials": 15,
+     "Consumer Cyclical": 6,
+     "Technology": 5,
+     "Communication Services": 5,
+     "Basic Materials": 5,
+     "Financial Services": 4
+    },
+    "representative_tickers": [
+     "8415",
+     "211A",
+     "6461",
+     "5767",
+     "6522",
+     "1934",
+     "3740",
+     "6173"
+    ],
+    "top_features": {
+     "leverage_debt_to_mcap": 1.97,
+     "val_bp_z": 0.92,
+     "revenue_growth": -0.65,
+     "ni_growth": -0.63,
+     "cfo_growth": -0.58,
+     "log_market_cap": 0.57
+    },
+    "jaccard_vs_prior": null,
+    "membership_entrants": null,
+    "membership_leavers": null
+   }
+  ],
+  "anomaly_watch": [
+   {
+    "ticker": "5063",
+    "cluster_id": 2,
+    "cluster_name": "favorable excursion edge · rising (3m) · wide 1y upside range",
+    "anomaly_score": 0.999,
+    "pca_reconstruction_error": 1.18667,
+    "centroid_distance": 11.4464,
+    "coverage_ratio": 0.878,
+    "low_coverage": false,
+    "top_drivers": [
+     {
+      "feature": "ret_63d",
+      "z": 5.0
+     },
+     {
+      "feature": "profit_margin",
+      "z": 5.0
+     },
+     {
+      "feature": "pa_edge_21d",
+      "z": 5.0
+     },
+     {
+      "feature": "cfo_growth",
+      "z": -5.0
+     }
+    ]
+   },
+   {
+    "ticker": "6780",
+    "cluster_id": 1,
+    "cluster_name": "high growth · rising earnings · strong 1y momentum",
+    "anomaly_score": 0.9979,
+    "pca_reconstruction_error": 1.15276,
+    "centroid_distance": 11.4713,
+    "coverage_ratio": 0.915,
+    "low_coverage": false,
+    "top_drivers": [
+     {
+      "feature": "ret_20d",
+      "z": 5.0
+     },
+     {
+      "feature": "val_bp_z",
+      "z": 5.0
+     },
+     {
+      "feature": "pa_mfe_21d",
+      "z": -4.73
+     },
+     {
+      "feature": "pa_mae_52w",
+      "z": 2.76
+     }
+    ]
+   },
+   {
+    "ticker": "8914",
+    "cluster_id": 3,
+    "cluster_name": "falling (3m) · poor risk-adj return · deep pullbacks (21d)",
+    "anomaly_score": 0.9968,
+    "pca_reconstruction_error": 1.18147,
+    "centroid_distance": 11.3042,
+    "coverage_ratio": 0.893,
+    "low_coverage": false,
+    "top_drivers": [
+     {
+      "feature": "beta_252_d",
+      "z": -5.0
+     },
+     {
+      "feature": "val_ep_z",
+      "z": 4.84
+     },
+     {
+      "feature": "pa_sir_recovered",
+      "z": 3.85
+     },
+     {
+      "feature": "rv_20",
+      "z": -3.65
+     }
+    ]
+   },
+   {
+    "ticker": "8302",
+    "cluster_id": 8,
+    "cluster_name": "high leverage · cheap (high B/P) · falling earnings",
+    "anomaly_score": 0.9957,
+    "pca_reconstruction_error": 1.20064,
+    "centroid_distance": 10.7647,
+    "coverage_ratio": 0.979,
+    "low_coverage": false,
+    "top_drivers": [
+     {
+      "feature": "r2_252_d",
+      "z": -5.0
+     },
+     {
+      "feature": "revenue_growth",
+      "z": -5.0
+     },
+     {
+      "feature": "pa_mae_21d",
+      "z": -4.94
+     },
+     {
+      "feature": "rolling_sharpe_63",
+      "z": -3.71
+     }
+    ]
+   },
+   {
+    "ticker": "6157",
+    "cluster_id": 9,
+    "cluster_name": "deep drawdown · poor risk-adj return · deep pullbacks (21d)",
+    "anomaly_score": 0.9946,
+    "pca_reconstruction_error": 1.10054,
+    "centroid_distance": 11.003,
+    "coverage_ratio": 0.875,
+    "low_coverage": false,
+    "top_drivers": [
+     {
+      "feature": "rolling_sharpe_63",
+      "z": -5.0
+     },
+     {
+      "feature": "ni_growth",
+      "z": -5.0
+     },
+     {
+      "feature": "pa_mfe_21d",
+      "z": -5.0
+     },
+     {
+      "feature": "val_ep_z",
+      "z": 3.14
+     }
+    ]
+   },
+   {
+    "ticker": "6071",
+    "cluster_id": 6,
+    "cluster_name": "wide upside excursions (21d) · attention spent · high turnover",
+    "anomaly_score": 0.9935,
+    "pca_reconstruction_error": 0.91501,
+    "centroid_distance": 11.2604,
+    "coverage_ratio": 0.973,
+    "low_coverage": false,
+    "top_drivers": [
+     {
+      "feature": "ret_20d",
+      "z": 5.0
+     },
+     {
+      "feature": "revenue_growth",
+      "z": 5.0
+     },
+     {
+      "feature": "ret_252d",
+      "z": 4.61
+     },
+     {
+      "feature": "r2_252_d",
+      "z": -3.83
+     }
+    ]
+   },
+   {
+    "ticker": "1897",
+    "cluster_id": 9,
+    "cluster_name": "deep drawdown · poor risk-adj return · deep pullbacks (21d)",
+    "anomaly_score": 0.9924,
+    "pca_reconstruction_error": 1.01526,
+    "centroid_distance": 11.063,
+    "coverage_ratio": 0.885,
+    "low_coverage": false,
+    "top_drivers": [
+     {
+      "feature": "ret_63d",
+      "z": -5.0
+     },
+     {
+      "feature": "cfo_growth",
+      "z": -5.0
+     },
+     {
+      "feature": "rolling_sharpe_63",
+      "z": 3.78
+     },
+     {
+      "feature": "pa_mae_52w",
+      "z": 2.97
+     }
+    ]
+   },
+   {
+    "ticker": "4745",
+    "cluster_id": 0,
+    "cluster_name": "low volatility (1y) · low idio vol · high margin",
+    "anomaly_score": 0.9913,
+    "pca_reconstruction_error": 0.84648,
+    "centroid_distance": 12.142,
+    "coverage_ratio": 0.948,
+    "low_coverage": false,
+    "top_drivers": [
+     {
+      "feature": "log_market_cap",
+      "z": -5.0
+     },
+     {
+      "feature": "pa_edge_52w",
+      "z": 5.0
+     },
+     {
+      "feature": "cfo_growth",
+      "z": 5.0
+     },
+     {
+      "feature": "ret_20d",
+      "z": -4.83
+     }
+    ]
+   },
+   {
+    "ticker": "6146",
+    "cluster_id": 0,
+    "cluster_name": "low volatility (1y) · low idio vol · high margin",
+    "anomaly_score": 0.9901,
+    "pca_reconstruction_error": 1.06562,
+    "centroid_distance": 10.5622,
+    "coverage_ratio": 0.981,
+    "low_coverage": false,
+    "top_drivers": [
+     {
+      "feature": "ret_63d",
+      "z": 5.0
+     },
+     {
+      "feature": "profit_margin",
+      "z": 5.0
+     },
+     {
+      "feature": "cfo_growth",
+      "z": -5.0
+     },
+     {
+      "feature": "log_market_cap",
+      "z": 2.93
+     }
+    ]
+   },
+   {
+    "ticker": "9014",
+    "cluster_id": 5,
+    "cluster_name": "cheap (high B/P) · high cash yield · cheap (high E/P)",
+    "anomaly_score": 0.989,
+    "pca_reconstruction_error": 0.83077,
+    "centroid_distance": 11.1701,
+    "coverage_ratio": 0.956,
+    "low_coverage": false,
+    "top_drivers": [
+     {
+      "feature": "val_bp_z",
+      "z": 5.0
+     },
+     {
+      "feature": "turnover_to_mcap",
+      "z": -5.0
+     },
+     {
+      "feature": "leverage_debt_to_mcap",
+      "z": -5.0
+     },
+     {
+      "feature": "revenue_growth",
+      "z": -4.65
+     }
+    ]
+   },
+   {
+    "ticker": "8899",
+    "cluster_id": 9,
+    "cluster_name": "deep drawdown · poor risk-adj return · deep pullbacks (21d)",
+    "anomaly_score": 0.9879,
+    "pca_reconstruction_error": 0.93072,
+    "centroid_distance": 10.3888,
+    "coverage_ratio": 0.84,
+    "low_coverage": false,
+    "top_drivers": [
+     {
+      "feature": "ret_20d",
+      "z": -5.0
+     },
+     {
+      "feature": "revenue_growth",
+      "z": 5.0
+     },
+     {
+      "feature": "rv_63",
+      "z": 3.71
+     },
+     {
+      "feature": "rv_20",
+      "z": -2.9
+     }
+    ]
+   },
+   {
+    "ticker": "9516",
+    "cluster_id": 2,
+    "cluster_name": "favorable excursion edge · rising (3m) · wide 1y upside range",
+    "anomaly_score": 0.9868,
+    "pca_reconstruction_error": 0.8489,
+    "centroid_distance": 10.7317,
+    "coverage_ratio": 0.877,
+    "low_coverage": false,
+    "top_drivers": [
+     {
+      "feature": "vol_of_vol_63",
+      "z": -5.0
+     },
+     {
+      "feature": "pa_mae_21d",
+      "z": 5.0
+     },
+     {
+      "feature": "pa_edge_52w",
+      "z": 4.52
+     },
+     {
+      "feature": "ret_252d",
+      "z": 4.29
+     }
+    ]
+   },
+   {
+    "ticker": "3595",
+    "cluster_id": 1,
+    "cluster_name": "high growth · rising earnings · strong 1y momentum",
+    "anomaly_score": 0.9857,
+    "pca_reconstruction_error": 0.8931,
+    "centroid_distance": 10.2714,
+    "coverage_ratio": 0.844,
+    "low_coverage": false,
+    "top_drivers": [
+     {
+      "feature": "val_ep_z",
+      "z": -5.0
+     },
+     {
+      "feature": "rv_20",
+      "z": 3.85
+     },
+     {
+      "feature": "vol_of_vol_63",
+      "z": -3.65
+     },
+     {
+      "feature": "downside_vol_63",
+      "z": 3.57
+     }
+    ]
+   },
+   {
+    "ticker": "8388",
+    "cluster_id": 1,
+    "cluster_name": "high growth · rising earnings · strong 1y momentum",
+    "anomaly_score": 0.9846,
+    "pca_reconstruction_error": 0.85385,
+    "centroid_distance": 9.4932,
+    "coverage_ratio": 0.9,
+    "low_coverage": false,
+    "top_drivers": [
+     {
+      "feature": "pa_sir_infectious",
+      "z": -4.98
+     },
+     {
+      "feature": "downside_vol_63",
+      "z": -4.54
+     },
+     {
+      "feature": "distance_from_high_252",
+      "z": -3.35
+     },
+     {
+      "feature": "pa_mfe_21d",
+      "z": 2.63
+     }
+    ]
+   },
+   {
+    "ticker": "5932",
+    "cluster_id": 1,
+    "cluster_name": "high growth · rising earnings · strong 1y momentum",
+    "anomaly_score": 0.9835,
+    "pca_reconstruction_error": 0.72349,
+    "centroid_distance": 9.7602,
+    "coverage_ratio": 0.869,
+    "low_coverage": false,
+    "top_drivers": [
+     {
+      "feature": "cfo_growth",
+      "z": 5.0
+     },
+     {
+      "feature": "ret_252d",
+      "z": 4.65
+     },
+     {
+      "feature": "downside_vol_63",
+      "z": 3.2
+     },
+     {
+      "feature": "log_market_cap",
+      "z": -3.04
+     }
+    ]
+   },
+   {
+    "ticker": "9789",
+    "cluster_id": 8,
+    "cluster_name": "high leverage · cheap (high B/P) · falling earnings",
+    "anomaly_score": 0.9824,
+    "pca_reconstruction_error": 0.52731,
+    "centroid_distance": 10.7425,
+    "coverage_ratio": 0.925,
+    "low_coverage": false,
+    "top_drivers": [
+     {
+      "feature": "log_market_cap",
+      "z": 5.0
+     },
+     {
+      "feature": "revenue_growth",
+      "z": -5.0
+     },
+     {
+      "feature": "val_bp_z",
+      "z": 3.43
+     },
+     {
+      "feature": "ret_252d",
+      "z": 3.31
+     }
+    ]
+   },
+   {
+    "ticker": "3689",
+    "cluster_id": 3,
+    "cluster_name": "falling (3m) · poor risk-adj return · deep pullbacks (21d)",
+    "anomaly_score": 0.9813,
+    "pca_reconstruction_error": 0.67806,
+    "centroid_distance": 9.127,
+    "coverage_ratio": 0.849,
+    "low_coverage": false,
+    "top_drivers": [
+     {
+      "feature": "r2_252_d",
+      "z": -5.0
+     },
+     {
+      "feature": "val_bp_z",
+      "z": -5.0
+     },
+     {
+      "feature": "pa_edge_21d",
+      "z": -2.14
+     },
+     {
+      "feature": "downside_vol_63",
+      "z": -1.95
+     }
+    ]
+   },
+   {
+    "ticker": "2955",
+    "cluster_id": 4,
+    "cluster_name": "expensive (low E/P) · low cash yield · low margin",
+    "anomaly_score": 0.9802,
+    "pca_reconstruction_error": 0.68678,
+    "centroid_distance": 8.5473,
+    "coverage_ratio": 0.853,
+    "low_coverage": false,
+    "top_drivers": [
+     {
+      "feature": "ni_growth",
+      "z": -4.96
+     },
+     {
+      "feature": "r2_252_d",
+      "z": -4.68
+     },
+     {
+      "feature": "val_ep_z",
+      "z": -3.3
+     },
+     {
+      "feature": "pa_mfe_21d",
+      "z": -3.02
+     }
+    ]
+   },
+   {
+    "ticker": "2298",
+    "cluster_id": 6,
+    "cluster_name": "wide upside excursions (21d) · attention spent · high turnover",
+    "anomaly_score": 0.9791,
+    "pca_reconstruction_error": 0.64368,
+    "centroid_distance": 8.5714,
+    "coverage_ratio": 0.784,
+    "low_coverage": true,
+    "top_drivers": [
+     {
+      "feature": "ret_20d",
+      "z": 5.0
+     },
+     {
+      "feature": "ret_63d",
+      "z": 4.56
+     },
+     {
+      "feature": "distance_from_high_252",
+      "z": 2.73
+     },
+     {
+      "feature": "pa_sir_recovered",
+      "z": 2.27
+     }
+    ]
+   },
+   {
+    "ticker": "6367",
+    "cluster_id": 0,
+    "cluster_name": "low volatility (1y) · low idio vol · high margin",
+    "anomaly_score": 0.9769,
+    "pca_reconstruction_error": 0.61075,
+    "centroid_distance": 8.9791,
+    "coverage_ratio": 0.93,
+    "low_coverage": false,
+    "top_drivers": [
+     {
+      "feature": "pa_edge_21d",
+      "z": 5.0
+     },
+     {
+      "feature": "val_bp_z",
+      "z": -5.0
+     },
+     {
+      "feature": "log_market_cap",
+      "z": 3.11
+     },
+     {
+      "feature": "residual_vol_252_d",
+      "z": -1.83
+     }
+    ]
+   },
+   {
+    "ticker": "5450",
+    "cluster_id": 0,
+    "cluster_name": "low volatility (1y) · low idio vol · high margin",
+    "anomaly_score": 0.978,
+    "pca_reconstruction_error": 0.67911,
+    "centroid_distance": 8.2806,
+    "coverage_ratio": 0.882,
+    "low_coverage": false,
+    "top_drivers": [
+     {
+      "feature": "pa_mfe_21d",
+      "z": 4.62
+     },
+     {
+      "feature": "ret_252d",
+      "z": -4.24
+     },
+     {
+      "feature": "rv_252",
+      "z": -3.87
+     },
+     {
+      "feature": "cfo_growth",
+      "z": 2.19
+     }
+    ]
+   },
+   {
+    "ticker": "7143",
+    "cluster_id": 0,
+    "cluster_name": "low volatility (1y) · low idio vol · high margin",
+    "anomaly_score": 0.9758,
+    "pca_reconstruction_error": 0.65113,
+    "centroid_distance": 8.3785,
+    "coverage_ratio": 0.957,
+    "low_coverage": false,
+    "top_drivers": [
+     {
+      "feature": "vol_of_vol_63",
+      "z": 4.86
+     },
+     {
+      "feature": "r2_252_d",
+      "z": -3.34
+     },
+     {
+      "feature": "pa_mae_21d",
+      "z": -2.91
+     },
+     {
+      "feature": "pa_sir_infectious",
+      "z": -1.83
+     }
+    ]
+   },
+   {
+    "ticker": "6626",
+    "cluster_id": 8,
+    "cluster_name": "high leverage · cheap (high B/P) · falling earnings",
+    "anomaly_score": 0.9747,
+    "pca_reconstruction_error": 0.46189,
+    "centroid_distance": 9.4836,
+    "coverage_ratio": 0.846,
+    "low_coverage": false,
+    "top_drivers": [
+     {
+      "feature": "downside_vol_63",
+      "z": 5.0
+     },
+     {
+      "feature": "leverage_debt_to_mcap",
+      "z": 5.0
+     },
+     {
+      "feature": "val_bp_z",
+      "z": 5.0
+     },
+     {
+      "feature": "ni_growth",
+      "z": -2.86
+     }
+    ]
+   },
+   {
+    "ticker": "4519",
+    "cluster_id": 1,
+    "cluster_name": "high growth · rising earnings · strong 1y momentum",
+    "anomaly_score": 0.9735,
+    "pca_reconstruction_error": 0.5803,
+    "centroid_distance": 8.5465,
+    "coverage_ratio": 0.988,
+    "low_coverage": false,
+    "top_drivers": [
+     {
+      "feature": "profit_margin",
+      "z": -4.04
+     },
+     {
+      "feature": "pa_mae_52w",
+      "z": 3.43
+     },
+     {
+      "feature": "ret_126d",
+      "z": -2.91
+     },
+     {
+      "feature": "pa_mfe_21d",
+      "z": 2.58
+     }
+    ]
+   },
+   {
+    "ticker": "7318",
+    "cluster_id": 4,
+    "cluster_name": "expensive (low E/P) · low cash yield · low margin",
+    "anomaly_score": 0.9724,
+    "pca_reconstruction_error": 0.60834,
+    "centroid_distance": 7.9155,
+    "coverage_ratio": 0.817,
+    "low_coverage": false,
+    "top_drivers": [
+     {
+      "feature": "profit_margin",
+      "z": -5.0
+     },
+     {
+      "feature": "pa_sir_recovered",
+      "z": 4.48
+     },
+     {
+      "feature": "vol_of_vol_63",
+      "z": 4.16
+     },
+     {
+      "feature": "val_bp_z",
+      "z": -2.21
+     }
+    ]
+   },
+   {
+    "ticker": "4285",
+    "cluster_id": 3,
+    "cluster_name": "falling (3m) · poor risk-adj return · deep pullbacks (21d)",
+    "anomaly_score": 0.9713,
+    "pca_reconstruction_error": 0.62224,
+    "centroid_distance": 7.7825,
+    "coverage_ratio": 0.872,
+    "low_coverage": false,
+    "top_drivers": [
+     {
+      "feature": "pa_mfe_52w",
+      "z": -5.0
+     },
+     {
+      "feature": "pa_mae_21d",
+      "z": -4.89
+     },
+     {
+      "feature": "rv_20",
+      "z": -2.73
+     },
+     {
+      "feature": "downside_vol_63",
+      "z": -2.37
+     }
+    ]
+   },
+   {
+    "ticker": "9403",
+    "cluster_id": 8,
+    "cluster_name": "high leverage · cheap (high B/P) · falling earnings",
+    "anomaly_score": 0.9702,
+    "pca_reconstruction_error": 0.45237,
+    "centroid_distance": 7.8011,
+    "coverage_ratio": 0.866,
+    "low_coverage": false,
+    "top_drivers": [
+     {
+      "feature": "r2_252_d",
+      "z": 4.71
+     },
+     {
+      "feature": "distance_from_high_252",
+      "z": -4.07
+     },
+     {
+      "feature": "pa_edge_52w",
+      "z": 3.12
+     },
+     {
+      "feature": "log_market_cap",
+      "z": 2.87
+     }
+    ]
+   },
+   {
+    "ticker": "1804",
+    "cluster_id": 0,
+    "cluster_name": "low volatility (1y) · low idio vol · high margin",
+    "anomaly_score": 0.9691,
+    "pca_reconstruction_error": 0.3424,
+    "centroid_distance": 7.4295,
+    "coverage_ratio": 0.924,
+    "low_coverage": false,
+    "top_drivers": [
+     {
+      "feature": "val_cfop_z",
+      "z": -3.89
+     },
+     {
+      "feature": "pa_mae_52w",
+      "z": -2.93
+     },
+     {
+      "feature": "log_market_cap",
+      "z": -2.89
+     },
+     {
+      "feature": "beta_252_d",
+      "z": -1.81
+     }
+    ]
+   },
+   {
+    "ticker": "6463",
+    "cluster_id": 5,
+    "cluster_name": "cheap (high B/P) · high cash yield · cheap (high E/P)",
+    "anomaly_score": 0.968,
+    "pca_reconstruction_error": 0.41918,
+    "centroid_distance": 7.1691,
+    "coverage_ratio": 0.922,
+    "low_coverage": false,
+    "top_drivers": [
+     {
+      "feature": "turnover_to_mcap",
+      "z": -4.33
+     },
+     {
+      "feature": "rv_20",
+      "z": -4.09
+     },
+     {
+      "feature": "ret_126d",
+      "z": 4.01
+     },
+     {
+      "feature": "val_bp_z",
+      "z": 1.82
+     }
+    ]
+   },
+   {
+    "ticker": "8830",
+    "cluster_id": 0,
+    "cluster_name": "low volatility (1y) · low idio vol · high margin",
+    "anomaly_score": 0.9669,
+    "pca_reconstruction_error": 0.24706,
+    "centroid_distance": 7.2427,
+    "coverage_ratio": 0.937,
+    "low_coverage": false,
+    "top_drivers": [
+     {
+      "feature": "r2_252_d",
+      "z": 4.8
+     },
+     {
+      "feature": "log_market_cap",
+      "z": 4.53
+     },
+     {
+      "feature": "pa_sir_recovered",
+      "z": 2.12
+     },
+     {
+      "feature": "ni_growth",
+      "z": 1.14
+     }
+    ]
+   },
+   {
+    "ticker": "2918",
+    "cluster_id": 9,
+    "cluster_name": "deep drawdown · poor risk-adj return · deep pullbacks (21d)",
+    "anomaly_score": 0.9658,
+    "pca_reconstruction_error": 0.14559,
+    "centroid_distance": 5.9665,
+    "coverage_ratio": 0.81,
+    "low_coverage": false,
+    "top_drivers": [
+     {
+      "feature": "val_ep_z",
+      "z": -3.15
+     },
+     {
+      "feature": "profit_margin",
+      "z": -2.66
+     },
+     {
+      "feature": "val_bp_z",
+      "z": -2.63
+     },
+     {
+      "feature": "downside_vol_63",
+      "z": 2.37
+     }
+    ]
+   },
+   {
+    "ticker": "5788",
+    "cluster_id": 2,
+    "cluster_name": "favorable excursion edge · rising (3m) · wide 1y upside range",
+    "anomaly_score": 0.9647,
+    "pca_reconstruction_error": 0.15944,
+    "centroid_distance": 5.6459,
+    "coverage_ratio": 0.858,
+    "low_coverage": false,
+    "top_drivers": [
+     {
+      "feature": "beta_252_d",
+      "z": 2.45
+     },
+     {
+      "feature": "val_ep_z",
+      "z": 1.75
+     },
+     {
+      "feature": "pa_edge_52w",
+      "z": 1.58
+     },
+     {
+      "feature": "log_market_cap",
+      "z": 1.38
+     }
+    ]
+   },
+   {
+    "ticker": "7974",
+    "cluster_id": 5,
+    "cluster_name": "cheap (high B/P) · high cash yield · cheap (high E/P)",
+    "anomaly_score": 0.9636,
+    "pca_reconstruction_error": 0.12874,
+    "centroid_distance": 5.9039,
+    "coverage_ratio": 0.984,
+    "low_coverage": false,
+    "top_drivers": [
+     {
+      "feature": "log_market_cap",
+      "z": 3.99
+     },
+     {
+      "feature": "val_bp_z",
+      "z": 3.26
+     },
+     {
+      "feature": "residual_vol_252_d",
+      "z": -2.55
+     },
+     {
+      "feature": "val_ep_z",
+      "z": 1.95
+     }
+    ]
+   },
+   {
+    "ticker": "2337",
+    "cluster_id": 0,
+    "cluster_name": "low volatility (1y) · low idio vol · high margin",
+    "anomaly_score": 0.9625,
+    "pca_reconstruction_error": 0.14626,
+    "centroid_distance": 5.0794,
+    "coverage_ratio": 0.961,
+    "low_coverage": false,
+    "top_drivers": [
+     {
+      "feature": "downside_vol_63",
+      "z": -2.07
+     },
+     {
+      "feature": "profit_margin",
+      "z": 2.07
+     },
+     {
+      "feature": "pa_sir_infectious",
+      "z": 1.67
+     },
+     {
+      "feature": "pa_edge_52w",
+      "z": 1.54
+     }
+    ]
+   },
+   {
+    "ticker": "8848",
+    "cluster_id": 1,
+    "cluster_name": "high growth · rising earnings · strong 1y momentum",
+    "anomaly_score": 0.9614,
+    "pca_reconstruction_error": 0.12233,
+    "centroid_distance": 5.6442,
+    "coverage_ratio": 0.842,
+    "low_coverage": false,
+    "top_drivers": [
+     {
+      "feature": "pa_sir_infectious",
+      "z": 2.99
+     },
+     {
+      "feature": "revenue_growth",
+      "z": 2.68
+     },
+     {
+      "feature": "pa_sir_recovered",
+      "z": 2.05
+     },
+     {
+      "feature": "turnover_to_mcap",
+      "z": 2.0
+     }
+    ]
+   },
+   {
+    "ticker": "8431",
+    "cluster_id": 0,
+    "cluster_name": "low volatility (1y) · low idio vol · high margin",
+    "anomaly_score": 0.9603,
+    "pca_reconstruction_error": 0.1994,
+    "centroid_distance": 4.9126,
+    "coverage_ratio": 0.973,
+    "low_coverage": false,
+    "top_drivers": [
+     {
+      "feature": "turnover_to_mcap",
+      "z": -3.13
+     },
+     {
+      "feature": "vol_of_vol_63",
+      "z": -2.36
+     },
+     {
+      "feature": "pa_sir_infectious",
+      "z": -2.33
+     },
+     {
+      "feature": "pa_mfe_21d",
+      "z": -1.98
+     }
+    ]
+   },
+   {
+    "ticker": "5834",
+    "cluster_id": 3,
+    "cluster_name": "falling (3m) · poor risk-adj return · deep pullbacks (21d)",
+    "anomaly_score": 0.9592,
+    "pca_reconstruction_error": 0.12097,
+    "centroid_distance": 5.5129,
+    "coverage_ratio": 0.884,
+    "low_coverage": false,
+    "top_drivers": [
+     {
+      "feature": "ni_growth",
+      "z": -2.15
+     },
+     {
+      "feature": "residual_vol_252_d",
+      "z": 2.06
+     },
+     {
+      "feature": "pa_mae_52w",
+      "z": -2.03
+     },
+     {
+      "feature": "vol_of_vol_63",
+      "z": 1.95
+     }
+    ]
+   },
+   {
+    "ticker": "3288",
+    "cluster_id": 9,
+    "cluster_name": "deep drawdown · poor risk-adj return · deep pullbacks (21d)",
+    "anomaly_score": 0.958,
+    "pca_reconstruction_error": 0.14082,
+    "centroid_distance": 4.9726,
+    "coverage_ratio": 0.941,
+    "low_coverage": false,
+    "top_drivers": [
+     {
+      "feature": "pa_mae_52w",
+      "z": -2.23
+     },
+     {
+      "feature": "pa_mfe_52w",
+      "z": 1.68
+     },
+     {
+      "feature": "revenue_growth",
+      "z": -1.44
+     },
+     {
+      "feature": "max_drawdown_252",
+      "z": -1.42
+     }
+    ]
+   },
+   {
+    "ticker": "7473",
+    "cluster_id": 1,
+    "cluster_name": "high growth · rising earnings · strong 1y momentum",
+    "anomaly_score": 0.9569,
+    "pca_reconstruction_error": 0.178,
+    "centroid_distance": 4.8658,
+    "coverage_ratio": 0.926,
+    "low_coverage": false,
+    "top_drivers": [
+     {
+      "feature": "revenue_growth",
+      "z": 3.85
+     },
+     {
+      "feature": "cfo_growth",
+      "z": 2.58
+     },
+     {
+      "feature": "pa_sir_infectious",
+      "z": 2.17
+     },
+     {
+      "feature": "val_bp_z",
+      "z": 1.38
+     }
+    ]
+   },
+   {
+    "ticker": "6501",
+    "cluster_id": 0,
+    "cluster_name": "low volatility (1y) · low idio vol · high margin",
+    "anomaly_score": 0.9558,
+    "pca_reconstruction_error": 0.11194,
+    "centroid_distance": 6.1542,
+    "coverage_ratio": 0.927,
+    "low_coverage": false,
+    "top_drivers": [
+     {
+      "feature": "log_market_cap",
+      "z": 5.0
+     },
+     {
+      "feature": "rv_252",
+      "z": -2.16
+     },
+     {
+      "feature": "residual_vol_252_d",
+      "z": -1.99
+     },
+     {
+      "feature": "profit_margin",
+      "z": 1.97
+     }
+    ]
+   }
+  ],
+  "anomaly_total": 18,
+  "changed_group": [
+   {
+    "ticker": "1356",
+    "from_cluster_id": 2,
+    "from_cluster_name": "favorable excursion edge · rising (3m) · wide 1y upside range",
+    "to_cluster_id": 6,
+    "to_cluster_name": "wide upside excursions (21d) · attention spent · high turnover",
+    "cluster_confidence": 0.998,
+    "days_in_cluster": 1
+   },
+   {
+    "ticker": "5667",
+    "from_cluster_id": 2,
+    "from_cluster_name": "favorable excursion edge · rising (3m) · wide 1y upside range",
+    "to_cluster_id": 6,
+    "to_cluster_name": "wide upside excursions (21d) · attention spent · high turnover",
+    "cluster_confidence": 0.987,
+    "days_in_cluster": 1
+   },
+   {
+    "ticker": "1600",
+    "from_cluster_id": 3,
+    "from_cluster_name": "falling (3m) · poor risk-adj return · deep pullbacks (21d)",
+    "to_cluster_id": 4,
+    "to_cluster_name": "expensive (low E/P) · low cash yield · low margin",
+    "cluster_confidence": 0.985,
+    "days_in_cluster": 1
+   },
+   {
+    "ticker": "6902",
+    "from_cluster_id": 2,
+    "from_cluster_name": "favorable excursion edge · rising (3m) · wide 1y upside range",
+    "to_cluster_id": 1,
+    "to_cluster_name": "high growth · rising earnings · strong 1y momentum",
+    "cluster_confidence": 0.975,
+    "days_in_cluster": 1
+   },
+   {
+    "ticker": "306A",
+    "from_cluster_id": 6,
+    "from_cluster_name": "wide upside excursions (21d) · attention spent · high turnover",
+    "to_cluster_id": 2,
+    "to_cluster_name": "favorable excursion edge · rising (3m) · wide 1y upside range",
+    "cluster_confidence": 0.975,
+    "days_in_cluster": 1
+   },
+   {
+    "ticker": "6400",
+    "from_cluster_id": 1,
+    "from_cluster_name": "high growth · rising earnings · strong 1y momentum",
+    "to_cluster_id": 2,
+    "to_cluster_name": "favorable excursion edge · rising (3m) · wide 1y upside range",
+    "cluster_confidence": 0.964,
+    "days_in_cluster": 1
+   },
+   {
+    "ticker": "8042",
+    "from_cluster_id": 1,
+    "from_cluster_name": "high growth · rising earnings · strong 1y momentum",
+    "to_cluster_id": 2,
+    "to_cluster_name": "favorable excursion edge · rising (3m) · wide 1y upside range",
+    "cluster_confidence": 0.964,
+    "days_in_cluster": 1
+   },
+   {
+    "ticker": "9330",
+    "from_cluster_id": 5,
+    "from_cluster_name": "cheap (high B/P) · high cash yield · cheap (high E/P)",
+    "to_cluster_id": 0,
+    "to_cluster_name": "low volatility (1y) · low idio vol · high margin",
+    "cluster_confidence": 0.954,
+    "days_in_cluster": 1
+   },
+   {
+    "ticker": "9709",
+    "from_cluster_id": 5,
+    "from_cluster_name": "cheap (high B/P) · high cash yield · cheap (high E/P)",
+    "to_cluster_id": 0,
+    "to_cluster_name": "low volatility (1y) · low idio vol · high margin",
+    "cluster_confidence": 0.95,
+    "days_in_cluster": 1
+   },
+   {
+    "ticker": "539A",
+    "from_cluster_id": 5,
+    "from_cluster_name": "cheap (high B/P) · high cash yield · cheap (high E/P)",
+    "to_cluster_id": 0,
+    "to_cluster_name": "low volatility (1y) · low idio vol · high margin",
+    "cluster_confidence": 0.948,
+    "days_in_cluster": 1
+   },
+   {
+    "ticker": "200A",
+    "from_cluster_id": 8,
+    "from_cluster_name": "high leverage · cheap (high B/P) · falling earnings",
+    "to_cluster_id": 4,
+    "to_cluster_name": "expensive (low E/P) · low cash yield · low margin",
+    "cluster_confidence": 0.948,
+    "days_in_cluster": 1
+   },
+   {
+    "ticker": "9433",
+    "from_cluster_id": 1,
+    "from_cluster_name": "high growth · rising earnings · strong 1y momentum",
+    "to_cluster_id": 0,
+    "to_cluster_name": "low volatility (1y) · low idio vol · high margin",
+    "cluster_confidence": 0.947,
+    "days_in_cluster": 1
+   },
+   {
+    "ticker": "3857",
+    "from_cluster_id": 8,
+    "from_cluster_name": "high leverage · cheap (high B/P) · falling earnings",
+    "to_cluster_id": 4,
+    "to_cluster_name": "expensive (low E/P) · low cash yield · low margin",
+    "cluster_confidence": 0.945,
+    "days_in_cluster": 1
+   },
+   {
+    "ticker": "9622",
+    "from_cluster_id": 8,
+    "from_cluster_name": "high leverage · cheap (high B/P) · falling earnings",
+    "to_cluster_id": 4,
+    "to_cluster_name": "expensive (low E/P) · low cash yield · low margin",
+    "cluster_confidence": 0.942,
+    "days_in_cluster": 1
+   },
+   {
+    "ticker": "5588",
+    "from_cluster_id": 2,
+    "from_cluster_name": "favorable excursion edge · rising (3m) · wide 1y upside range",
+    "to_cluster_id": 1,
+    "to_cluster_name": "high growth · rising earnings · strong 1y momentum",
+    "cluster_confidence": 0.942,
+    "days_in_cluster": 1
+   },
+   {
+    "ticker": "9280",
+    "from_cluster_id": 9,
+    "from_cluster_name": "deep drawdown · poor risk-adj return · deep pullbacks (21d)",
+    "to_cluster_id": 6,
+    "to_cluster_name": "wide upside excursions (21d) · attention spent · high turnover",
+    "cluster_confidence": 0.938,
+    "days_in_cluster": 1
+   },
+   {
+    "ticker": "7679",
+    "from_cluster_id": 5,
+    "from_cluster_name": "cheap (high B/P) · high cash yield · cheap (high E/P)",
+    "to_cluster_id": 0,
+    "to_cluster_name": "low volatility (1y) · low idio vol · high margin",
+    "cluster_confidence": 0.932,
+    "days_in_cluster": 1
+   },
+   {
+    "ticker": "5124",
+    "from_cluster_id": 2,
+    "from_cluster_name": "favorable excursion edge · rising (3m) · wide 1y upside range",
+    "to_cluster_id": 6,
+    "to_cluster_name": "wide upside excursions (21d) · attention spent · high turnover",
+    "cluster_confidence": 0.926,
+    "days_in_cluster": 1
+   },
+   {
+    "ticker": "1605",
+    "from_cluster_id": 1,
+    "from_cluster_name": "high growth · rising earnings · strong 1y momentum",
+    "to_cluster_id": 0,
+    "to_cluster_name": "low volatility (1y) · low idio vol · high margin",
+    "cluster_confidence": 0.924,
+    "days_in_cluster": 1
+   },
+   {
+    "ticker": "7264",
+    "from_cluster_id": 1,
+    "from_cluster_name": "high growth · rising earnings · strong 1y momentum",
+    "to_cluster_id": 0,
+    "to_cluster_name": "low volatility (1y) · low idio vol · high margin",
+    "cluster_confidence": 0.923,
+    "days_in_cluster": 1
+   },
+   {
+    "ticker": "8534",
+    "from_cluster_id": 8,
+    "from_cluster_name": "high leverage · cheap (high B/P) · falling earnings",
+    "to_cluster_id": 5,
+    "to_cluster_name": "cheap (high B/P) · high cash yield · cheap (high E/P)",
+    "cluster_confidence": 0.922,
+    "days_in_cluster": 1
+   },
+   {
+    "ticker": "8370",
+    "from_cluster_id": 1,
+    "from_cluster_name": "high growth · rising earnings · strong 1y momentum",
+    "to_cluster_id": 6,
+    "to_cluster_name": "wide upside excursions (21d) · attention spent · high turnover",
+    "cluster_confidence": 0.916,
+    "days_in_cluster": 1
+   },
+   {
+    "ticker": "2508",
+    "from_cluster_id": 5,
+    "from_cluster_name": "cheap (high B/P) · high cash yield · cheap (high E/P)",
+    "to_cluster_id": 0,
+    "to_cluster_name": "low volatility (1y) · low idio vol · high margin",
+    "cluster_confidence": 0.916,
+    "days_in_cluster": 1
+   },
+   {
+    "ticker": "8031",
+    "from_cluster_id": 5,
+    "from_cluster_name": "cheap (high B/P) · high cash yield · cheap (high E/P)",
+    "to_cluster_id": 0,
+    "to_cluster_name": "low volatility (1y) · low idio vol · high margin",
+    "cluster_confidence": 0.903,
+    "days_in_cluster": 1
+   },
+   {
+    "ticker": "2584",
+    "from_cluster_id": 9,
+    "from_cluster_name": "deep drawdown · poor risk-adj return · deep pullbacks (21d)",
+    "to_cluster_id": 4,
+    "to_cluster_name": "expensive (low E/P) · low cash yield · low margin",
+    "cluster_confidence": 0.901,
+    "days_in_cluster": 1
+   },
+   {
+    "ticker": "2522",
+    "from_cluster_id": 3,
+    "from_cluster_name": "falling (3m) · poor risk-adj return · deep pullbacks (21d)",
+    "to_cluster_id": 9,
+    "to_cluster_name": "deep drawdown · poor risk-adj return · deep pullbacks (21d)",
+    "cluster_confidence": 0.9,
+    "days_in_cluster": 1
+   },
+   {
+    "ticker": "7231",
+    "from_cluster_id": 9,
+    "from_cluster_name": "deep drawdown · poor risk-adj return · deep pullbacks (21d)",
+    "to_cluster_id": 3,
+    "to_cluster_name": "falling (3m) · poor risk-adj return · deep pullbacks (21d)",
+    "cluster_confidence": 0.892,
+    "days_in_cluster": 1
+   },
+   {
+    "ticker": "4945",
+    "from_cluster_id": 8,
+    "from_cluster_name": "high leverage · cheap (high B/P) · falling earnings",
+    "to_cluster_id": 4,
+    "to_cluster_name": "expensive (low E/P) · low cash yield · low margin",
+    "cluster_confidence": 0.882,
+    "days_in_cluster": 1
+   },
+   {
+    "ticker": "5481",
+    "from_cluster_id": 5,
+    "from_cluster_name": "cheap (high B/P) · high cash yield · cheap (high E/P)",
+    "to_cluster_id": 0,
+    "to_cluster_name": "low volatility (1y) · low idio vol · high margin",
+    "cluster_confidence": 0.881,
+    "days_in_cluster": 1
+   },
+   {
+    "ticker": "6778",
+    "from_cluster_id": 9,
+    "from_cluster_name": "deep drawdown · poor risk-adj return · deep pullbacks (21d)",
+    "to_cluster_id": 3,
+    "to_cluster_name": "falling (3m) · poor risk-adj return · deep pullbacks (21d)",
+    "cluster_confidence": 0.881,
+    "days_in_cluster": 1
+   },
+   {
+    "ticker": "3485",
+    "from_cluster_id": 1,
+    "from_cluster_name": "high growth · rising earnings · strong 1y momentum",
+    "to_cluster_id": 0,
+    "to_cluster_name": "low volatility (1y) · low idio vol · high margin",
+    "cluster_confidence": 0.874,
+    "days_in_cluster": 1
+   },
+   {
+    "ticker": "2276",
+    "from_cluster_id": 2,
+    "from_cluster_name": "favorable excursion edge · rising (3m) · wide 1y upside range",
+    "to_cluster_id": 1,
+    "to_cluster_name": "high growth · rising earnings · strong 1y momentum",
+    "cluster_confidence": 0.872,
+    "days_in_cluster": 1
+   },
+   {
+    "ticker": "6501",
+    "from_cluster_id": 5,
+    "from_cluster_name": "cheap (high B/P) · high cash yield · cheap (high E/P)",
+    "to_cluster_id": 0,
+    "to_cluster_name": "low volatility (1y) · low idio vol · high margin",
+    "cluster_confidence": 0.862,
+    "days_in_cluster": 1
+   },
+   {
+    "ticker": "3407",
+    "from_cluster_id": 5,
+    "from_cluster_name": "cheap (high B/P) · high cash yield · cheap (high E/P)",
+    "to_cluster_id": 0,
+    "to_cluster_name": "low volatility (1y) · low idio vol · high margin",
+    "cluster_confidence": 0.86,
+    "days_in_cluster": 1
+   },
+   {
+    "ticker": "211A",
+    "from_cluster_id": 5,
+    "from_cluster_name": "cheap (high B/P) · high cash yield · cheap (high E/P)",
+    "to_cluster_id": 8,
+    "to_cluster_name": "high leverage · cheap (high B/P) · falling earnings",
+    "cluster_confidence": 0.855,
+    "days_in_cluster": 1
+   },
+   {
+    "ticker": "234A",
+    "from_cluster_id": 5,
+    "from_cluster_name": "cheap (high B/P) · high cash yield · cheap (high E/P)",
+    "to_cluster_id": 0,
+    "to_cluster_name": "low volatility (1y) · low idio vol · high margin",
+    "cluster_confidence": 0.852,
+    "days_in_cluster": 1
+   },
+   {
+    "ticker": "8444",
+    "from_cluster_id": 2,
+    "from_cluster_name": "favorable excursion edge · rising (3m) · wide 1y upside range",
+    "to_cluster_id": 0,
+    "to_cluster_name": "low volatility (1y) · low idio vol · high margin",
+    "cluster_confidence": 0.851,
+    "days_in_cluster": 1
+   },
+   {
+    "ticker": "8184",
+    "from_cluster_id": 5,
+    "from_cluster_name": "cheap (high B/P) · high cash yield · cheap (high E/P)",
+    "to_cluster_id": 0,
+    "to_cluster_name": "low volatility (1y) · low idio vol · high margin",
+    "cluster_confidence": 0.85,
+    "days_in_cluster": 1
+   },
+   {
+    "ticker": "6146",
+    "from_cluster_id": 5,
+    "from_cluster_name": "cheap (high B/P) · high cash yield · cheap (high E/P)",
+    "to_cluster_id": 0,
+    "to_cluster_name": "low volatility (1y) · low idio vol · high margin",
+    "cluster_confidence": 0.827,
+    "days_in_cluster": 1
+   },
+   {
+    "ticker": "8831",
+    "from_cluster_id": 2,
+    "from_cluster_name": "favorable excursion edge · rising (3m) · wide 1y upside range",
+    "to_cluster_id": 0,
+    "to_cluster_name": "low volatility (1y) · low idio vol · high margin",
+    "cluster_confidence": 0.823,
+    "days_in_cluster": 1
+   }
+  ],
+  "model_notes": {
+   "cluster_count": 9,
+   "clustered_ticker_count": 900,
+   "anomaly_count_p95": 18,
+   "avg_confidence": 0.789,
+   "changed_count": 153,
+   "feature_count": 33,
+   "feature_set_version": "multi_market_v2_1",
+   "model_version": "unsupervised_features_only_step1",
+   "cluster_model_version": "kmeans_gmm_hier_consensus_v1",
+   "estimator_count": 3,
+   "methodology": "Per-ticker features are robust-scaled (median/IQR) and winsorised, then clustered by a consensus of k-means, a Gaussian mixture and hierarchical clustering. Anomalies combine PCA reconstruction error with distance to the cluster centroid.",
+   "guardrails": [
+    "Macro inputs enter only as per-ticker sensitivities, never as same-day macro levels.",
+    "Each valuation ratio is used once, so the same signal is not counted twice.",
+    "Fundamentals and ownership are carried forward with an explicit age; stale inputs lower coverage.",
+    "Every run records coverage and freshness; an old run is labelled stale instead of being hidden."
+   ],
+   "disclaimer": "An unsupervised description of how the market groups today. Not a prediction and not investment advice."
+  }
+ }
+}
