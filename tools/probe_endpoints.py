@@ -5,7 +5,7 @@
 Saves each live response to tests/fixtures/live/ (git-ignored, never
 committed) and prints, per endpoint, the key paths that exist live but not
 in the mock fixture (+) and the reverse (-). Use it to correct fixtures and
-notebook column names after the API changes. Uses about 40 requests.
+notebook column names after the API changes. Uses about 50 requests.
 """
 from __future__ import annotations
 
@@ -24,6 +24,8 @@ BASE_URL = os.getenv("SURGEFLOW_BASE_URL", "https://stock-api-c4qdowjxva-uc.a.ru
 MARKETS = ("us", "cn", "jp", "hk")
 
 GLOBAL = {
+    "health": "/api/v1/health",
+    "catalog": "/api/v1/catalog",
     "me": "/api/v1/me",
     "summary": "/api/v1/summary",
     "ai_ratings": "/api/v1/ai/ratings",
@@ -67,13 +69,19 @@ def main() -> int:
     session.headers["Authorization"] = f"Bearer {key}"
     LIVE.mkdir(parents=True, exist_ok=True)
 
-    jobs = [(name, path) for name, path in GLOBAL.items()]
+    jobs = [(name, path, {}) for name, path in GLOBAL.items()]
     for name, suffix in PER_MARKET.items():
-        jobs += [(f"{name}_{m}", f"/api/v1/markets/{m}/{suffix}") for m in MARKETS]
+        jobs += [(f"{name}_{m}", f"/api/v1/markets/{m}/{suffix}", {}) for m in MARKETS]
+    # The screen is paged (page_size <= 100); save the three largest-cap pages per market.
+    jobs = [j for j in jobs if not j[0].startswith("screen_")]
+    for m in MARKETS:
+        for page in (1, 2, 3):
+            name = f"screen_{m}" + ("" if page == 1 else f".page{page}")
+            jobs.append((name, f"/api/v1/markets/{m}/screen", {"page": page, "page_size": 100, "sort": "market_cap_usd"}))
     failures = 0
-    for name, path in jobs:
+    for name, path, params in jobs:
         time.sleep(0.5)
-        response = session.get(BASE_URL + path, timeout=60)
+        response = session.get(BASE_URL + path, params=params, timeout=60)
         try:
             payload = response.json()
         except ValueError:
@@ -81,7 +89,7 @@ def main() -> int:
         (LIVE / f"{name}.json").write_text(json.dumps(payload, indent=1, ensure_ascii=False))
         mock_file = FIXTURES / f"{name}.json"
         if not mock_file.exists():
-            mock_file = FIXTURES / f"{name.rsplit('_', 1)[0]}.json"
+            mock_file = FIXTURES / f"{name.split('.')[0].rsplit('_', 1)[0]}.json"
         mock = json.loads(mock_file.read_text()) if mock_file.exists() else {}
         live_paths, mock_paths = paths(payload), paths(mock)
         added, missing = sorted(live_paths - mock_paths), sorted(mock_paths - live_paths)

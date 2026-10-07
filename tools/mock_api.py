@@ -10,19 +10,29 @@ responses come from tests/fixtures/*.json. Fixture lookup for a request path:
 When only the market-agnostic fixture exists, every "market" field equal to
 "us" is rewritten to the requested market. A request for page > 1 returns
 the page fixture ({name}_{m}.page{N}.json) if present, otherwise the base
-fixture with its top-level "rows" emptied, so paging loops terminate.
+fixture with its top-level "rows" emptied and "page" echoed (as the live API
+does past the end), so paging loops terminate.
+
+Endpoints without a market path segment that take ?market= (macro/calendar,
+notes/daily) are served from {name}_{market}.json when that file exists,
+otherwise from {name}.json unchanged. Other query parameters (limit, sort,
+ticker, sentiment, days, checkpoint, page_size) are ignored.
+
+Set SURGEFLOW_FIXTURES_DIR to serve another directory, e.g. the live
+snapshots that tools/probe_endpoints.py saves in tests/fixtures/live/.
 """
 from __future__ import annotations
 
 import copy
 import json
+import os
 import re
 from pathlib import Path
 from urllib.parse import parse_qs, urlparse
 
 import requests
 
-FIXTURES = Path(__file__).resolve().parents[1] / "tests" / "fixtures"
+FIXTURES = Path(os.getenv("SURGEFLOW_FIXTURES_DIR") or Path(__file__).resolve().parents[1] / "tests" / "fixtures")
 CALLS: list[str] = []
 
 
@@ -47,11 +57,14 @@ def resolve(path: str, params: dict) -> tuple[int, dict]:
         return 404, {"ok": False, "error": {"code": "UNSUPPORTED_MARKET", "message": f"market {market} not supported"}}
 
     page = int(params.get("page", 1) or 1)
+    query_market = str(params.get("market") or "").lower()
     candidates = []
     if market:
         if page > 1:
             candidates.append(f"{name}_{market}.page{page}.json")
         candidates.append(f"{name}_{market}.json")
+    elif query_market in ("us", "cn", "jp", "hk"):
+        candidates.append(f"{name}_{query_market}.json")
     candidates.append(f"{name}.json")
     for candidate in candidates:
         file = FIXTURES / candidate
@@ -61,6 +74,8 @@ def resolve(path: str, params: dict) -> tuple[int, dict]:
                 payload = _retarget(payload, market)
             if page > 1 and ".page" not in candidate:
                 payload = copy.deepcopy(payload)
+                if "page" in payload:
+                    payload["page"] = page
                 if isinstance(payload.get("rows"), list):
                     payload["rows"] = []
                 if isinstance(payload.get("data"), dict) and isinstance(payload["data"].get("rows"), list):

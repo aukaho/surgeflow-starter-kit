@@ -90,8 +90,11 @@ def sf_get(path: str, retries: int = 3, **params) -> dict:
         except ValueError:
             raise SurgeFlowError(response.status_code, "NON_JSON", response.text[:200]) from None
         # /health answers 200 with "ok": false when degraded - that is data, not an error.
-        if not response.ok or (payload.get("ok") is False and "error" in payload):
-            error = payload.get("error") or {}
+        # Some endpoints wrap an upstream failure inside a 200: {"ok": true, "data": {"ok": false, "error": ...}}.
+        inner = payload.get("data") if isinstance(payload.get("data"), dict) else {}
+        failed = payload if "error" in payload else inner if inner.get("ok") is False and "error" in inner else None
+        if not response.ok or (failed is not None and failed.get("ok") is False):
+            error = (failed or payload).get("error") or {}
             raise SurgeFlowError(
                 response.status_code,
                 error.get("code", "HTTP_ERROR"),
@@ -99,6 +102,15 @@ def sf_get(path: str, retries: int = 3, **params) -> dict:
             )
         return payload
     raise SurgeFlowError(response.status_code, "RETRIES_EXHAUSTED", path)
+
+
+def sf_try(path: str, **params) -> dict | None:
+    """Like sf_get, but a temporarily unavailable endpoint prints a note and returns None."""
+    try:
+        return sf_get(path, **params)
+    except SurgeFlowError as exc:
+        display(Markdown(f"**{path} is unavailable right now** ({exc}). Skipping this section - try again later."))
+        return None
 
 
 def dig(obj, *keys, default=None):
