@@ -62,7 +62,7 @@
 # | 13F | The quarterly US filing in which managers with at least $100 million in US-listed stocks list their long positions, due 45 days after quarter end |
 # | consensus | Many tracked funds own the stock and give it a large weight |
 # | conviction | At least one fund holds an unusually large position in it |
-# | crowdedness | The share of tracked funds that own it |
+# | crowdedness | The share of funds that own it, out of `n_funds_total` (a count the API sends; it can be smaller than the roster of tracked holders) |
 # | centrality | How connected a stock is in the web of shared holders |
 # | run | One computation of a board. Every board row carries `updated_at`, the time its run wrote it |
 
@@ -1187,12 +1187,16 @@ else:
 # Read every number here as a statement about the **listed stocks only**. The
 # check above tells you how they were picked; in the live data they are the
 # most unusual switchers, so they say nothing about how the other switchers
-# moved or how confident the model is about them. Unusual stocks sit far from
-# their cluster's centre, where the model tends to be less sure of the
-# assignment, so a low confidence on this list is expected by construction.
-# That is why the subtitle compares listed stocks with each other (on the
-# anomaly watch against off it, median against median) rather than with the
-# map-wide `avg_confidence`, which is a mean over every stock.
+# moved or how confident the model is about them. Because the list is a
+# selected sample, compare its stocks with each other, not with the map-wide
+# `avg_confidence` (a mean over every stock). The subtitle does that: on the
+# anomaly watch against off it, median against median. Whether unusual
+# switchers are assigned less confidently is an empirical question, not
+# something the method guarantees: the methodology note says confidence blends
+# how strongly the three clustering methods agree with the Gaussian-mixture
+# posterior, and a stock far from its cluster's centre can still have all
+# three methods agree and a posterior close to 1. Let the two medians answer
+# it for your run; in the live data they have often been equal.
 #
 # **Caveats.**
 #
@@ -1214,7 +1218,7 @@ else:
 # |---|---|---|
 # | `consensus` | Which stocks do many funds own, with large weights? | `consensus_score` (a re-standardised blend of four z-scores), `n_funds_holding` |
 # | `conviction` | Where has a single fund made an unusually large bet? | `ticker_conviction_score`, `max_fund_conviction_z`, `top_conviction_fund` |
-# | `crowdedness` | What share of tracked funds own the stock? | `crowdedness_pct` (a fraction: `n_funds_holding` ÷ `n_funds_total`), `crowdedness_quintile` (1 = most crowded) |
+# | `crowdedness` | What share of the funds counted in `n_funds_total` own the stock? | `crowdedness_pct` (a fraction: `n_funds_holding` ÷ `n_funds_total`), `crowdedness_quintile` (1 = most crowded) |
 # | `position_delta` | What did funds buy or sell since their previous filing? | `n_funds_buying`, `n_funds_selling`, share counts (sales are negative), `delta_z` |
 # | `network` | Which stocks sit at the centre of the web of shared holders? | `degree`, `eigenvector_centrality`, `community_id` |
 # | `ll_predictive` | Which stocks gained the most holders since the previous period? | `n_funds_holding_q`, `n_funds_holding_q_minus_1`, `owner_count_change`, `portfolio_weight_change`, `ll_score_z` |
@@ -1224,6 +1228,12 @@ else:
 # Kong it is every holder that has filed a large-shareholding report: about
 # two thousand in Hong Kong and over twenty thousand in Japan, from asset
 # managers and banks to companies, founders and foundations.
+#
+# **Two fund counts.** The roster size (`data.funds.count`, charted in 4.3) is
+# not the number the boards divide by. The crowdedness board's shares use
+# `n_funds_total`, which can be much smaller (in Hong Kong it has been well
+# under half the roster). Section 4.5 prints both; every "of N funds" share in
+# this notebook names `n_funds_total` so you do not read it as the roster.
 #
 # The payload also carries `signal_gate_status` (how far each signal has passed
 # SurgeFlow's own validation tests), the roster itself (`funds`), and for the
@@ -1819,24 +1829,41 @@ else:
 # catches the worst cases: a position cannot be worth more than the whole
 # company. The screen endpoint (notebook 01) lists market caps, largest first,
 # so for the US we fetch its first `CAP_CHECK_PAGES` pages (the largest
-# companies) and flag a consensus row when
+# companies).
 #
-# - the company is on those pages and the position is worth more than its
-#   market cap, or
-# - the company is **not** on those pages, so its market cap is at most the
-#   smallest one fetched, yet one or two filers report a position worth more
-#   than that.
+# **Two dates.** The position values are as of the holdings date (a quarter
+# end, section 4.3); the screen's market caps are as of its own `as_of_date`,
+# today or yesterday. That can be three months or more later. A holder that
+# owns most of a company (a parent holding a subsidiary, say) can see its
+# correct quarter-end value rise above today's market cap after a fall in the
+# share price. So we flag a value only when it exceeds the cap by a clear
+# margin, `CAP_MARGIN` = 1.5 (50%): even a holder of the whole company would
+# need the price to fall by a third for a correct filing to cross that line.
+# A consensus row is marked when
+#
+# - the company is on the fetched pages and the position is worth more than
+#   1.5 × its market cap ("above the market cap"), or
+# - the company is **not** on the fetched pages, and one or two filers report
+#   a position worth more than 1.5 × the smallest cap fetched ("check"). We do
+#   not know this company's cap: if the screen lists it, the cap is below the
+#   smallest one fetched, but the ticker may also be missing from the screen
+#   altogether.
 #
 # A stock that many funds hold but that is missing from the pages may simply
 # be missing from the screen's universe (a new listing, for example), so those
-# rows are listed as "not verifiable" rather than flagged. The test runs for
+# rows are listed as "not verifiable" rather than marked, and values above
+# the cap but within the margin are listed without a mark. The test runs for
 # the US only: the screen reports `market_cap_usd`, the other markets' whale
-# values are in local currency, and v1 sends no exchange rates. A flag means
-# "read this value with care", not "proven wrong".
+# values are in local currency, and v1 sends no exchange rates. A mark means
+# "read this value with care" (possibly a unit error in the filing, or a price
+# fall since the holdings date), not "proven wrong".
 
 # %%
+CAP_MARGIN = 1.5          # mark a value only above 1.5 x the cap: room for a price fall since the holdings date
 consensus["market_cap_usd"] = np.nan
-consensus["implausible_value"] = False
+consensus["cap_flag"] = ""                 # "" = not marked; else "above the market cap" or "check" (see above)
+consensus["cap_note"] = ""                 # the same, in words, for the chart's hover and table
+SCREEN_DATE = None                         # the screen's as_of_date: the date of its market caps
 if consensus.empty:
     print("The consensus board is empty: nothing to check.")
 elif MARKET != "us" or CAP_CHECK_PAGES < 1:
@@ -1850,6 +1877,7 @@ else:
             break
         if page == 1:   # on the screen, data_quality is a dictionary of coverage statistics; we leave it out
             show_freshness({k: v for k, v in payload.items() if k != "data_quality"}, "Screen (market caps):")
+            SCREEN_DATE = payload["as_of_date"]
         batch = records(payload, "screen")
         cap_rows += batch
         if not batch or page >= payload["total_pages"]:
@@ -1861,25 +1889,54 @@ else:
     if caps.empty:
         print("No market caps came back, so the check is skipped.")
     else:
+        value_dates = consensus["as_of_date"].dropna().dt.strftime("%Y-%m-%d").unique()
+        print(f"Positions as of {', '.join(sorted(value_dates)) or 'an unknown date'} (the holdings date); market caps "
+              f"as of {SCREEN_DATE} (the screen). A value is marked only above {CAP_MARGIN:g} × the cap, to allow "
+              "for price moves between the two dates.")
         smallest = float(caps["market_cap_usd"].min())
         consensus["market_cap_usd"] = consensus["ticker"].map(dict(zip(caps["ticker"], caps["market_cap_usd"])))
-        over_cap = consensus["total_market_value"] > consensus["market_cap_usd"]
-        off_list = consensus["market_cap_usd"].isna() & (consensus["total_market_value"] > smallest)
+        over_cap = consensus["total_market_value"] > CAP_MARGIN * consensus["market_cap_usd"]
+        off_page = consensus["market_cap_usd"].isna() & (consensus["total_market_value"] > smallest)
+        far_off_page = off_page & (consensus["total_market_value"] > CAP_MARGIN * smallest)
         few = consensus["n_funds_holding"] <= 2                        # one or two filers report the whole value
-        consensus["implausible_value"] = over_cap | (off_list & few)
-        flagged = consensus[consensus["implausible_value"]].copy()
-        unverifiable = consensus[off_list & ~few]
+        consensus.loc[over_cap, "cap_flag"] = "above the market cap"
+        consensus.loc[far_off_page & few, "cap_flag"] = "check"
+        consensus.loc[over_cap, "cap_note"] = (
+            (consensus["total_market_value"] / consensus["market_cap_usd"])[over_cap]
+            .map(lambda x: f"check: {x:.1f} × the market cap of {SCREEN_DATE}"))
+        consensus.loc[far_off_page & few, "cap_note"] = (f"check: not on the fetched screen pages (cap under "
+                                                         f"{money(smallest)} if the screen lists it)")
+        flagged = consensus[consensus["cap_flag"] != ""].copy()
+        unverifiable = consensus[off_page & ~few]                      # many filers: perhaps not on the screen at all
+        # Above the cap (or the smallest cap fetched), but within the margin: a price fall alone could explain these.
+        near_cap = ~over_cap & (consensus["total_market_value"] > consensus["market_cap_usd"])
+        within = consensus[near_cap | (off_page & few & ~far_off_page)]
+        n_above, n_check = int(over_cap.sum()), int((far_off_page & few).sum())
         print(f"Checked {len(consensus)} consensus rows against the {len(caps):,} largest US companies on the screen "
-              f"(the smallest is {money(smallest)}): {plural(len(flagged), 'position value')} exceed"
-              f"{'s' if len(flagged) == 1 else ''} the company's market cap.")
+              f"(the smallest is {money(smallest)}): {plural(n_above, 'position value')} above {CAP_MARGIN:g} × the "
+              f"company's market cap; {n_check} to check (one or two filers, company not on the fetched pages, value "
+              f"above {CAP_MARGIN:g} × {money(smallest)}).")
         if not flagged.empty:
             flagged["position value"] = flagged["total_market_value"].map(money)
             flagged["market cap"] = flagged["market_cap_usd"].map(
-                lambda v: f"below {money(smallest)} (not among the {len(caps):,} largest)" if pd.isna(v) else money(v))
+                lambda v: f"not on the fetched pages (under {money(smallest)} if the screen lists it)" if pd.isna(v)
+                else money(v))
+            flagged["value ÷ cap"] = flagged["total_market_value"] / flagged["market_cap_usd"]
             display(flagged[["ticker", "display_name", "n_funds_holding", "position value", "market cap",
-                             "avg_portfolio_pct"]]
-                    .style.format({"n_funds_holding": "{:.0f}", "avg_portfolio_pct": "{:.1f}%"}).hide(axis="index"))
-            print("These values feed the 'Position value (log)' piece of the score: read that piece with care.")
+                             "value ÷ cap", "cap_flag", "avg_portfolio_pct"]]
+                    .rename(columns={"cap_flag": "mark"})
+                    .style.format({"n_funds_holding": "{:.0f}", "value ÷ cap": "{:.2f}",
+                                   "avg_portfolio_pct": "{:.1f}%"}, na_rep="n/a").hide(axis="index"))
+            print("Possibly a unit error in the filing, or a price fall since the holdings date. These values feed the "
+                  "'Position value (log)' piece of the score: read that piece with care.")
+        if not within.empty:
+            listed = ", ".join(f"{r.ticker} ({money(r.total_market_value)}, "
+                               + (f"cap {money(r.market_cap_usd)}" if pd.notna(r.market_cap_usd)
+                                  else "not on the fetched pages")
+                               + f", {plural(r.n_funds_holding, 'filer')})" for r in within.itertuples())
+            print(f"Above the market cap (or, off the fetched pages, above {money(smallest)}) but within the "
+                  f"{CAP_MARGIN:g}× margin, so not marked; a price fall since the holdings date could explain them: "
+                  f"{listed}.")
         if not unverifiable.empty:
             listed = ", ".join(f"{r.ticker} ({r.n_funds_holding:.0f} funds, {money(r.total_market_value)})"
                                for r in unverifiable.itertuples())
@@ -1889,14 +1946,22 @@ else:
 # %%
 if not consensus.empty:
     bars = consensus.sort_values("consensus_score", ascending=False).reset_index(drop=True)
-    n_total_funds = (boards["crowdedness"]["n_funds_total"].mode().iloc[0]
-                     if not boards["crowdedness"].empty else funds_block["count"])
+    # The denominator of the shares: n_funds_total from the crowdedness board (not the roster size; see 4.5).
+    if not boards["crowdedness"].empty:
+        n_total_funds, denom_words = boards["crowdedness"]["n_funds_total"].mode().iloc[0], "funds in n_funds_total"
+    else:
+        n_total_funds, denom_words = funds_block["count"], "holders on the roster"
     lead = bars.iloc[0]
     lead_part = max(COMPONENTS, key=lambda p: lead[f"c_{p}"])
     bars["value_text"] = bars["total_market_value"].map(lambda v: "not disclosed" if pd.isna(v) else money(v, CCY))
-    bars.loc[bars["implausible_value"], "value_text"] += " (above the company's market cap: check)"
-    bars["label"] = np.where(bars["implausible_value"], bars["label"] + " †", bars["label"])
-    n_flagged = int(bars["implausible_value"].sum())
+    marked = bars["cap_flag"] != ""                                  # from the market-cap check above
+    bars.loc[marked, "value_text"] += " (" + bars.loc[marked, "cap_note"] + ")"
+    bars["label"] = np.where(marked, bars["label"] + " †", bars["label"])
+    n_flagged = int(marked.sum())
+    n_above, n_check = int((bars["cap_flag"] == "above the market cap").sum()), int((bars["cap_flag"] == "check").sum())
+    kinds = ([f"{n_above} above {CAP_MARGIN:g} × the market cap of {SCREEN_DATE}"] if n_above else []) + (
+        [f"{n_check} off the fetched screen pages, above {CAP_MARGIN:g} × the smallest cap there"] if n_check else [])
+    top_margin = 130 if n_flagged else 110                           # room for one more subtitle line
     # The four pieces are parts of one score: shades of one hue (darkest = largest weight), never market colours.
     # Steps 700, 500, 350 and 250 of the kit's sequential blue ramp (350 and 250 sit between SEQUENTIAL's entries),
     # spaced so that neighbouring pieces stay apart and the lightest still stands out from the background.
@@ -1931,16 +1996,17 @@ if not consensus.empty:
     fig.update_layout(
         title=dict(text=f"{lead['ticker']} tops consensus mainly on {lower_first(COMPONENTS[lead_part])}: "
                         f"{lead['n_funds_holding']:.0f} "
-                        + (f"of {n_total_funds:,.0f} tracked funds " if n_total_funds else "tracked funds ")
+                        + (f"of {n_total_funds:,.0f} {denom_words} " if n_total_funds else "tracked funds ")
                         + f"hold{'s' if lead['n_funds_holding'] == 1 else ''} it",
                    subtitle=dict(text=f"Top {len(bars)} of the consensus board · holdings as of "
                                       f"{holdings_date:%Y-%m-%d} · gate: {GATE['consensus']} · "
                                       "diamond = published score"
-                                      + (f"<br>† position value above the company's market cap ({n_flagged} "
-                                         "rows): likely a filing error, so its value piece is suspect"
+                                      + (f"<br>† value to check: {'; '.join(kinds)}<br>possibly a unit error in "
+                                         f"the filing, or a price fall since the holdings date "
+                                         f"({holdings_date:%Y-%m-%d}), so its value piece is suspect"
                                          if n_flagged else ""))),
-        barmode="relative", height=200 + 30 * len(bars), margin=dict(t=110, r=90, l=10, b=130),
-        legend=dict(orientation="h", x=0, y=below_plot(200 + 30 * len(bars), 110, 130), yanchor="top"))
+        barmode="relative", height=200 + 30 * len(bars), margin=dict(t=top_margin, r=90, l=10, b=130),
+        legend=dict(orientation="h", x=0, y=below_plot(200 + 30 * len(bars), top_margin, 130), yanchor="top"))
     fig.show()
 
     SHORT = {"n_funds_holding": "breadth", "aum_weighted_portfolio_pct": "AUM-weighted",
@@ -1979,9 +2045,12 @@ if not consensus.empty:
 #   sign of mixed runs (section 4.1), which is why we keep only the newest.
 # - `total_market_value` is in local currency (yen in Japan, HK dollars in
 #   Hong Kong); the portfolio percentages are in percent (2.5 = 2.5%).
-# - Filer-reported 13F values can carry unit errors: some single-filer
-#   positions exceed the company's market cap (the check above marks them
-#   with †), so read the position-value piece with care.
+# - Filer-reported 13F values can carry unit errors. The check above marks
+#   with † a value above 1.5 × the market cap (or, for a company off the
+#   fetched screen pages, above 1.5 × the smallest cap fetched): possibly a
+#   unit error in the filing, or a price fall since the holdings date, since
+#   the values and the caps are dated months apart. Read the position-value
+#   piece of those rows with care.
 # - Many funds owning a stock tells you it is popular, not that it will rise.
 
 # %% [markdown]
@@ -1993,16 +2062,25 @@ if not consensus.empty:
 # `ticker_conviction_score`, the board's ranking measure, is the same number
 # when one fund holds the stock; when several do, it blends their readings and
 # can sit well below the strongest one (we count both cases below).
-# **Crowdedness** asks what share of the tracked funds own the stock.
+# **Crowdedness** asks what share of the funds counted in `n_funds_total` own
+# the stock.
 #
 # The two boards list different stocks, so we need one shared measure. Every
 # conviction row carries `n_funds_holding`, and the crowdedness board defines
 # `crowdedness_pct = n_funds_holding / n_funds_total`. We verify that identity
 # on the crowdedness board, then place both boards on one axis: **the number of
 # tracked funds holding the stock**. The axis is logarithmic, because the
-# counts run from 1 to dozens, and the number of tracked funds differs hugely
-# between markets (about 100 in the US, over 20,000 large-holding filers in
-# Japan), so a raw percentage would squash Japan's points against zero.
+# counts run from 1 to dozens, and the number of funds differs hugely between
+# markets (about 100 in the US, over 20,000 large-holding filers in Japan), so
+# a raw percentage would squash Japan's points against zero.
+#
+# **Which denominator?** `n_funds_total` is not the roster size from section
+# 4.3 (`data.funds.count`). It is smaller: by one or two funds in the US and
+# Japan in the live data, and by more than half in Hong Kong. v1 does not
+# document which holders it leaves out. Every share in 4.4 and 4.5 divides by
+# `n_funds_total`, as SurgeFlow's own `crowdedness_pct` does, so the charts
+# name it ("of N funds in n_funds_total") rather than calling it the tracked
+# roster. The cell below prints both numbers.
 
 # %%
 conviction, crowded = boards["conviction"].copy(), boards["crowdedness"].copy()
@@ -2010,13 +2088,20 @@ if not crowded.empty:
     identity_gap = (crowded["crowdedness_pct"] - crowded["n_funds_holding"] / crowded["n_funds_total"]).abs().max()
     N_FUNDS = float(crowded["n_funds_total"].mode().iloc[0])
     CUT_N = float(crowded["n_funds_holding"].min())           # where the most-crowded list starts
+    DENOM = "funds in n_funds_total"                         # how charts name the denominator of every share
     print(f"crowdedness_pct = n_funds_holding / n_funds_total holds (largest gap {identity_gap:.2e}); "
-          f"{N_FUNDS:,.0f} tracked funds; the {len(crowded)} most crowded in the newest run start at {CUT_N:.0f} "
-          f"holders ({CUT_N / N_FUNDS:.2%} of tracked funds).")
+          f"n_funds_total = {N_FUNDS:,.0f}; the {len(crowded)} most crowded in the newest run start at {CUT_N:.0f} "
+          f"holders ({CUT_N / N_FUNDS:.2%} of n_funds_total).")
+    print(f"Two fund counts: the roster lists {funds_block['count']:,} tracked holders (section 4.3); the crowdedness "
+          f"denominator n_funds_total is {N_FUNDS:,.0f}"
+          + (f" ({funds_block['count'] - N_FUNDS:,.0f} fewer; v1 does not document why)"
+             if N_FUNDS != funds_block["count"] else " (the same)")
+          + ". Shares below use n_funds_total.")
 else:
     N_FUNDS, CUT_N = float(funds_block["count"]) or np.nan, np.nan     # NaN, not a division by zero
+    DENOM = "holders on the roster"
     print("The crowdedness board is empty; we use the roster count for shares instead: "
-          + (f"{N_FUNDS:,.0f} funds." if pd.notna(N_FUNDS) else "it is missing too, so shares are unknown."))
+          + (f"{N_FUNDS:,.0f} holders." if pd.notna(N_FUNDS) else "it is missing too, so shares are unknown."))
 N_CROWDED = len(crowded)                                  # 20, or fewer when rows from an earlier run were dropped
 if not conviction.empty:
     conviction["crowdedness"] = conviction["n_funds_holding"] / N_FUNDS
@@ -2057,7 +2142,8 @@ else:
                              "ticker_conviction_rank", "max_fund_conviction_z", "crowdedness",
                              "funds_word"]].to_numpy(),
             hovertemplate=("<b>%{customdata[0]}</b> (%{customdata[1]})<br>Conviction %{y:.2f} (rank "
-                           f"%{{customdata[4]}})<br>Held by %{{x}} %{{customdata[7]}} = {share} of tracked funds"
+                           f"%{{customdata[4]}})<br>Held by %{{x}} %{{customdata[7]}} = {share} of "
+                           f"{N_FUNDS:,.0f} {DENOM}"
                            "<br>Top conviction fund: %{customdata[3]} (z %{customdata[5]:.2f})<extra></extra>")),
             row=1, col=1)
     if not crowded.empty:
@@ -2069,7 +2155,8 @@ else:
             marker=dict(size=9, color=MUTED, symbol="line-ns-open", line=dict(width=2, color=MUTED)),
             customdata=strip[["display_name", "ticker", "crowdedness_pct", "crowdedness_quintile"]].to_numpy(),
             hovertemplate=("<b>%{customdata[0]}</b> (%{customdata[1]})<br>Held by %{x} funds = "
-                           "%{customdata[2]:.2%} of tracked funds<br>Crowdedness quintile %{customdata[3]} "
+                           f"%{{customdata[2]:.2%}} of {N_FUNDS:,.0f} funds in n_funds_total<br>Crowdedness quintile "
+                           "%{customdata[3]} "
                            "(1 = most crowded)<extra></extra>")), row=2, col=1)
         for r, (lo, hi) in [(1, (y_lo, y_hi)), (2, (-0.6, 0.6))]:        # a line trace: shapes are awkward on log axes
             fig.add_trace(go.Scatter(x=[CUT_N, CUT_N], y=[lo, hi], mode="lines", showlegend=False, hoverinfo="skip",
@@ -2106,8 +2193,8 @@ else:
     fig.update_layout(
         title=dict(text=headline,
                    subtitle=dict(text=(f"{single} held by a single fund · " if single else "")
-                                 + f"{N_FUNDS:,.0f} tracked funds · holdings as of {holdings_date:%Y-%m-%d} · gates: "
-                                   f"conviction {GATE['conviction']}, crowdedness {GATE['crowdedness']}")),
+                                 + f"shares of {N_FUNDS:,.0f} {DENOM} · holdings as of {holdings_date:%Y-%m-%d} · "
+                                   f"gates: conviction {GATE['conviction']}, crowdedness {GATE['crowdedness']}")),
         height=580, margin=dict(t=110, b=120), legend=dict(orientation="h", x=0, y=-0.14, yanchor="top"))
     fig.show()
 
@@ -2148,7 +2235,7 @@ else:
 #   amounts is "crowded" here.
 # - In Japan and Hong Kong "funds" means every large-holding filer, and only
 #   stakes of 5% or more are visible, so even the most crowded stock is held by
-#   a tiny share of the roster. Compare counts within a market, not across.
+#   a tiny share of `n_funds_total`. Compare counts within a market, not across.
 
 # %% [markdown]
 # ### 4.6 Chart: position deltas, buyers against sellers
@@ -2553,10 +2640,15 @@ else:
 #   believable when every current holder is new, that is when
 #   `owner_count_change` equals the current count. When the change is smaller
 #   (0 → 5 holders but a change of 4, say), the 0 cannot be a real count: it
-#   stands for "not available". We set those previous counts to NaN, count
-#   them, and draw no open circle for them. Even a consistent 0 may mean that
-#   the stock is new to the data (a recent listing, or a holder roster that
-#   only began this period) rather than newly bought.
+#   stands for "not available". We set those previous counts to NaN and count
+#   them. Such a stock **did** have earlier holders: the API's own numbers
+#   imply now − change of them (5 − 4 = 1 in the example). We add that
+#   `implied_previous` as a separate column and draw it as a hollow diamond on
+#   a dotted line, labelled as inferred, so every row shows its gain while the
+#   0 placeholder is never used as a count. Only a consistent 0 is a start from
+#   zero, and even that may mean the stock is new to the data (a recent
+#   listing, or a holder roster that only began this period) rather than newly
+#   bought.
 # - Is `owner_count_change` simply now − before, where a previous count is
 #   available? We count the rows where it is not, and keep the API's own
 #   number on the table.
@@ -2578,19 +2670,26 @@ else:
     prev_missing = zero_prev & (gainers["owner_count_change"] < gainers["n_funds_holding_q"])
     gainers["previous_count"] = gainers["n_funds_holding_q_minus_1"].mask(prev_missing)    # NaN = not available
     gainers["difference"] = gainers["n_funds_holding_q"] - gainers["previous_count"]
+    # Inferred, not reported: the previous count the API's own change implies (now - change), only where it is NaN.
+    gainers["implied_previous"] = (gainers["n_funds_holding_q"] - gainers["owner_count_change"]).where(prev_missing)
     from_zero, n_missing = int((zero_prev & ~prev_missing).sum()), int(prev_missing.sum())
     print(f"Previous count: {from_zero} of {len(gainers)} stocks start from 0 holders (consistent with their change); "
           f"{n_missing} show 0 but a change smaller than the current count, so their previous count is not "
-          "available -> NaN.")
+          "available -> NaN." + (f" Their change implies {gainers['implied_previous'].min():.0f} to "
+                                 f"{gainers['implied_previous'].max():.0f} earlier holders (now − change): they were "
+                                 "held before, so they are not first appearances." if n_missing else ""))
     has_prev = gainers["previous_count"].notna()
     mismatch = int((has_prev & (gainers["difference"] != gainers["owner_count_change"])).sum())
     print(f"owner_count_change differs from (now − before) on {mismatch} of the {int(has_prev.sum())} rows with a "
-          "previous count.")
+          "previous count" + ("; so wherever both counts are reported the change is exactly now − before, which is "
+                              "what the implied count assumes." if n_missing and has_prev.any() and not mismatch
+                              else "."))
     if mismatch:
         smaller = int((has_prev & (gainers["owner_count_change"] < gainers["difference"])).sum())
         print(f"On {smaller} of those {mismatch} rows the API's change is smaller than the plain difference, so it "
               "does not count every current holder as new. The payload has no holder lists, so we cannot see why; "
-              "the table shows both numbers.")
+              "the table shows both numbers" + (", and the implied previous counts may be too high." if n_missing
+                                                 else "."))
     negative = int((zero_prev & (gainers["portfolio_weight_change"] < 0)).sum())
     print(f"portfolio_weight_change: {negative} of the {int(zero_prev.sum())} stocks with no previous holders have a "
           "negative value" + (", which a sum of weight changes starting from zero cannot be: its units are not "
@@ -2599,18 +2698,31 @@ else:
                    else "SurgeFlow's measure; units vary by market and run")
 
     bars = gainers.sort_values("ll_rank").reset_index(drop=True)
-    bars["previous_text"] = bars["previous_count"].map(lambda v: "not available" if pd.isna(v) else f"{v:.0f}")
+    bars["previous_text"] = [f"{p:.0f}" if pd.notna(p) else
+                             f"not available; implied {i:.0f} (now − change)" if pd.notna(i) else "not available"
+                             for p, i in zip(bars["previous_count"], bars["implied_previous"])]
     lead = bars.iloc[0]
     fig = go.Figure()
-    for _, row in bars[bars["previous_count"].notna()].iterrows():    # one connector per stock: before -> now
-        fig.add_trace(go.Scatter(x=[row["previous_count"], row["n_funds_holding_q"]],
-                                 y=[row["label"], row["label"]], mode="lines", line=dict(color=GRID, width=4),
-                                 hoverinfo="skip", showlegend=False))
+    for _, row in bars.iterrows():                       # one connector per stock: before (or implied) -> now
+        reported = pd.notna(row["previous_count"])
+        fig.add_trace(go.Scatter(x=[row["previous_count"] if reported else row["implied_previous"],
+                                    row["n_funds_holding_q"]],
+                                 y=[row["label"], row["label"]], mode="lines", hoverinfo="skip", showlegend=False,
+                                 line=dict(color=GRID, width=4) if reported else dict(color=MUTED, width=1.5,
+                                                                                      dash="dot")))
     known_prev = bars[bars["previous_count"].notna()]
     fig.add_trace(go.Scatter(
         x=known_prev["previous_count"], y=known_prev["label"], mode="markers", name="Previous period",
         marker=dict(size=11, color=SURFACE, line=dict(width=2, color=MUTED)),
         hovertemplate="<b>%{y}</b><br>Previous period: %{x} holders<extra></extra>"))
+    implied = bars[bars["implied_previous"].notna()]
+    if not implied.empty:
+        fig.add_trace(go.Scatter(
+            x=implied["implied_previous"], y=implied["label"], mode="markers",
+            name="Implied previous (now − change; inferred, not reported)",
+            marker=dict(size=11, symbol="diamond", color=SURFACE, line=dict(width=1.5, color=MUTED)),
+            hovertemplate=("<b>%{y}</b><br>Implied previous period: %{x} holders<br>(now − owner_count_change; "
+                           "the API's previous count is a 0 placeholder)<extra></extra>")))
     fig.add_trace(go.Scatter(
         x=bars["n_funds_holding_q"], y=bars["label"], mode="markers", name="Latest period",
         marker=dict(size=12, color=COLOR),
@@ -2620,51 +2732,65 @@ else:
                        "owner_count_change %{customdata[0]:+.0f}<br>"
                        f"Portfolio weight change %{{customdata[1]:+.2f}} ({WEIGHT_UNIT})<br>"
                        "ll_score_z %{customdata[2]:.2f} (rank %{customdata[3]})<extra></extra>")))
-    x_max = float(bars[["n_funds_holding_q", "previous_count"]].max().max())
+    x_max = float(bars[["n_funds_holding_q", "previous_count", "implied_previous"]].max().max())
     fig.update_xaxes(title_text="Tracked funds holding the stock", range=[-0.04 * x_max - 0.5, x_max * 1.06 + 0.5])
     fig.update_yaxes(autorange="reversed", ticks="", title_text=None)
-    n_none = from_zero + n_missing
-    if n_none >= 0.8 * len(bars):
-        headline = (f"{n_none} of the {len(bars)} top gainers show no earlier holders"
-                    + (f" ({n_missing} lack a previous count)" if n_missing else "")
-                    + ": mostly first appearances")
+    # Only a reported 0 that matches the change is a start from zero; a NaN previous count had earlier holders.
+    if from_zero >= 0.8 * len(bars):
+        headline = (f"{from_zero} of the {len(bars)} top gainers start from 0 holders: "
+                    + ("all" if from_zero == len(bars) else "mostly") + " first appearances"
+                    + (f" ({n_missing} more were held before, previous count not available)" if n_missing else ""))
+    elif n_missing >= len(bars) / 2:
+        headline = (f"{n_missing} of the {len(bars)} top gainers have no usable previous count; only {from_zero} "
+                    f"verifiably start{'s' if from_zero == 1 else ''} from 0 holders")
     elif pd.notna(lead["previous_count"]):
         headline = (f"{lead['ticker']} gained the most holders: {lead['previous_count']:.0f} → "
                     f"{lead['n_funds_holding_q']:.0f} holders")
     else:
-        headline = (f"{lead['ticker']} tops the board with {lead['n_funds_holding_q']:.0f} holders "
-                    "(previous count not available)")
+        headline = (f"{lead['ticker']} tops the board: {lead['owner_count_change']:+.0f} holders to "
+                    f"{lead['n_funds_holding_q']:.0f} (previous count not available)")
     fig.update_layout(
         title=dict(text=headline,
                    subtitle=dict(text=f"Top {len(bars)} of the ll_predictive board in rank order · holdings as of "
                                       f"{holdings_date:%Y-%m-%d} · gate: {GATE['ll_predictive']}<br>"
                                       "open circle = previous period, filled = latest"
-                                      + (f" · no open circle = previous count not available ({n_missing})"
+                                      + (f" · diamond on a dotted line = implied previous, now − change "
+                                         f"({n_missing} rows whose previous count is not available)"
                                          if n_missing else ""))),
         height=220 + 30 * len(bars), margin=dict(t=130, l=10, r=30, b=120),
         legend=dict(orientation="h", x=0, y=below_plot(220 + 30 * len(bars), 130, 120), yanchor="top"))
     fig.show()
     display(bars[["ll_rank", "ticker", "display_name", "n_funds_holding_q_minus_1", "previous_count",
-                  "n_funds_holding_q", "difference", "owner_count_change", "portfolio_weight_change", "ll_score_z"]]
-            .style.format({"previous_count": "{:.0f}", "difference": "{:.0f}", "portfolio_weight_change": "{:+.2f}",
-                           "ll_score_z": "{:.2f}"}, na_rep="n/a").hide(axis="index"))
+                  "implied_previous", "n_funds_holding_q", "difference", "owner_count_change",
+                  "portfolio_weight_change", "ll_score_z"]]
+            .style.format({"previous_count": "{:.0f}", "implied_previous": "{:.0f}", "difference": "{:.0f}",
+                           "portfolio_weight_change": "{:+.2f}", "ll_score_z": "{:.2f}"}, na_rep="n/a")
+            .hide(axis="index"))
 
 # %% [markdown]
 # **How to read this.** Each row is a stock; the open circle is how many
 # tracked funds held it in the previous period and the filled circle how many
 # hold it now, so a longer connector is a bigger gain in ownership breadth. A
-# row with no open circle has no usable previous count (the NaN policy above);
-# the table shows the API's raw `n_funds_holding_q_minus_1` next to our
-# `previous_count`. Rows follow the board's `ll_rank`. Ties in `ll_score_z` are
-# common, because many stocks gain the same whole number of holders.
+# row with a hollow diamond on a dotted line has no usable previous count (the
+# NaN policy above): the diamond is the count implied by now − change, an
+# inference from the API's numbers rather than a reported count. The table
+# shows the API's raw `n_funds_holding_q_minus_1` next to our `previous_count`
+# and `implied_previous`. The headline counts as "first appearances" only the
+# rows that verifiably start from 0. Rows follow the board's `ll_rank`. Ties in
+# `ll_score_z` are common, because many stocks gain the same whole number of
+# holders.
 #
 # **Caveats.**
 #
 # - Its gate reason notes that only a few quarter-on-quarter transitions are
 #   on file, so SurgeFlow itself treats this board as preliminary.
-# - When the previous period is mostly empty or unavailable (often in Japan
-#   and Hong Kong), the "gain" is the arrival of a stock in the data, not new
-#   buying.
+# - A row that genuinely goes from 0 to n holders (its change equals its
+#   current count) may record the arrival of a stock in the data, not new
+#   buying. That does not apply to a row whose previous count is not
+#   available: its change implies it already had holders.
+# - The implied previous count assumes `owner_count_change` = now − before,
+#   which the cell checks on the rows where both counts are reported. It is an
+#   inference, so it never feeds a ranking here.
 # - `portfolio_weight_change` is SurgeFlow's weight-change measure. Only in
 #   the US does it behave like a sum of the holders' weight changes in
 #   percentage points (so it grows with the number of holders); elsewhere its

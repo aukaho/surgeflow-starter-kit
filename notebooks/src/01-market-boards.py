@@ -21,7 +21,8 @@
 # - Why `realtime` is a current-session snapshot, not a tick feed, and what a
 #   closed market or an empty board looks like.
 # - How to read four chart forms: a treemap, a bubble chart, a ranked dot plot
-#   and small multiples.
+#   (drawn when the hotlist has two or more names) and small multiples, and
+#   when a sentence and a table say more than a chart.
 #
 # **Endpoints used**
 #
@@ -29,7 +30,7 @@
 # |---|---|---|
 # | GET | `/api/v1/markets/{market}/screen` | The market screen, paged (at most 100 rows a page): one row per stock with about 20 fields (price, daily change, turnover, market cap, trend, valuation and fundamentals) |
 # | GET | `/api/v1/markets/{market}/sector` | The sector snapshot: every stock's one-day change with its sector and industry, plus two market-cap-weighted averages (`sector_mean_1d`, `industry_mean_1d`, as documented in `/api/v1/catalog`), in one unpaged response |
-# | GET | `/api/v1/markets/{market}/realtime` | The current-session turnover board: the most-traded names (50 by default; pass `limit=1..100`), with turnover so far, a projection for the full session and the pace versus yesterday |
+# | GET | `/api/v1/markets/{market}/realtime` | The current-session turnover board: the most-traded names among those its source feed covers (50 by default; pass `limit=1..100`), with turnover so far, a projection for the full session and the pace versus yesterday |
 # | GET | `/api/v1/markets/{market}/hotlist` | The momentum hotlist: a short, often empty, list of the session's momentum names; its `_usd` amounts are in US dollars |
 #
 # Markets: `us`, `cn`, `jp`, `hk`. The notebook makes about 9 requests (the
@@ -256,17 +257,36 @@ else:
 # session the numbers describe, and the cell above checks it.
 #
 # The screen also reports how complete its inputs are. On this endpoint
-# `data_quality` is a dictionary of coverage percentages: the share of the
-# universe with a usable value for each input. Keep it in mind for the
-# missing-value audit below. For example, a low
-# `dividend_yield_currency_aligned_pct` means many empty `dividend_yield` values.
+# `data_quality` is a dictionary of coverage statistics, and they do not all
+# measure the same thing, so read the `unit` column and the names:
+#
+# - `basis_population` is a **count** of names: the population the
+#   percentages are measured over. It can differ from the screen's `count`.
+# - The `*_populated_pct`, `*_governed_pct` and `*_aligned_pct` measures (and
+#   `per_share_currency_pct`) are the share of that population with a usable
+#   value for each input. For example, a low
+#   `dividend_yield_currency_aligned_pct` means many empty `dividend_yield`
+#   values. Keep them in mind for the missing-value audit below.
+# - `validated_market_cap_pct` is the one that says market caps are present.
+# - `market_cap_information_pit_pct` measures something else: whether the share
+#   count behind each market cap is strictly point-in-time (dated no later than
+#   the session it is used for), as the API's `basis_coverage_note` explains.
+#   A low value is fine for this one-day snapshot of the market and does not
+#   mean the market caps are empty.
 
 # %%
 dq = first_page["data_quality"]
 display(Markdown(f"**Coverage:** {dq.get('coverage', 'n/a')}. {dq.get('basis_coverage_note') or ''}"
                  + (f" **Limitation:** {dq['limitation']}" if dq.get("limitation") else "")))
-pd.DataFrame([(k, f"{v:,g}") for k, v in dq.items() if isinstance(v, (int, float)) and not isinstance(v, bool)],
-             columns=["measure", "value"]).set_index("measure")
+caps_ok, pit = dq.get("validated_market_cap_pct"), dq.get("market_cap_information_pit_pct")
+if caps_ok is not None and pit is not None and pit < caps_ok:
+    display(Markdown(f"> Market caps: {caps_ok:g}% of the names have a validated market cap, so the caps are there. "
+                     f"Only {pit:g}% of them rest on a strictly point-in-time share count. That clock matters when "
+                     "you test a rule on past dates (it guards against look-ahead); for today's sort, treemap and "
+                     "sector weights, the validated caps are what count."))
+pd.DataFrame([(k, v, "names" if k == "basis_population" else "%" if k.endswith("_pct") else "")
+              for k, v in dq.items() if isinstance(v, (int, float)) and not isinstance(v, bool)],
+             columns=["measure", "value", "unit"]).set_index("measure").style.format({"value": "{:,g}"})
 
 # %% [markdown]
 # **Raw preview.** This is the data exactly as it arrived, before any cleaning.
@@ -412,9 +432,12 @@ if n_unexpected:   # show the rows behind an unexpected gap, so you can look the
 #      So its place in the market-cap sort and its turnover-per-cap ratio
 #      (`turnover_vs_typical`) are suspect as well.
 #
-#    Policy: flagged rows stay in the table. Both kinds are left out of every
-#    market-cap-weighted number later on (the sector check, the movers list and
-#    the treemap), and each of those cells says how many it left out.
+#    Policy: flagged rows stay in the table. Both kinds are left out of this
+#    notebook's own market-cap-weighted estimates later on (the movers list and
+#    the treemap), and each of those cells says how many it left out. The one
+#    exception is the check of the API's `sector_mean_1d` in section 4: it tries
+#    to reproduce the API's own number, the API averages these rows too, so the
+#    check keeps them.
 
 # %%
 turnover_per_cap = screen["turnover"] / screen["market_cap_usd"]
@@ -613,7 +636,7 @@ sec_raw.head() if not sec_raw.empty else None
 #   raise if either side still has duplicate tickers. Both endpoints report
 #   `change_pct`, so we also check that they agree. We also carry over the
 #   screen's two flags from step 6 (thin lines and possible splits), because
-#   both make a market cap unreliable as a weight.
+#   both make a market cap unreliable as a weight in our own estimates.
 
 # %%
 SEC_COLS = ["ticker", "name", "sector", "industry", "change_pct", "sector_mean_1d",
@@ -643,8 +666,8 @@ shared = sec.dropna(subset=["change_pct", "screen_change_pct"])
 n_agree = int(np.isclose(shared["change_pct"], shared["screen_change_pct"], rtol=0, atol=1e-9).sum())
 print(f"Market cap known for {n_cap:,} of {len(sec):,} names ({n_cap / max(len(sec), 1):.0%}): "
       f"the {len(screen):,} largest companies fetched from the screen. {int(sec['thin_line'].sum())} thin "
-      f"lines and {int(sec['suspect_split'].sum())} possible splits among them are left out of the "
-      "cap-weighted numbers.")
+      f"lines and {int(sec['suspect_split'].sum())} possible splits among them are left out of the movers "
+      "list and the treemap (the check of the API's sector mean keeps them, because the API averages them too).")
 print(f"change_pct agrees between the screen and the sector snapshot for {n_agree} of {len(shared)} shared names.")
 
 # %% [markdown]
@@ -658,26 +681,41 @@ print(f"change_pct agrees between the screen and the sector snapshot for {n_agre
 # - **equal-weighted, every name**: the plain mean of `change_pct` over every
 #   stock in the sector (each stock counts once);
 # - **equal-weighted, largest names**: the plain mean over the companies whose
-#   market cap we hold;
+#   market cap (and one-day change) we hold;
 # - **cap-weighted, largest names**: the same companies, each weighted by its
 #   market cap (big companies count for more).
 #
-# The first two differ only in **which** stocks are included; the last two
-# differ only in **how** they are weighted. So the fair test of weighting is
-# the last pair, on the same names. We use only sectors with at least
-# `MIN_NAMES` such companies, and we credit cap weighting only when it lands
-# clearly closer: a median gap at least 5 bp smaller, and closer in most of
-# those sectors.
+# This check tries to reproduce the API's own number, so it uses **every** row
+# that has a market cap and a change, including the thin lines and possible
+# splits flagged in step 6: the API averages them too, and dropping them would
+# open a gap of our own making. (The movers list and the treemap below are our
+# own estimates, and they still leave the flagged rows out.)
+#
+# The first two candidates differ only in **which** stocks are included; the
+# last two differ only in **how** they are weighted. So the fair test of
+# weighting is the last pair, on the same names, compared **sector by sector**.
+# We use only sectors with at least `MIN_NAMES` such companies. In each one,
+# the improvement is how many bp closer to the API cap weighting lands than
+# equal weighting (positive = closer). We credit cap weighting only when it is
+# clearly closer on both counts:
+#
+# - a **median improvement of at least 5 bp**; and
+# - closer in more sectors than chance would give. If weighting did not matter,
+#   each sector would be a coin flip. A one-sided **sign test**
+#   (`stats.binomtest`) gives the probability of at least this many "closer"
+#   sectors under that coin flip, and we require p < 0.05. With 11 sectors,
+#   that means closer in at least 9.
 #
 # `share_up` is the sector's **breadth**: the share of its stocks that rose. A
 # sector can be up on average (its big names rose) while most of its stocks
 # fell; breadth shows that. Gaps are in basis points (1 bp = 0.01%).
 
 # %%
-MIN_NAMES = 5          # a sector needs this many companies with a usable market cap to enter the weighting check
+MIN_NAMES = 5          # a sector needs this many companies with a market cap and a change to enter the weighting check
 
 sec["up"] = sec["change_pct"].gt(0).astype(float).where(sec["change_pct"].notna())
-covered = sec[sec["weight_ok"]].dropna(subset=["change_pct", "market_cap_usd"])
+# Reproducing the API's number: keep every row it averages, flagged or not (weight_ok is for our own estimates).
+covered = sec.dropna(subset=["change_pct", "market_cap_usd"])
 sector_table = sec.groupby("sector").agg(
     names=("ticker", "size"), share_up=("up", "mean"), api_mean_1d=("sector_mean_1d", "first"),
     equal_weighted_all_1d=("change_pct", "mean"))
@@ -700,23 +738,40 @@ if len(testable) < 3:
                      "cap: too few to check the weighting. Raise `MAX_PAGES` to hold more market caps."))
 else:
     med = testable[["ew_all_gap_bp", "ewl_gap_bp", "cw_gap_bp"]].abs().median()
-    n_closer = int((testable["cw_gap_bp"].abs() < testable["ewl_gap_bp"].abs()).sum())
-    clearly = (med["ewl_gap_bp"] - med["cw_gap_bp"] >= 5) and n_closer > len(testable) / 2
+    # Paired, sector by sector: how many bp closer to the API each step lands (+ = closer).
+    by_names_bp = testable["ew_all_gap_bp"].abs() - testable["ewl_gap_bp"].abs()   # the choice of names
+    d = testable["ewl_gap_bp"].abs() - testable["cw_gap_bp"].abs()                 # weighting the same names
+    n_closer = int((d > 0).sum())
+    p_sign = stats.binomtest(n_closer, len(d), alternative="greater").pvalue        # better than a coin flip?
+    clearly = d.median() >= 5 and p_sign < 0.05
+
+    # What the check cannot see, in the sectors it tests: names without a cap, and rows it had to leave out.
+    in_test = sec[sec["sector"].isin(testable.index)]
+    n_no_cap = int(in_test["market_cap_usd"].isna().sum())
+    n_left_out = int((in_test["market_cap_usd"].notna() & in_test["change_pct"].isna()).sum())
+    n_flagged_in = int((~covered["weight_ok"] & covered["sector"].isin(testable.index)).sum())
+    sources = (f"the {n_no_cap:,} of the {len(in_test):,} names in these sectors whose market cap we do not hold "
+               f"(they sit beyond the {MAX_PAGES} screen pages fetched)"
+               + (f", and the {n_left_out} row(s) with a cap that the check left out for lack of a one-day change"
+                  if n_left_out else ""))
+
     numbers = (f"Median gap to the API mean over the {len(testable)} sectors with {MIN_NAMES}+ such companies: "
                f"equal-weighted over every name **{med['ew_all_gap_bp']:.0f} bp**, equal-weighted over the largest "
-               f"names **{med['ewl_gap_bp']:.0f} bp**, cap-weighted over the same names **{med['cw_gap_bp']:.0f} bp** "
-               f"(closer than equal weighting in {n_closer} of {len(testable)} sectors).")
+               f"names **{med['ewl_gap_bp']:.0f} bp**, cap-weighted over the same names **{med['cw_gap_bp']:.0f} bp**. "
+               f"Sector by sector, cap weighting lands closer in **{n_closer} of {len(d)}** (sign test p = "
+               f"{p_sign:.3f}), by a median of **{d.median():+.0f} bp**."
+               + (f" The {n_flagged_in} row(s) flagged in step 6 are included, as the API includes them."
+                  if n_flagged_in else ""))
     if clearly:
         verdict = ("On the same names, cap weighting lands clearly closer, which is consistent with the documented "
-                   "market-cap weighting. It cannot match exactly, because we hold caps for the largest companies only.")
+                   f"market-cap weighting. It cannot match exactly; the gap that remains comes from {sources}.")
     else:
-        by_names = med["ew_all_gap_bp"] - med["ewl_gap_bp"]     # how much the choice of names closed
-        by_weights = med["ewl_gap_bp"] - med["cw_gap_bp"]       # how much weighting closed on top
         lead = ("Most of the gap closes just by looking at the largest names, not by weighting them"
-                if by_names > 0 and by_names > by_weights else "Weighting does not clearly close the gap")
+                if by_names_bp.median() > 0 and by_names_bp.median() > d.median()
+                else "Weighting does not clearly close the gap")
         verdict = (f"{lead}: on the same names, cap weighting is not clearly closer today. This partial sample "
                    "cannot confirm the weighting, so rely on the documented definition (cap-weighted over the "
-                   "whole sector); the remaining gap comes from the companies whose market cap we do not hold.")
+                   f"whole sector). The gap that remains comes from {sources}.")
     display(Markdown(f"{numbers} {verdict}"))
 
 # %% [markdown]
@@ -900,12 +955,19 @@ else:
 # %% [markdown]
 # ## 5. Realtime: the current-session turnover board
 #
-# **What it is for.** The realtime board lists the most-traded names in the
-# current session (or the last one, if the market is closed), ranked by
-# projected turnover: 50 names by default, or pass `limit` (1 to 100; we use
-# the `RT_LIMIT` parameter). For each name it shows the money
-# traded so far, the session return, and a projection of the full day's
-# turnover compared with yesterday's.
+# **What it is for.** The realtime board lists the most-traded names, among
+# those its source feed covers, in the current session (or the last one, if the
+# market is closed), ranked by projected turnover: 50 names by default, or pass
+# `limit` (1 to 100; we use the `RT_LIMIT` parameter). For each name it shows
+# the money traded so far, the session return, and a projection of the full
+# day's turnover compared with yesterday's.
+#
+# **Which names?** The board ranks the names its source feed (`source`)
+# covers, and that is not always the whole market. The China board, for
+# example, can list STAR Market names only: Shanghai's technology board (codes
+# starting 688 or 689), where the daily price limit is ±20% instead of the
+# main boards' ±10%. So the cleaning cell below measures the China board's
+# composition instead of assuming it.
 #
 # **A board, not a tick feed.** Despite the name, `realtime` does not stream
 # trades. Each call returns one snapshot of the board, refreshed about once a
@@ -938,7 +1000,10 @@ rt_raw.head() if not rt_raw.empty else None
 #
 # We wrap the cleaning in a small, visible function because section 7 reuses it
 # for all four markets. It keeps the documented columns, keeps tickers as text,
-# coerces numbers, de-duplicates on `ticker` and prints what it changed.
+# coerces numbers, de-duplicates on `ticker` and prints what it changed. A
+# second function, `board_universe`, measures which part of the market a board
+# covers: for China it counts the STAR Market codes, and when they make up most
+# of the board it returns a label that the chart titles carry.
 #
 # Then we check what "projected" means. The board projects the full day by
 # assuming the current pace continues: `projected_turnover = turnover_per_second
@@ -968,7 +1033,27 @@ def clean_realtime(raw: pd.DataFrame, label: str) -> pd.DataFrame:
     return df
 
 
+STAR_PREFIXES = ["688", "689"]   # Shanghai STAR Market codes: a ±20% daily price limit (main boards: ±10%)
+
+
+def board_universe(board: pd.DataFrame, m: str) -> str:
+    """Measure which part of the market a board covers. Returns a short label for titles ('' = no narrow segment)."""
+    if m != "cn" or board.empty:
+        return ""
+    star = float(board["ticker"].str[:3].isin(STAR_PREFIXES).mean())
+    if star >= 0.8:
+        label = "STAR Market" if star == 1 else "mostly STAR Market"
+        print(f"The China board currently lists {'STAR Market names only' if star == 1 else 'mostly STAR Market names'} "
+              f"({star:.0%} of its {len(board)} names have a 688/689 code). It describes the STAR Market (±20% daily "
+              "limit), not the whole A-share market.")
+        return label
+    print(f"China board composition: {star:.0%} of its {len(board)} names are STAR Market codes (688/689); the rest "
+          "come from the other A-share boards.")
+    return ""
+
+
 rt = clean_realtime(rt_raw, f"Realtime {MARKET}")
+RT_UNIVERSE = board_universe(rt, MARKET)
 
 if not rt.empty:
     per_second = rt["turnover_per_second"].where(rt["turnover_per_second"] > 0)   # avoid dividing by zero
@@ -1065,8 +1150,9 @@ else:
         title=dict(text=headline,
                    subtitle=dict(text=f"Market {rt_meta['market_status']} · data_quality {rt_meta['data_quality']}"
                                       + (f" ({rt_meta['stale_reason']})" if rt_meta["stale_reason"] else "")
-                                      + f" · snapshot {local_time(rt_meta['as_of_local'])}<br>Bubble area = pace "
-                                      f"vs yesterday, capped at {PACE_CAP:g}× (key on the right)")),
+                                      + f" · snapshot {local_time(rt_meta['as_of_local'])}<br>"
+                                      + (f"Board lists {RT_UNIVERSE} names, not the whole market · " if RT_UNIVERSE else "")
+                                      + f"Bubble area = pace vs yesterday, capped at {PACE_CAP:g}× (key on the right)")),
         height=540, margin=dict(t=120, b=90, r=120),
         legend=dict(orientation="h", x=0, y=-0.2, yanchor="top", itemsizing="constant"))
     fig.show()
@@ -1099,8 +1185,13 @@ else:
 #   often too high. Japan, Hong Kong and China also pause for lunch.
 # - On a closed market the board shows the full last session, so the
 #   "projection" is simply the day's final turnover.
-# - The board holds only the top names by projected turnover. It describes the
-#   busiest stocks, not the whole market.
+# - The board holds only the top names by projected turnover among the names
+#   its feed covers. It describes the busiest stocks, not the whole market.
+# - The China board currently covers the **STAR Market** (codes 688/689,
+#   ±20% daily limit), not the whole A-share market. The composition line
+#   printed by the cleaning cell says whether that still holds when you run
+#   it. Comparing that board with another market's board, or with the China
+#   screen and sector snapshot, compares different sets of stocks.
 
 # %% [markdown]
 # ### Units lesson: two "returns" that must not be mixed
@@ -1130,6 +1221,10 @@ board_session = str(pd.Timestamp(rt_meta["as_of_local"]).date()) if rt_meta["as_
 same_session = board_session == first_page["as_of_date"]
 print(f"{len(both)} of {len(rt)} board names are among the {len(screen):,} screen rows fetched. "
       f"Board session: {board_session}; screen session: {first_page['as_of_date']}.")
+if RT_UNIVERSE:   # a board limited to one segment can only overlap the screen pages on that segment
+    n_star_screen = int(screen["ticker"].str[:3].isin(STAR_PREFIXES).sum())
+    print(f"Few matches are expected: the board lists {RT_UNIVERSE} names, while the screen pages hold the largest "
+          f"companies of every A-share board ({n_star_screen} of the {len(screen):,} are STAR Market names).")
 
 example = both.dropna(subset=["change_pct", "intraday_return_pct"]).head(1)
 for _, first in example.iterrows():   # the unit lesson itself: how to read each number
@@ -1307,10 +1402,10 @@ else:
 # bar's length would mean nothing. Read each dot against the gridlines.
 #
 # A ranking needs at least two names. With a single name, one sentence and a
-# table say it better. When the hotlist has fewer than two names, the cell
-# still shows the chart form, drawn on the **realtime board's** 10 fastest
-# names (by pace versus yesterday) that you already fetched, and labelled as
-# such. That board's money is in local currency.
+# table say it better; with none, one sentence does. So when the hotlist has
+# fewer than two names, the cell draws no chart. It does not borrow other names
+# to fill the space either: the realtime board's busiest and fastest names are
+# already charted and listed in section 5.
 
 # %%
 def ranked_dots(rows: pd.DataFrame, value: str, ccy: str, x_title: str) -> go.Figure:
@@ -1332,9 +1427,15 @@ def short_name(names: pd.Series, width: int = 26) -> pd.Series:
 
 
 hot_status = hot_payload["data"]["market_status"]
+HOT_TABLE = ["hotlist_rank", "ticker", "company_name", "industry", "projected_turnover_usd",
+             "previous_day_turnover_usd", "projected_vs_yesterday", "intraday_return_pct", "realtime_rank"]
+HOT_FORMAT = {"projected_turnover_usd": "${:,.0f}", "previous_day_turnover_usd": "${:,.0f}",
+              "projected_vs_yesterday": "{:.2f}×", "intraday_return_pct": "{:+.2f}%", "realtime_rank": "{:.0f}"}
+
 if hot.empty:
     display(Markdown(f"> The {MARKET_NAMES[MARKET]} hotlist is empty (market {hot_status}), so there is "
-                     "nothing to rank. Empty is a normal state for this board."))
+                     "nothing to rank and no chart. Empty is a normal state for this board. The realtime board's "
+                     "busiest and fastest names are already charted and listed in section 5."))
 elif len(hot) == 1:
     one = hot.iloc[0]
     rank_text = (f"realtime board rank {one['realtime_rank']:.0f}" if pd.notna(one["realtime_rank"])
@@ -1344,68 +1445,37 @@ elif len(hot) == 1:
         f"{MARKET_NAMES[MARKET]} hotlist: projected turnover **{money(one['projected_turnover_usd'])}**, "
         f"**{one['projected_vs_yesterday']:.1f}×** yesterday's {money(one['previous_day_turnover_usd'])}, "
         f"session return **{one['intraday_return_pct']:+.2f}%**, market cap {money(one['market_cap_usd'])}, "
-        f"{rank_text}."))
-    display(hot[["hotlist_rank", "ticker", "company_name", "industry", "projected_turnover_usd",
-                 "previous_day_turnover_usd", "projected_vs_yesterday", "intraday_return_pct", "realtime_rank"]]
-            .style.format({"projected_turnover_usd": "${:,.0f}", "previous_day_turnover_usd": "${:,.0f}",
-                           "projected_vs_yesterday": "{:.2f}×", "intraday_return_pct": "{:+.2f}%",
-                           "realtime_rank": "{:.0f}"}, na_rep="not on board").hide(axis="index"))
-
-if len(hot) >= 2:
+        f"{rank_text}. One name is not a ranking, so there is no chart"
+        + (f"; section 5's bubble chart shows where {one['ticker']} sits on the realtime board."
+           if pd.notna(one["realtime_rank"]) else ".")))
+    display(hot[HOT_TABLE].style.format(HOT_FORMAT, na_rep="not on board").hide(axis="index"))
+else:
     dots = hot.dropna(subset=["projected_turnover_usd"])
     dots = dots[dots["projected_turnover_usd"] > 0].sort_values("hotlist_rank").copy()
     print(f"Plotting {len(dots)} of {len(hot)} hotlist names ({len(hot) - len(dots)} without a positive "
           "projected turnover left out).")
-    dots["label"] = ("#" + dots["hotlist_rank"].map("{:.0f}".format) + " " + dots["ticker"] + " · "
-                     + short_name(dots["company_name"]))
-    dots["hover"] = [f"<b>{r.company_name}</b> ({r.ticker})<br>{r.industry if pd.notna(r.industry) else '(no industry)'}"
-                     f"<br>Hotlist rank: {r.hotlist_rank:.0f}"
-                     f"<br>Projected turnover: {money(r.projected_turnover_usd)} ({r.projected_vs_yesterday:.2f}× "
-                     f"yesterday's {money(r.previous_day_turnover_usd)})<br>Session return: "
-                     f"{r.intraday_return_pct:+.2f}%<br>Market cap: {money(r.market_cap_usd)}"
-                     f"<br>Factor lean: {r.factor_style}" for r in dots.itertuples()]
-    lead = dots.loc[dots["projected_turnover_usd"].idxmax()]
-    fig = ranked_dots(dots, "projected_turnover_usd", "USD", "Projected session turnover (USD, log scale)")
-    fig.update_layout(title=dict(
-        text=(f"{lead['ticker']} carries the most money on the {MARKET_NAMES[MARKET]} hotlist: "
-              f"{money(lead['projected_turnover_usd'])} projected, {lead['projected_vs_yesterday']:.1f}× yesterday"),
-        subtitle=dict(text=f"{len(dots)} names in hotlist order · pace vs yesterday from "
-                           f"{dots['projected_vs_yesterday'].min():.1f}× to {dots['projected_vs_yesterday'].max():.1f}× "
-                           f"· market {hot_status}")))
-    fig.show()
-    display(dots[["hotlist_rank", "ticker", "company_name", "industry", "projected_turnover_usd",
-                  "previous_day_turnover_usd", "projected_vs_yesterday", "intraday_return_pct", "realtime_rank"]]
-            .style.format({"projected_turnover_usd": "${:,.0f}", "previous_day_turnover_usd": "${:,.0f}",
-                           "projected_vs_yesterday": "{:.2f}×", "intraday_return_pct": "{:+.2f}%",
-                           "realtime_rank": "{:.0f}"}, na_rep="not on board").hide(axis="index"))
-else:
-    # Stand-in: the same chart form on the realtime board you already have (no extra request).
-    dots = rt.dropna(subset=["projected_turnover", "projected_vs_yesterday"])
-    dots = dots[(dots["projected_turnover"] > 0) & (dots["projected_vs_yesterday"] > 0)]
-    dots = dots.nlargest(10, "projected_vs_yesterday").copy()
     if len(dots) < 2:
-        display(Markdown("> The realtime board has too few names to show the ranked form as a stand-in either."))
+        display(Markdown("> Fewer than two hotlist names have a positive projected turnover, so there is no "
+                         "ranking to draw. The table lists every name."))
     else:
-        dots["label"] = dots["ticker"] + " · " + short_name(dots["company_name"])
-        dots["hover"] = [f"<b>{r.company_name}</b> ({r.ticker})<br>Realtime board rank: {r.rank:.0f}"
-                         f"<br>Projected turnover: {money(r.projected_turnover, CCY)} ({r.projected_vs_yesterday:.2f}× "
-                         f"yesterday's {money(r.previous_day_turnover, CCY)})<br>Session return: "
-                         f"{r.intraday_return_pct:+.2f}%" for r in dots.itertuples()]
-        top = dots.iloc[0]
-        fig = ranked_dots(dots, "projected_turnover", CCY, f"Projected session turnover ({CCY}, log scale)")
+        dots["label"] = ("#" + dots["hotlist_rank"].map("{:.0f}".format) + " " + dots["ticker"] + " · "
+                         + short_name(dots["company_name"]))
+        dots["hover"] = [f"<b>{r.company_name}</b> ({r.ticker})<br>{r.industry if pd.notna(r.industry) else '(no industry)'}"
+                         f"<br>Hotlist rank: {r.hotlist_rank:.0f}"
+                         f"<br>Projected turnover: {money(r.projected_turnover_usd)} ({r.projected_vs_yesterday:.2f}× "
+                         f"yesterday's {money(r.previous_day_turnover_usd)})<br>Session return: "
+                         f"{r.intraday_return_pct:+.2f}%<br>Market cap: {money(r.market_cap_usd)}"
+                         f"<br>Factor lean: {r.factor_style}" for r in dots.itertuples()]
+        lead = dots.loc[dots["projected_turnover_usd"].idxmax()]
+        fig = ranked_dots(dots, "projected_turnover_usd", "USD", "Projected session turnover (USD, log scale)")
         fig.update_layout(title=dict(
-            text=(f"Realtime board stand-in: {top['ticker']} trades fastest, at "
-                  f"{top['projected_vs_yesterday']:.1f}× yesterday's pace"),
-            subtitle=dict(text=f"The hotlist has {len(hot)} name{'' if len(hot) == 1 else 's'}, too few to rank, so "
-                               f"this is the {MARKET_NAMES[MARKET]} realtime board's {len(dots)} fastest names, not "
-                               f"the hotlist<br>Fastest first · money in local currency ({CCY}) · market "
-                               f"{rt_meta['market_status']}")))
+            text=(f"{lead['ticker']} carries the most money on the {MARKET_NAMES[MARKET]} hotlist: "
+                  f"{money(lead['projected_turnover_usd'])} projected, {lead['projected_vs_yesterday']:.1f}× yesterday"),
+            subtitle=dict(text=f"{len(dots)} names in hotlist order · pace vs yesterday from "
+                               f"{dots['projected_vs_yesterday'].min():.1f}× to {dots['projected_vs_yesterday'].max():.1f}× "
+                               f"· market {hot_status}")))
         fig.show()
-        display(dots[["rank", "ticker", "company_name", "projected_turnover", "previous_day_turnover",
-                      "projected_vs_yesterday", "intraday_return_pct"]]
-                .style.format({"projected_turnover": "{:,.0f}", "previous_day_turnover": "{:,.0f}",
-                               "projected_vs_yesterday": "{:.2f}×", "intraday_return_pct": "{:+.2f}%"})
-                .hide(axis="index"))
+    display(hot[HOT_TABLE].style.format(HOT_FORMAT, na_rep="not on board").hide(axis="index"))
 
 # %% [markdown]
 # **How to read this.** On the hotlist, rows run in the hotlist's own order,
@@ -1415,8 +1485,8 @@ else:
 # label beside each dot says how today's projected turnover compares with
 # yesterday's: "3.5× yesterday" means three and a half times as much money is
 # on course to trade. Hover for the session return, the market cap and the
-# factor lean. When the cell falls back to the realtime board, the rows run
-# fastest first and the money is in local currency.
+# factor lean. With fewer than two names there is no chart: read the sentence
+# and the table instead.
 #
 # **Caveats.**
 #
@@ -1447,10 +1517,12 @@ else:
 #
 # Markets keep different hours, so at any moment some boards are live and
 # others are stale. Read the status and date in each panel title before
-# comparing.
+# comparing. The boards also cover different sets of stocks: when the China
+# board lists STAR Market names only, its panel title says so, and its numbers
+# describe the STAR Market, not the whole A-share market.
 
 # %%
-board_frames, board_meta = [], []
+board_frames, board_meta, universe = [], [], {}
 for m in MARKETS:
     payload = rt_payload if m == MARKET else sf_get(f"/api/v1/markets/{m}/realtime", limit=RT_LIMIT)
     show_freshness(payload, f"{MARKET_NAMES[m]}:")
@@ -1458,6 +1530,7 @@ for m in MARKETS:
     board_meta.append({"market": m, "status": meta["market_status"], "data_quality": meta["data_quality"],
                        "stale_reason": meta["stale_reason"], "as_of_local": meta["as_of_local"]})
     board = clean_realtime(to_frame(payload, "realtime"), f"Realtime {m}")
+    universe[m] = board_universe(board, m)          # e.g. "STAR Market" when the China board covers one segment
     if not board.empty:
         board_frames.append(board.assign(market=m))
 
@@ -1531,7 +1604,8 @@ else:
         status, quality, stamp = board_meta.loc[m, ["status", "data_quality", "as_of_local"]]
         day = pd.Timestamp(stamp).date() if stamp else "date unknown"
         rho, lo_m, hi_m = board_summary.loc[m, ["rho_pace_size", "rho_size_ci_low", "rho_size_ci_high"]]
-        titles.append(f"<b>{MARKET_NAMES[m]}</b><br>{status}" + ("" if quality == "ok" else f" ({quality}, {day})")
+        name = MARKET_NAMES[m] + (f" · {universe[m]}" if universe[m] else "")   # say when a board is one segment
+        titles.append(f"<b>{name}</b><br>{status}" + ("" if quality == "ok" else f" ({quality}, {day})")
                       + (f"<br>ρ = {rho:+.2f} [{lo_m:+.2f}, {hi_m:+.2f}]" if pd.notna(rho)
                          else "<br>board empty" if board_summary.loc[m, "names"] == 0 else "<br>too few names for ρ"))
     fig = make_subplots(rows=1, cols=4, subplot_titles=titles, shared_yaxes=True, horizontal_spacing=0.03)
@@ -1624,12 +1698,18 @@ else:
 # - A live board and a stale board are not the same thing. A live board
 #   projects a partial session; a stale board shows a finished one. Compare
 #   shapes, not levels, across them.
-# - Each board holds only its market's busiest names, so these are the
-#   patterns of the busiest names, not of the whole market.
+# - Each board holds only the busiest names that its feed covers, so these
+#   are the patterns of the busiest names, not of the whole market. The China
+#   board currently covers the STAR Market only (see the composition line
+#   printed above and the panel title). Its median return, breadth and ρ
+#   describe STAR Market names, a different universe from the other three
+#   boards and from the broad A-share market (run the notebook with
+#   `MARKET = "cn"` to see the whole market's breadth in the sector table).
 # - Spearman's ρ here describes how stocks on today's board differ from each
 #   other. It does not forecast returns and is not a trading signal.
-# - China's daily price limits cut off its return distribution (±10%, or
-#   ±20% on the STAR and ChiNext boards).
+# - Daily price limits cut off China's return distribution: ±10% on the main
+#   boards, ±20% on the STAR Market and ChiNext. Every name on a STAR-only
+#   board has the ±20% limit.
 
 # %% [markdown]
 # ## Next steps

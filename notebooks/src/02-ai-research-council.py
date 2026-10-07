@@ -90,6 +90,7 @@ BOOK_MARKET = "us"      # the grade book follows the US hotlist; "cn", "jp" or "
 BOOK_LIMIT = 200        # grade-book position rows: 1-200 (default 80). More closed rows = tighter statistics
 LADDER_CLOSED = 12      # how many recent closed positions the position chart shows next to the open ones
 MIN_PAIR_N = 6          # seat agreement: hide a correlation computed on fewer names than this
+MAX_RHO_SHIFT = 0.3     # seat agreement: a pair whose rho moves this much without the blank zeros "rests on" them
 WINSOR_Q = 0.05         # outcome robustness: clip realised returns at the 5th and 95th percentile per side
 BOOTSTRAP_SEED = 7      # fixed seed, so the bootstrap intervals come out the same every run
 STALE_DAYS = 4          # warn when the latest council meeting is older than this many days
@@ -112,8 +113,8 @@ print(f"Scoreboard checkpoint: {CHECKPOINT}. Grade book: market {BOOK_MARKET}, u
 #   `KeyError`, because that means the API contract changed. An empty list is
 #   normal, so it returns an empty table instead of crashing.
 # - `wilson`, `bootstrap_mean_ci`, `cluster_bootstrap_ci` and
-#   `cluster_bootstrap_spread_ci` are the interval estimates used in the outcome
-#   section. They are explained there.
+#   `cluster_bootstrap_spread_ci` are the interval estimates used in section 6.5.
+#   They are explained there.
 # - `pct`, `usd`, `p_text` and `age_text` format numbers for titles and tables.
 #
 # The cell also checks two library versions. Chart subtitles need plotly 5.23 or
@@ -426,20 +427,28 @@ board.head()
 #    - the seat is **present but its score is null**: it filed a comment (often
 #      "no evidence routed to this desk") without a score.
 #
-#    A third pattern is not a gap in the data, but may be one in substance: a seat
-#    that **scored exactly 0 and filed no comment**. A review that was never filed
-#    could be recorded that way. The API does not say, so we call these cells
-#    **blank zeros**, count them, and flag them in the charts. (Other scores without
-#    a comment are common and are not flagged; only the combination with a 0 is
-#    suspicious.)
+#    Two more patterns are not gaps in the data, but may be gaps in substance,
+#    because a score without a comment has no review behind it that we can read:
+#
+#    - a seat that **scored exactly 0 and filed no comment**. A review that was
+#      never filed could be recorded that way. The API does not say, so we call
+#      these cells **blank zeros**, count them, and flag them in the charts;
+#    - any **other score without a comment**. One of them on its own may be
+#      harmless. But when most of a name's scores come without a comment, its
+#      composite rests on reviews nobody can check. The audit counts these cells
+#      per seat (`scored_no_comment`, which includes the blank zeros) and per name
+#      (`uncommented_scores`), and the cell prints the names where most scores
+#      have no comment.
 #
 # Our policy is explicit: **a missing seat stays missing.** We never fill it with
 # 50 ("neutral") or 0, because that would invent an opinion. Any average we
 # compute ourselves uses only the seats that reported, and the agreement
 # statistics use, for each pair of seats, only the names both of them scored.
 # A blank zero stays 0, because that is the published score and the published
-# composite averages it (step 6 checks this). Instead, the agreement and fragility
-# checks below re-run without the blank zeros, so you can see how much they matter.
+# composite averages it (step 6 checks this). Uncommented scores also stay as
+# published. Instead, the checks in section 6 re-run without the blank zeros
+# (and the fragility check also without every uncommented score), so you can see
+# how much they matter.
 
 # %%
 wide = (seats.pivot(index="ticker", columns="seat", values="score")
@@ -449,6 +458,7 @@ present = (seats.assign(reported=1).pivot(index="ticker", columns="seat", values
 comments_wide = (seats.pivot(index="ticker", columns="seat", values="comment")
                  .reindex(index=board["ticker"], columns=SEATS))
 no_comment = comments_wide.map(lambda c: not isinstance(c, str) or not c.strip())
+uncommented = wide.notna() & no_comment                              # scored, but no review text to read
 zero_no_comment = (wide == 0) & no_comment                           # a "blank zero": maybe no review filed
 wide_without_blank_zeros = wide.mask(zero_no_comment)              # for the sensitivity checks only
 
@@ -456,7 +466,8 @@ seat_audit = pd.DataFrame({
     "names_scored": wide.notna().sum(),
     "seat_absent": present.isna().sum(),                           # key not in per_analyst at all
     "seat_present_score_null": (present.notna() & wide.isna()).sum(),
-    "score_zero_no_comment": zero_no_comment.sum(),                # scored, but maybe not reviewed
+    "scored_no_comment": uncommented.sum(),                        # any score with no comment behind it
+    "score_zero_no_comment": zero_no_comment.sum(),                # of those, the blank zeros
 }).rename_axis("seat")
 seat_audit["coverage"] = seat_audit["names_scored"] / max(len(board), 1)
 display(seat_audit.style.format({"coverage": "{:.0%}"}))
@@ -467,9 +478,27 @@ print(f"Blank zeros (score 0, no comment): {n_blank}" + (f" ({blank_by_seat}). T
                                                          if n_blank else "."))
 
 board["n_seats"] = board["ticker"].map(wide.notna().sum(axis=1))
+board["uncommented_scores"] = board["ticker"].map(uncommented.sum(axis=1))
 board["seat_min"] = board["ticker"].map(wide.min(axis=1))
 board["seat_max"] = board["ticker"].map(wide.max(axis=1))
 print("Names by number of seats that scored:", board["n_seats"].value_counts().sort_index().to_dict())
+
+# Where do the uncommented scores sit? Flag names where MOST of the scores have no comment.
+n_scored, n_uncommented = int(wide.notna().sum().sum()), int(uncommented.sum().sum())
+if n_scored:
+    print(f"Scores without a comment: {n_uncommented} of {n_scored} scored cells ({n_blank} blank zeros, "
+          f"{n_uncommented - n_blank} other scores).")
+    bare = board[board["uncommented_scores"] * 2 > board["n_seats"]]
+    if n_uncommented and bare.empty:
+        print("No name has most of its scores without a comment, so no zone rests mainly on unreadable reviews.")
+    elif not bare.empty:
+        other_on_bare = int((uncommented & ~zero_no_comment).loc[bare["ticker"]].sum().sum())
+        legs = bare.loc[bare["long"] | bare["short"], "ticker"].tolist()
+        print(f"Most scores have no comment on {len(bare)} name(s): "
+              + ", ".join(f"{r.ticker} ({r.uncommented_scores} of {r.n_seats})" for r in bare.itertuples())
+              + f". Together they hold {other_on_bare} of the {n_uncommented - n_blank} non-zero uncommented scores."
+              + (f" Scoreboard paper legs among them: {', '.join(legs)}." if legs else "")
+              + " Read their zones as resting on reviews you cannot check.")
 
 # %% [markdown]
 # 6. **Check what the composite is.** Never trust a definition you can test.
@@ -548,9 +577,10 @@ if not board.empty:                                                   # an empty
 # Each row is one hotlist name, highest composite at the top. The big dot is the
 # composite, coloured by the zone the rule puts it in. The small hollow dots are
 # the individual seats' scores, and the grey bar spans the lowest to the highest
-# seat. A black ring marks a paper leg in the scoreboard's ledger. A grey × marks
-# a blank zero (a seat score of 0 with no comment). (This is a dot strip with one
-# row per name, so every label stays readable.)
+# seat. A black ring marks a working paper leg in the scoreboard's ledger, and a
+# grey crossed ring (⊗) marks a leg that is already stopped out. A grey ×
+# marks a blank zero (a seat score of 0 with no comment). (This is a dot strip with
+# one row per name, so every label stays readable.)
 
 # %%
 if board["composite_score"].notna().sum() == 0:
@@ -562,6 +592,9 @@ else:
     seat_pts = seats.dropna(subset=["score"])
     seat_pts = seat_pts[seat_pts["ticker"].isin(order)]
     seat_pts = seat_pts.assign(blank=[bool(zero_no_comment.at[t, s]) for t, s in zip(seat_pts["ticker"], seat_pts["seat"])])
+
+    flagged = plot[plot["flag"] != "not flagged"]
+    stopped = flagged["stop_state"] == "stopped_out"                  # the ledger's stop already closed these legs
 
     fig = go.Figure()
     fig.add_vrect(x0=-2, x1=SHORT_BELOW, fillcolor=SIDE_COLORS["SHORT"], opacity=0.06, line_width=0, layer="below")
@@ -590,6 +623,12 @@ else:
             marker=dict(symbol="x-thin", size=9, color=MUTED, line=dict(width=1.8, color=MUTED)),
             customdata=blank_pts["seat"],
             hovertemplate="<b>%{y}</b> · %{customdata}: 0, no comment filed (maybe no review)<extra></extra>"))
+    if stopped.any():                                                 # drawn before the dots: spokes show around them
+        fig.add_trace(go.Scatter(
+            x=flagged.loc[stopped, "composite_score"], y=flagged.loc[stopped, "ticker"], mode="markers",
+            name="Paper leg, already stopped out", legendrank=4,
+            marker=dict(symbol="circle-x-open", size=24, color=MUTED, line=dict(width=1.8, color=MUTED)),
+            hoverinfo="skip"))
     for side in SIDE_ORDER:
         sub = plot[plot["rule_side"] == side]
         if sub.empty:
@@ -604,20 +643,28 @@ else:
                            "<br>Composite %{x:.1f} (%{customdata[1]} seats scored)"
                            "<br>Scoreboard paper flag: %{customdata[2]} · stop: %{customdata[3]}"
                            "<br>%{customdata[4]} days on the list<extra></extra>")))
-    flagged = plot[plot["flag"] != "not flagged"]
-    fig.add_trace(go.Scatter(
-        x=flagged["composite_score"], y=flagged["ticker"], mode="markers", name="Paper leg in the scoreboard ledger",
-        legendrank=4,
-        marker=dict(symbol="circle-open", size=24, color=INK, line=dict(width=1.8, color=INK)), hoverinfo="skip"))
+    if (~stopped).any():
+        fig.add_trace(go.Scatter(
+            x=flagged.loc[~stopped, "composite_score"], y=flagged.loc[~stopped, "ticker"], mode="markers",
+            name="Working paper leg in the scoreboard ledger", legendrank=4,
+            marker=dict(symbol="circle-open", size=24, color=INK, line=dict(width=1.8, color=INK)), hoverinfo="skip"))
 
     n_long, n_short = int((plot["rule_side"] == "LONG").sum()), int((plot["rule_side"] == "SHORT").sum())
-    n_flag_long, n_flag_short = int(plot["long"].sum()), int(plot["short"].sum())
-    legs_text = " and ".join(text for n, text in ((n_flag_long, f"{n_flag_long} paper long{'s' * (n_flag_long > 1)}"),
-                                                   (n_flag_short, f"{n_flag_short} paper short{'s' * (n_flag_short > 1)}"))
-                             if n) or "no paper legs"
+
+    def count_legs(mask: pd.Series) -> str:
+        """'4 shorts', '1 long and 4 shorts', ... for the flagged legs selected by mask."""
+        counts = {side: int((mask & (flagged["flag"] == side)).sum()) for side in ("LONG", "SHORT")}
+        return " and ".join(f"{n} {side.lower()}{'s' * (n != 1)}" for side, n in counts.items() if n)
+
+    if flagged.empty:
+        legs_text = "no paper legs in the scoreboard ledger"
+    else:                                                             # working and stopped-out legs, counted apart
+        legs_text = "paper legs: " + (f"{count_legs(~stopped)} working" if (~stopped).any() else "none working")
+        if stopped.any():
+            legs_text += f", {count_legs(stopped)} stopped out"
     fig.update_layout(
-        title=dict(text=(f"{n_short or 'None'} of {len(plot)} names score below {SHORT_BELOW} and "
-                         f"{n_long or 'none'} above {LONG_ABOVE}; the scoreboard ledger holds {legs_text}"),
+        title=dict(text=(f"{n_short or 'None'} of {len(plot)} names score below {SHORT_BELOW}, "
+                         f"{n_long or 'none'} above {LONG_ABOVE}; {legs_text}"),
                    subtitle=dict(text=(f"US hotlist, {MEETING.get(meta['checkpoint_index'], '')} meeting of "
                                        f"{meta['decision_session_date']}.<br>Big dot = published composite; hollow "
                                        "dots = seat scores; grey bar = lowest to highest seat."))),
@@ -639,9 +686,11 @@ else:
 # blue right of the 70 line is LONG, red left of the 30 line is SHORT, grey in
 # between is HOLD. The grey bar shows how much the seats disagree on that name:
 # a short bar means the seats broadly agree, and a long bar means at least one
-# seat sees it very differently. A ring means the name is a leg of the
-# scoreboard's paper ledger. A big dot in a coloured zone **without** a ring is a
-# name the ledger did not take. The table under the chart has the same numbers.
+# seat sees it very differently. A black ring means the name is a working leg of
+# the scoreboard's paper ledger; a grey crossed ring (⊗) means the leg has already
+# hit the ledger's stop and is no longer working. The title counts the two apart. A big dot in a coloured zone
+# **without** a ring is a name the ledger did not take. The table under the chart
+# has the same numbers, including each leg's `stop_state`.
 #
 # **Caveats.**
 #
@@ -666,8 +715,12 @@ else:
 # colour scale is diverging and centred at 50: blue cells lean bullish, red cells
 # lean bearish, and the palest cells sit near the neutral midpoint. The two kinds
 # of gap from step 5 get different marks: a dash (–) is a seat that did not report
-# on the name, and a "c" is a seat that filed a comment without a score. A cell
-# reading 0* with a dotted outline is a blank zero: a score of 0 with no comment.
+# on the name, and a "c" is a seat that filed a comment without a score. A grey
+# cell reading 0* with a dotted outline is a blank zero: a score of 0 with no
+# comment. It is kept out of the colour scale on purpose, so a review that may
+# never have been filed does not look like the council's most bearish view. The
+# title's "most contested" name is chosen without the blank zeros for the same
+# reason.
 
 # %%
 if wide.notna().sum().sum() == 0:
@@ -678,11 +731,14 @@ else:
     here = present.reindex(index=grid.index).notna()                  # the seat key exists for this name
     comments = comments_wide.reindex(index=grid.index)
     blank = zero_no_comment.reindex(index=grid.index)
+    filed = wide_without_blank_zeros.reindex(index=grid.index)       # colour and spread leave the blank zeros out
 
     def cell_label(score, reported: bool, blank_zero: bool) -> str:
+        if blank_zero:
+            return ""                                                 # the grey overlay below prints "0*"
         if pd.isna(score):
             return "c" if reported else "–"
-        return "0*" if blank_zero else f"{score:.0f}"
+        return f"{score:.0f}"
 
     def cell_hover(score, reported: bool, comment, blank_zero: bool) -> str:
         if not reported:
@@ -698,27 +754,40 @@ else:
                  for i in range(len(grid))]
     hover_text = [[cell_hover(grid.iat[i, j], here.iat[i, j], comments.iat[i, j], blank.iat[i, j])
                    for j in range(len(SEATS))] for i in range(len(grid))]
-    spread = grid.max(axis=1) - grid.min(axis=1)
-    contested = spread.idxmax()
+    spread = filed.max(axis=1) - filed.min(axis=1)                    # highest minus lowest seat, blank zeros left out
     y_labels = [f"{t} · {c:.0f}" for t, c in zip(ranked["ticker"], ranked["composite_score"])]
+    x_labels = [s.capitalize() for s in SEATS]
 
     fig = go.Figure(go.Heatmap(
-        z=grid.to_numpy(dtype=float), x=[s.capitalize() for s in SEATS], y=y_labels,
+        z=filed.to_numpy(dtype=float), x=x_labels, y=y_labels,
         text=cell_text, texttemplate="%{text}", textfont=dict(size=12),
         customdata=hover_text, hoverongaps=True,                      # gaps hover too: comment-only seats
         colorscale=DIVERGING, zmin=0, zmax=100, zmid=50, xgap=2, ygap=2,
         colorbar=dict(title=dict(text="Seat score<br>(0-100)"), tickvals=[0, 30, 50, 70, 100], len=0.8,
                       thickness=14),
         hovertemplate="<b>%{y}</b> · %{x}<br>%{customdata}<extra></extra>"))
-    for i, j in zip(*np.nonzero(blank.to_numpy())):                   # outline each blank zero
-        fig.add_shape(type="rect", xref="x", yref="y", x0=j - 0.5, x1=j + 0.5, y0=i - 0.5, y1=i + 0.5,
-                      line=dict(color=INK, width=1.5, dash="dot"))
+    if blank.any().any():                                             # blank zeros: neutral grey, not the scale's red
+        blank_np = blank.to_numpy(dtype=bool)
+        fig.add_trace(go.Heatmap(
+            z=np.where(blank_np, 1.0, np.nan), x=x_labels, y=y_labels, showscale=False,
+            colorscale=[[0, GRID], [1, GRID]], zmin=0, zmax=1, xgap=2, ygap=2, hoverongaps=False,
+            text=np.where(blank_np, "0*", ""), texttemplate="%{text}", textfont=dict(size=12, color=INK),
+            customdata=hover_text, hovertemplate="<b>%{y}</b> · %{x}<br>%{customdata}<extra></extra>"))
+        for i, j in zip(*np.nonzero(blank_np)):                        # and a dotted outline on each one
+            fig.add_shape(type="rect", xref="x", yref="y", x0=j - 0.5, x1=j + 0.5, y0=i - 0.5, y1=i + 0.5,
+                          line=dict(color=INK, width=1.5, dash="dot"))
     gap_note = "– = seat did not report; c = comment without a score"
     if blank.any().any():
-        gap_note += ";<br>0* (dotted outline) = scored 0 with no comment, possibly a missing review"
+        gap_note += (";<br>grey 0* (dotted outline) = scored 0 with no comment, possibly a missing review, "
+                     "kept out of the colour scale")
+    if spread.notna().any():
+        contested = spread.idxmax()
+        headline = (f"The seats disagree most on {contested}: its seat scores run from "
+                    f"{filed.loc[contested].min():.0f} to {filed.loc[contested].max():.0f}")
+    else:
+        headline = "Too few seat scores per name to compare the seats"
     fig.update_layout(
-        title=dict(text=(f"The seats disagree most on {contested}: its seat scores run from "
-                         f"{grid.loc[contested].min():.0f} to {grid.loc[contested].max():.0f}"),
+        title=dict(text=headline,
                    subtitle=dict(text=("Rows: hotlist names in rank order, labelled with the composite. Columns: "
                                        f"seats.<br>Colour centred at 50 (neutral); {gap_note}."))),
         xaxis=dict(title=None, side="top", showgrid=False, ticks=""),
@@ -728,7 +797,7 @@ else:
 
     twin = grid.copy()
     twin.insert(0, "composite", ranked.set_index("ticker")["composite_score"])
-    twin["spread"] = spread
+    twin["spread_without_blank_zeros"] = spread
     twin["blank_zeros"] = blank.sum(axis=1)
     display(twin.style.format({**{c: "{:.0f}" for c in twin.columns}, "composite": "{:.1f}"}, na_rep="–"))
 
@@ -737,14 +806,16 @@ else:
 # is blue from end to end is a name every seat likes. A row with one blue cell
 # among red ones is a name where one seat is pushing back: that is the
 # "challenge" in action. Scan a column to see one seat's habits. A column that is
-# darker than the others belongs to a seat that scores more extremely. A column of
-# zeros has two possible readings: the seat is maximally bearish on those names,
-# or it did not file a review and the 0 is a placeholder. When the zeros come
-# without a comment (0*, dotted outline), the second reading is at least as
-# likely, so treat them with care. Hover a cell to read the seat's own comment,
-# including the comments that a seat filed without a score (c). The table under
-# the chart adds the composite, the spread (highest seat minus lowest seat) and the
-# number of blank zeros for each name.
+# darker than the others belongs to a seat that scores more extremely. A zero has
+# two possible readings: the seat is maximally bearish on that name, or it did not
+# file a review and the 0 is a placeholder. When a zero comes without a comment,
+# the second reading is at least as likely, so the chart shows it as a grey 0*
+# with a dotted outline instead of the darkest red. A column with many grey cells
+# belongs to a seat that may not have reviewed those names at all. Hover a cell to
+# read the seat's own comment, including the comments that a seat filed without a
+# score (c). The table under the chart keeps the published scores (blank zeros
+# included) and adds the composite, the spread (highest seat minus lowest seat,
+# with the blank zeros left out) and the number of blank zeros for each name.
 #
 # **Caveats.**
 #
@@ -753,186 +824,6 @@ else:
 # - Seat comments are generated research text. Treat them as a summary of the
 #   inputs the seat saw, not as independent research. Offline fixture comments
 #   are placeholders.
-
-# %% [markdown]
-# ### Chart: do the seats agree with each other?
-#
-# If two seats rank the names in a similar order, they agree. We measure that
-# with **Spearman's rank correlation, ρ (rho)**. It compares the *ranks* of the
-# scores, not the scores themselves, so one seat that scores everything 10
-# points higher still "agrees" perfectly with another. ρ = +1 means the same
-# order, 0 means no relation, and −1 means opposite orders. Tied scores (such as
-# several zeros) share an average rank.
-#
-# Each pair is computed on the names **both** seats scored, so `n` differs by
-# pair. A seat that scored fewer than `MIN_PAIR_N` names is left out of the grid,
-# and so is any pair with fewer shared names than that.
-#
-# Two details keep the p-values honest:
-#
-# - **A permutation p-value.** With a dozen names and several tied scores, the
-#   usual formula for Spearman's p-value is only an approximation. Instead we
-#   shuffle one seat's scores across the names thousands of times and count how
-#   often a ρ at least as far from 0 turns up by chance.
-# - **A Holm correction.** Six pairs tested at once give six chances to look
-#   "significant" by luck. Holm's method raises each p-value to allow for that;
-#   a pair counts as distinguishable from zero only when its Holm-adjusted p-value
-#   is below 0.05.
-
-# %%
-def rho_and_p(x: pd.Series, y: pd.Series) -> tuple:
-    """Spearman's ρ and a permutation p-value (shuffle x's ranks; tied scores keep their average rank)."""
-    rx, ry = stats.rankdata(x), stats.rankdata(y)
-    yc = ry - ry.mean()
-
-    def rho(r, axis=-1):                                            # Pearson correlation of the ranks = Spearman
-        rc = r - r.mean(axis=axis, keepdims=True)
-        return (rc * yc).sum(axis=axis) / np.sqrt((rc**2).sum(axis=axis) * (yc**2).sum())
-
-    result = stats.permutation_test((rx,), rho, permutation_type="pairings", vectorized=True,
-                                    n_resamples=9999, random_state=BOOTSTRAP_SEED)
-    return float(result.statistic), float(result.pvalue)
-
-
-def seat_pairs(scores: pd.DataFrame) -> pd.DataFrame:
-    """ρ, permutation p and Holm-adjusted p for every pair of CORR_SEATS, on the names both seats scored."""
-    out = []
-    for i, a in enumerate(CORR_SEATS):
-        for b in CORR_SEATS[i + 1:]:
-            both = scores[[a, b]].dropna()
-            ok = len(both) >= MIN_PAIR_N and both[a].nunique() > 1 and both[b].nunique() > 1
-            rho, p = rho_and_p(both[a], both[b]) if ok else (np.nan, np.nan)
-            out.append({"seat_a": a, "seat_b": b, "n": len(both), "rho": rho, "p_value": p})
-    out = pd.DataFrame(out, columns=["seat_a", "seat_b", "n", "rho", "p_value"])
-    out["p_holm"] = np.nan
-    tested = out["p_value"].notna()
-    if tested.any():
-        out.loc[tested, "p_holm"] = multipletests(out.loc[tested, "p_value"], method="holm")[1]
-    return out
-
-
-CORR_SEATS = [s for s in SEATS if wide[s].notna().sum() >= MIN_PAIR_N]
-dropped = [s for s in SEATS if s not in CORR_SEATS]
-if dropped:
-    print(f"Left out of the agreement grid (fewer than {MIN_PAIR_N} names scored): {', '.join(dropped)}.")
-pairs = seat_pairs(wide)
-shown = pairs.dropna(subset=["rho"])
-if len(shown):
-    print(f"{len(shown)} seat pairs tested. At the 5% level about {0.05 * len(shown):.1f} of them would look "
-          "'significant' by luck alone, even if no two seats were related, so the verdicts use Holm-adjusted "
-          "p-values.")
-
-if shown.empty:
-    display(Markdown(f"> Not enough overlapping seat scores (need {MIN_PAIR_N} names per pair) for agreement."))
-else:
-    def rho_needed(n: int) -> float:
-        """Roughly the smallest |rho| with p < 0.05 (two-sided) for ONE test on n names (t approximation)."""
-        t_crit = stats.t.ppf(0.975, n - 2)
-        return t_crit / np.sqrt(n - 2 + t_crit**2)
-
-    n_values = sorted(shown["n"].unique(), reverse=True)
-    needed = ", ".join(f"{rho_needed(n):.2f} at n = {n}" for n in n_values)
-
-    rows_, cols_ = CORR_SEATS[1:], CORR_SEATS[:-1]                    # lower triangle only, no diagonal
-    lookup = {(r.seat_b, r.seat_a): r for r in pairs.itertuples()}
-    z = [[lookup[(r, c)].rho if (r, c) in lookup else np.nan for c in cols_] for r in rows_]
-    text = [["" if (r, c) not in lookup else
-             (f"{lookup[(r, c)].rho:+.2f}  (n={lookup[(r, c)].n})" if pd.notna(lookup[(r, c)].rho)
-              else f"n={lookup[(r, c)].n}: too few") for c in cols_] for r in rows_]
-    nmat = [[lookup[(r, c)].n if (r, c) in lookup else 0 for c in cols_] for r in rows_]
-
-    best_pair, worst_pair = shown.loc[shown["rho"].idxmax()], shown.loc[shown["rho"].idxmin()]
-    n_sig = int((shown["p_holm"] < 0.05).sum())
-    fig = go.Figure(go.Heatmap(
-        z=z, x=[c.capitalize() for c in cols_], y=[r.capitalize() for r in rows_],
-        text=text, texttemplate="%{text}", customdata=nmat, hoverongaps=False,
-        colorscale=DIVERGING, zmin=-1, zmax=1, zmid=0, xgap=3, ygap=3,
-        colorbar=dict(title=dict(text="Spearman ρ"), tickvals=[-1, -0.5, 0, 0.5, 1], len=0.8, thickness=14),
-        hovertemplate="%{y} vs %{x}<br>ρ = %{z:+.2f} on %{customdata} names<extra></extra>"))
-    fig.update_layout(
-        title=dict(text=(f"Seats agree most on {best_pair.seat_a}–{best_pair.seat_b} (ρ = {best_pair.rho:+.2f}) "
-                         f"and least on {worst_pair.seat_a}–{worst_pair.seat_b} (ρ = {worst_pair.rho:+.2f})"),
-                   subtitle=dict(text=("Rank correlation across this checkpoint's hotlist names; n = names both "
-                                       f"seats scored.<br>{n_sig} of {len(shown)} pairs beat chance after a Holm "
-                                       f"correction (one test alone would need |ρ| above about {needed})."))),
-        xaxis=dict(title=None, showgrid=False, ticks=""),
-        yaxis=dict(title=None, autorange="reversed", showgrid=False, ticks=""),
-        height=200 + 95 * len(rows_), margin=dict(t=125, l=110))
-    fig.show()
-
-    display(pairs.assign(distinguishable_from_zero=pairs["p_holm"] < 0.05)
-            .sort_values("rho", ascending=False)
-            .style.format({"rho": "{:+.2f}", "p_value": "{:.3f}", "p_holm": "{:.3f}"}, na_rep="–")
-            .hide(axis="index"))
-
-    # Sensitivity: the same pairs with the blank zeros (score 0, no comment) treated as missing.
-    blank_seats = [s for s in CORR_SEATS if zero_no_comment[s].any()]
-    if not blank_seats:
-        print("No blank zeros among these seats, so there is no sensitivity check to run.")
-    else:
-        alt = seat_pairs(wide_without_blank_zeros)
-        sens = pairs.merge(alt, on=["seat_a", "seat_b"], suffixes=("", "_without_blank_zeros"))
-        sens = sens[sens["seat_a"].isin(blank_seats) | sens["seat_b"].isin(blank_seats)]
-        print(f"Sensitivity: {int(zero_no_comment[blank_seats].sum().sum())} blank zero(s) in "
-              f"{', '.join(blank_seats)}. The pairs that involve them, with and without those cells:")
-        display(sens[["seat_a", "seat_b", "n", "rho", "p_holm", "n_without_blank_zeros", "rho_without_blank_zeros",
-                      "p_holm_without_blank_zeros"]]
-                .style.format({"rho": "{:+.2f}", "rho_without_blank_zeros": "{:+.2f}", "p_holm": "{:.3f}",
-                               "p_holm_without_blank_zeros": "{:.3f}"}, na_rep="–").hide(axis="index"))
-
-# %% [markdown]
-# **How to read this.** Each cell is one pair of seats. Blue means the two seats
-# rank the names in a similar order; red means they tend to disagree; pale means
-# no clear relation. The small `n` is the number of names both seats scored.
-# Macro and risk score very few names, so they usually drop out of the grid. The
-# table lists every pair with its p-value (the chance of a correlation at least
-# this strong if the two seats were truly unrelated) and its Holm-adjusted
-# p-value, which allows for testing several pairs at once. When the scores carry
-# blank zeros, the second table shows each affected pair again without them: if
-# ρ changes a lot, the agreement rests on those placeholder-like cells.
-#
-# **Caveats.**
-#
-# - About a dozen names is a small sample. A correlation of 0.5 can easily be
-#   noise, which is why the subtitle prints a rough threshold for a single test at
-#   each sample size.
-# - Several pairs are tested at once. The line printed above the chart says how
-#   many would look "significant" by luck alone; the Holm correction allows for it.
-# - Hotlist names are selected for momentum, so they are not a random sample.
-#   Agreement on this list may not carry over to the wider market.
-#
-# **One seat against the rest.** A second view asks how each seat relates to the
-# average of the *other* seats in the composite (`COMPOSITE_SEATS`, found in
-# section 4). We leave the seat itself out of that average; otherwise it would
-# correlate with itself (a "part-whole" effect). Seats outside the composite get
-# no value, so every seat is compared with the same kind of benchmark. The lowest
-# value marks the seat that breaks from the council most often: its main
-# challenger. The `tilt_vs_composite` column is the seat's average score minus the
-# composite, for the names it scored: positive means the seat is more bullish than
-# the council.
-
-# %%
-if wide.notna().sum().sum() == 0:
-    print("No seat scores to summarise.")
-else:
-    composite_by_name = board.set_index("ticker")["composite_score"].reindex(wide.index)
-    seat_stats = []
-    for s in SEATS:
-        rest = wide[[c for c in COMPOSITE_SEATS if c != s]].mean(axis=1)   # mean of the OTHER composite seats
-        both = pd.concat([wide[s], rest], axis=1, keys=["seat", "rest"]).dropna()
-        ok = (s in COMPOSITE_SEATS and len(both) >= MIN_PAIR_N and both["seat"].nunique() > 1
-              and both["rest"].nunique() > 1)
-        seat_stats.append({"seat": s, "in_composite": s in COMPOSITE_SEATS, "names_scored": int(wide[s].notna().sum()),
-                           "mean_score": wide[s].mean(), "sd_score": wide[s].std(),
-                           "tilt_vs_composite": (wide[s] - composite_by_name).mean(),
-                           "rho_with_rest": stats.spearmanr(both["seat"], both["rest"])[0] if ok else np.nan})
-    seat_stats = pd.DataFrame(seat_stats).set_index("seat")
-    display(seat_stats.style.format({"mean_score": "{:.1f}", "sd_score": "{:.1f}", "tilt_vs_composite": "{:+.1f}",
-                                     "rho_with_rest": "{:+.2f}"}, na_rep="–"))
-    if seat_stats["rho_with_rest"].notna().any():
-        contrarian = seat_stats["rho_with_rest"].idxmin()
-        print(f"Least aligned seat at this checkpoint: {contrarian} (rank correlation with the other composite "
-              f"seats' average: {seat_stats.loc[contrarian, 'rho_with_rest']:+.2f}).")
 
 # %% [markdown]
 # ### How the seats explain and challenge each call
@@ -1433,67 +1324,51 @@ else:
 #
 # A closed position's `realized_return_pct` is side-aware, so a positive number
 # is a win for either side. We call a closed position a **hit** when its
-# realised return is above zero (exactly zero counts as a miss).
-#
-# Two tools make small samples honest:
-#
-# - **Wilson interval for the hit rate.** If 15 of 28 positions hit, the hit rate
-#   is 54%, but the true long-run rate could plausibly be anywhere from about 36%
-#   to 70%. The Wilson interval gives that range. It behaves better than the
-#   textbook "p ± 1.96 × standard error" when n is small or the rate is near 0% or 100%.
-# - **Bootstrap interval for the mean return.** We resample the closed positions
-#   with replacement 5,000 times and recompute the mean each time. The middle 95%
-#   of those means is the interval. It makes no assumption about the shape of the
-#   returns, which matters because a few big moves dominate.
-#
-# The `winsorised_mean_pct` column clips each side's returns at the 5th and 95th
-# percentile first. If it differs a lot from the plain mean, a few outliers drive
-# the average, and the median is the better summary.
-#
-# We also record each position's **raw price move**, `(exit − entry) / entry × 100`,
-# which is *not* side-aware, and the share of names whose price rose
-# (`share_rose`). For a LONG, a hit and a rise are the same thing; for a SHORT, a
-# hit is a fall. The next two sections use the raw moves to separate what the
-# grade did from what the market did.
+# realised return is above zero (exactly zero counts as a miss). The table counts
+# the hits by side and summarises the returns. It shows the median next to the
+# mean, because a few big moves can pull an average far from the typical position.
 
 # %%
 closed = book[is_closed].dropna(subset=["realized_return_pct"]).copy()
 closed["hit"] = closed["realized_return_pct"] > 0
-closed["raw_move_pct"] = (closed["exit_price"] - closed["entry_price"]) / closed["entry_price"] * 100 + 0.0
-closed["rose"] = closed["raw_move_pct"] > 0
 
 
 def outcome_row(group: pd.DataFrame, label: str) -> dict:
+    """Plain counts and averages for one group of closed positions (section 6.5 adds the intervals)."""
     r, n, hits = group["realized_return_pct"], len(group), int(group["hit"].sum())
-    lo, hi = wilson(hits, n)
-    b_lo, b_hi = bootstrap_mean_ci(r)
-    q_lo, q_hi = r.quantile([WINSOR_Q, 1 - WINSOR_Q]) if n else (np.nan, np.nan)
     return {"side": label, "closed": n, "hits": hits, "hit_rate": hits / n if n else np.nan,
-            "hit_rate_lo95": lo, "hit_rate_hi95": hi, "mean_return_pct": r.mean(), "mean_lo95": b_lo,
-            "mean_hi95": b_hi, "winsorised_mean_pct": r.clip(q_lo, q_hi).mean(), "median_return_pct": r.median(),
-            "best_pct": r.max(), "worst_pct": r.min(), "median_holding_days": group["holding_days"].median(),
-            "share_rose": group["rose"].mean(), "mean_price_move_pct": group["raw_move_pct"].mean()}
+            "mean_return_pct": r.mean(), "median_return_pct": r.median(), "best_pct": r.max(),
+            "worst_pct": r.min(), "median_holding_days": group["holding_days"].median()}
 
 
 if closed.empty:
     display(Markdown("> No closed positions yet, so there are no outcomes to summarise."))
-    outcomes = pd.DataFrame()
+    basic_outcomes = pd.DataFrame()
 else:
-    outcomes = pd.DataFrame([outcome_row(g, side) for side, g in closed.groupby("side")]
-                            + [outcome_row(closed, "All")]).set_index("side")
-
-    # Positions overlap in time, so they share market moves and are not independent draws.
-    starts, ends = closed["entry_date"].to_numpy(), closed["exit_date"].to_numpy()
-    overlaps = [int(((starts <= ends[i]) & (ends >= starts[i])).sum() - 1) for i in range(len(closed))]
+    basic_outcomes = pd.DataFrame([outcome_row(g, side) for side, g in closed.groupby("side")]
+                                  + [outcome_row(closed, "All")]).set_index("side")
     print(f"{len(closed)} closed paper positions, graded {closed['grade_date'].min():%Y-%m-%d} to "
-          f"{closed['grade_date'].max():%Y-%m-%d}, on {closed['grade_date'].nunique()} grade days and "
-          f"{closed['ticker'].nunique()} distinct tickers. The median position shared its holding window with "
-          f"{int(np.median(overlaps))} others.")
-    pct_cols = ["mean_return_pct", "mean_lo95", "mean_hi95", "winsorised_mean_pct", "median_return_pct",
-                "best_pct", "worst_pct", "mean_price_move_pct"]
-    display(outcomes.style.format({**{c: "{:+.2f}%" for c in pct_cols}, "hit_rate": "{:.0%}",
-                                   "hit_rate_lo95": "{:.0%}", "hit_rate_hi95": "{:.0%}", "share_rose": "{:.0%}",
-                                   "median_holding_days": "{:.0f}"}, na_rep="–"))
+          f"{closed['grade_date'].max():%Y-%m-%d}.")
+    display(basic_outcomes.style.format({**{c: "{:+.2f}%" for c in ["mean_return_pct", "median_return_pct",
+                                                                     "best_pct", "worst_pct"]},
+                                         "hit_rate": "{:.0%}", "median_holding_days": "{:.0f}"}, na_rep="–"))
+
+# %% [markdown]
+# **How to read this.** Each row is one side's closed positions, and `All` pools
+# both sides. `hit_rate` is the share that closed in the position's favour.
+# Compare the mean with the median: when they differ a lot, a few large wins or
+# losses drive the mean, and the median describes a typical position better.
+#
+# **Caveats.**
+#
+# - These are plain counts and averages, with no error bars. The book holds a
+#   limited number of closed positions, and positions graded on the same day tend
+#   to move together. Section 6.5 puts intervals around these numbers.
+# - A LONG and a SHORT have opposite market exposure. In a window when most
+#   hotlist names rose, LONG positions win and SHORT positions lose even if the
+#   grade has no skill at all. So a gap between the two hit rates is **not**
+#   evidence of skill. Section 6.5 separates the grade from the market's direction.
+# - Paper outcomes ignore spreads, fees, borrow costs for shorts, and slippage.
 
 # %% [markdown]
 # **Open positions: unrealised returns by side.** An open position has no
@@ -1522,11 +1397,722 @@ else:
           "move either way: treat them as a snapshot, not a result.")
 
 # %% [markdown]
-# ### How sure can we be? Positions graded on the same day may move together
+# ### The decisions gate table
 #
-# The intervals above treat every position as an independent draw. That is
-# optimistic: positions graded on the same day enter together, ride the same
-# market days, and often exit together. A second bootstrap allows for that.
+# `decisions` lists the latest grade date's actionable grades: every name graded
+# above 70 or below 30. For each one the book records six gates and whether the
+# name qualifies to open a position:
+#
+# | Gate | Passes when | Blocks an opening? |
+# |---|---|---|
+# | G1 strict grade | the grade is strictly above 70 (LONG) or strictly below 30 (SHORT) | yes |
+# | G2 six reviews | all six seats filed a promoted review (`agents_reviewed` = `agents_expected`) | yes |
+# | G3 rationale | the six rationales meet the content contract (the expected personas and evidence) | no: warn-only when `g3_warn_only` is true |
+# | G4 review fresh | the council's `review_date` is on or after the `freshness_floor` | yes |
+# | G5 zone current | the grade day has its own Drop Out Zone and the observed price is not below it | yes |
+# | G6 no risk veto | no active risk veto (recorded from council v3_0, 2026-09-04) | yes |
+#
+# Notice what the gates check. G2, G3, G4 and G6 are about the seats' reviews:
+# are they complete, well-formed, fresh, and free of a risk veto? They can stop
+# a position from opening. None of them changes `grade_score` or `side`.
+#
+# The `review` and `zone_check` columns show the evidence behind G4 and G5, so
+# you can see *why* a gate failed, not just that it did.
+
+# %%
+def gate_mark(value) -> str:
+    if value is None or (not isinstance(value, bool) and pd.isna(value)):
+        return "– n/a"
+    return "✓ pass" if value else "✗ fail"
+
+
+def zone_check(g: dict, grade_date: str) -> str:
+    """Spell out the G5 evidence: is there a zone for the grade day, and is the observed price above it?"""
+    zone, observed, zone_date = g["drop_out_zone"], g["drop_out_observed_price"], g["drop_out_zone_date"]
+    if zone is None or observed is None:
+        return "no zone or no observed price"
+    if zone_date != grade_date:
+        return f"latest zone is from {zone_date}, not the grade day"
+    return f"observed {observed:,.2f} {'below' if observed < zone else 'at or above'} zone {zone:,.2f}"
+
+
+dec = pd.DataFrame([{
+    "ticker": str(d["ticker"]), "side": d["side"], "grade_date": d["grade_date"], "grade_score": d["grade_score"],
+    **{name: d["gates"].get(key) if key == "g6_no_active_risk_veto" else d["gates"][key]
+       for key, name in GATES.items()},                               # g6 only exists from council v3_0
+    "g3_warn_only": d["gates"]["g3_warn_only"],
+    "reviews": f"{d['gates']['agents_reviewed']}/{d['gates']['agents_expected']}",
+    "review": f"{d['gates']['review_date']} (floor {d['gates']['freshness_floor']})",
+    "review_date": d["gates"]["review_date"], "review_checkpoint": d["gates"]["review_checkpoint"],
+    "zone_check": zone_check(d["gates"], d["grade_date"]), "qualifies": d["qualifies"],
+    "reject_reasons": "; ".join(d["reject_reasons"]) or "none", "built_at": d["built_at"],
+} for d in decisions_raw], columns=["ticker", "side", "grade_date", "grade_score", *GATES.values(), "g3_warn_only",
+                                   "reviews", "review", "review_date", "review_checkpoint", "zone_check",
+                                   "qualifies", "reject_reasons", "built_at"])
+dec = dec.drop_duplicates(subset=["ticker", "grade_date"], keep="first")
+dec["grade_score"] = pd.to_numeric(dec["grade_score"], errors="coerce")
+dec["built_at"] = pd.to_datetime(dec["built_at"], utc=True)
+
+if not BOOK_AVAILABLE:
+    display(Markdown("> Grade book unavailable right now; gate table skipped."))
+elif dec.empty:
+    display(Markdown("> No opener decisions for the latest grade date. No name graded above 70 or below 30, "
+                     "or the book has not been built yet today."))
+else:
+    built = dec["built_at"].max()
+    grade_day = pd.Timestamp(dec["grade_date"].max())
+    print(f"Decisions built {built:%Y-%m-%d %H:%M} UTC ({age_text(built)}), grade date {grade_day:%Y-%m-%d}.")
+    review_day = pd.to_datetime(dec["review_date"], format="%Y-%m-%d").max()   # null when never reviewed
+    print(f"The newest council review behind them is from {review_day:%Y-%m-%d}, "
+          f"{(grade_day - review_day).days} days before the grade date." if pd.notna(review_day) else
+          "No council review is recorded behind these decisions.")
+    rule_ok = (dec["side"] == dec["grade_score"].map(grade_side)).all()
+    print(f"Side follows the rule for every decision, qualifying or not: {rule_ok}.")
+
+    # Our reading of the gates: every blocking gate must pass; G3 blocks only when it is not warn-only.
+    g6 = dec[GATES["g6_no_active_risk_veto"]].map(lambda v: True if v is None or pd.isna(v) else bool(v))
+    predicted = (dec[[GATES[k] for k in ("g1_strict_grade", "g2_six_promoted_reviews", "g4_review_fresh",
+                                          "g5_drop_out_zone_current")]].astype(bool).all(axis=1)
+                 & g6.astype(bool) & (dec[GATES["g3_rationale_contract"]].astype(bool) | dec["g3_warn_only"]))
+    n_ok = int(dec["qualifies"].sum())
+    print(f"Our gate reading reproduces `qualifies` for {int((predicted == dec['qualifies']).sum())} of {len(dec)} "
+          f"decisions. {n_ok} of {len(dec)} qualif{'ies' if n_ok == 1 else 'y'} to open.")
+    failing = {name: int(dec[name].eq(False).sum()) for name in [*blocking, GATES["g6_no_active_risk_veto"]]}
+    print("Decisions failing each blocking gate:", failing)
+    opened = set(book.loc[is_open, "ticker"])
+    qualifying = set(dec.loc[dec["qualifies"], "ticker"])
+    missing = sorted(qualifying - opened)
+    print("No decision qualified, so no new position opens from this grade date." if not qualifying
+          else "Every qualifying decision appears as an open position." if not missing
+          else f"Qualifying but not (yet) open in the book: {missing}.")
+    if not book.empty and book["grade_date"].max() < grade_day:
+        print(f"No position has opened since {book['grade_date'].max():%Y-%m-%d}, the newest grade date in the book.")
+
+    view = dec[["ticker", "side", "grade_score", *GATES.values(), "reviews", "review", "zone_check", "qualifies",
+                "reject_reasons"]].copy()
+    for col in GATES.values():
+        view[col] = view[col].map(gate_mark)
+    view["qualifies"] = view["qualifies"].map({True: "✓ opens", False: "✗ held back"})
+
+    def gate_style(v) -> str:
+        if isinstance(v, str) and v.startswith("✗"):                  # the glyph carries "fail"; no side colour
+            return f"color: {INK}; font-weight: 700"
+        return f"color: {MUTED}" if isinstance(v, str) and v.startswith("–") else ""
+
+    styled = (view.style
+              .map(gate_style, subset=[*GATES.values(), "qualifies"])
+              .map(lambda v: f"color: {SIDE_COLORS[v]}; font-weight: 600", subset=["side"])
+              .format({"grade_score": "{:.1f}"}, escape="html")
+              .set_properties(subset=["reject_reasons", "zone_check"], **{"white-space": "normal", "max-width": "320px"})
+              .hide(axis="index"))
+    display(styled)
+
+# %% [markdown]
+# **How to read this.** Read each row left to right. The side and grade come first;
+# the check printed above confirms that the side matches the rule. Then come the
+# six gates. A bold ✗ in a blocking gate is enough to hold a name back, and
+# `reject_reasons` says why in words. A ✗ in G3 alone does not block while G3 is
+# warn-only. The `review` column compares the council's review date with the
+# freshness floor (G4); when the council has not met for weeks, every grade fails
+# here. The `zone_check` column explains G5: either the grade day has no zone of
+# its own yet, or the price was below it. A name that is held back today is not
+# lost for good: once the reviews are completed and refreshed, a later grade date
+# can open it.
+#
+# **Caveats.**
+#
+# - The decisions cover one grade date only. They are not capped by `limit`.
+# - "Qualifies" means "opens a paper position". It is not a buy or sell signal.
+# - Gate names and rules are versioned (`council_contract_version` in the gate
+#   record). Gates written under an older contract have no G6.
+#
+# **Recompute the gates yourself.** Each gate record stores the evidence next to
+# the verdict: review counts, dates, the zone and the observed price. If our
+# reading of the table above is right, we can rebuild G1, G2, G4 and G5 from that
+# evidence alone, for the positions' entry-day gates and for the latest decisions.
+# Any disagreement would mean our reading is wrong, or the rules changed.
+
+# %%
+GATE_RULES = {
+    "g1_strict_grade": ("G1", "rule side of grade_score equals the gate's side, and it is not HOLD",
+                        lambda g, score, day: grade_side(score) == g["side"] and g["side"] in SIDE_SIGN),
+    "g2_six_promoted_reviews": ("G2", "agents_reviewed >= agents_expected",
+                                lambda g, score, day: g["agents_reviewed"] >= g["agents_expected"]),
+    "g4_review_fresh": ("G4", "review_date >= freshness_floor (ISO dates compare as text)",
+                        lambda g, score, day: (g["review_date"] is not None and g["freshness_floor"] is not None
+                                               and g["review_date"] >= g["freshness_floor"])),
+    "g5_drop_out_zone_current": ("G5", "zone dated on the grade day, and observed price >= zone",
+                                 lambda g, score, day: (g["drop_out_zone"] is not None
+                                                        and g["drop_out_observed_price"] is not None
+                                                        and g["drop_out_zone_date"] == day
+                                                        and g["drop_out_observed_price"] >= g["drop_out_zone"])),
+}
+gate_sources = {"positions (entry-day gates)": [(r["gates"], r["grade_score"], r["grade_date"]) for r in rows_raw],
+                "latest decisions": [(d["gates"], d["grade_score"], d["grade_date"]) for d in decisions_raw]}
+recheck = []
+for key, (short, rule, derive) in GATE_RULES.items():
+    row = {"gate": short, "our rule": rule}
+    for label, items in gate_sources.items():
+        agree = sum(bool(derive(g, score, day)) == bool(g[key]) for g, score, day in items)
+        row[label] = f"{agree} of {len(items)} agree" if items else "no rows"
+    recheck.append(row)
+display(pd.DataFrame(recheck).style.format(escape="html").hide(axis="index"))
+
+# %% [markdown]
+# When every cell reads "N of N agree", the published gates are exactly the
+# simple rules in the second column: no hidden judgement sits inside them. G3 and
+# G6 are left out because their evidence (the rationale text and the risk desk's
+# veto) is not fully published.
+
+# %% [markdown]
+# ## 6. Extensions (beyond the raw API)
+#
+# *These sections go beyond the raw API.* Sections 4 and 5 read each endpoint and
+# checked its contract. Here we combine and test what they publish:
+#
+# - 6.1 to 6.3 join the scoreboard and the book. The two endpoints describe the
+#   same council from two sides, and they share the `ticker` key, so joining them
+#   tests whether the story holds together;
+# - 6.4 measures how far the seats agree with each other;
+# - 6.5 and 6.6 put intervals around the book's outcomes and separate the grade
+#   from the market's direction.
+#
+# ### 6.1 Same name, two numbers: composite and grade
+#
+# The scoreboard shows a `composite_score`; the book's rule reads `grade_score`.
+# For the latest decisions we can put the two side by side. Keep two things apart:
+#
+# - **What the data confirm.** The book's side is the rule applied to
+#   `grade_score`, never to the composite, so where the two numbers fall in
+#   different zones, the side follows the grade. That is true by construction:
+#   section 5 already checked it for every position and decision.
+# - **What the data cannot show.** Whether the seats influence `grade_score`
+#   itself cannot be tested from these fields, because the book publishes the
+#   grade but not how it was computed. For that part we rely on SurgeFlow's
+#   published disclaimer (printed with the grade book). A large gap between the
+#   two numbers is not evidence either way, especially when they come from
+#   different days: the gap then mixes the passage of time with the difference
+#   in method.
+#
+# So the cell first prints how many days separate the scoreboard's session from
+# the decisions' `grade_date`.
+
+# %%
+if dec.empty or board.empty:
+    print("Need both the latest decisions and a scoreboard to compare.")
+else:
+    both = dec[["ticker", "side", "grade_score", "qualifies"]].merge(
+        board[["ticker", "composite_score", "rule_side", "flag"]], on="ticker", how="left")
+    both["gap"] = both["composite_score"] - both["grade_score"]
+    on_board = both.dropna(subset=["composite_score"])
+    session_day = pd.to_datetime(meta["decision_session_date"], format="%Y-%m-%d")
+    graded_day = pd.to_datetime(dec["grade_date"], format="%Y-%m-%d").max()
+    day_gap = (graded_day - session_day).days
+    print(f"Scoreboard session {session_day:%Y-%m-%d}; decisions graded {graded_day:%Y-%m-%d}: "
+          f"{day_gap} day(s) apart.")
+    reviews = sorted({c for c in dec["review_checkpoint"] if isinstance(c, str) and c})   # skip nulls
+    same_meeting = meta["checkpoint_id"] in reviews
+    meeting_text = "the same meeting the scoreboard shows" if same_meeting else "a different meeting"
+    print(f"The decisions rest on council review {', '.join(reviews)}: {meeting_text}." if reviews else
+          "The decisions record no council review.")
+    if on_board.empty:
+        print("None of the decision names is on the scoreboard.")
+    else:
+        print(f"{len(on_board)} of {len(both)} decision names are on the scoreboard. The composite and the grade "
+              f"agree on the side for {int((on_board['side'] == on_board['rule_side']).sum())} of them; "
+              f"largest gap {on_board['gap'].abs().max():.1f} points.")
+        if abs(day_gap) > STALE_DAYS:
+            print(f"The two numbers are {abs(day_gap)} days apart (more than STALE_DAYS = {STALE_DAYS}), so the gap "
+                  "mixes time with method. We draw no conclusion from its size.")
+        disagree = on_board[on_board["side"] != on_board["rule_side"]]
+        if len(disagree):
+            print(f"Where the zones differ ({', '.join(disagree['ticker'])}), the book's side follows the grade. "
+                  "That is the rule at work (checked in section 5), not a test of whether the seats influence "
+                  "the grade.")
+    display(both.rename(columns={"side": "side_from_grade", "rule_side": "side_from_composite",
+                                 "flag": "scoreboard_flag"})
+            .style.format({"grade_score": "{:.2f}", "composite_score": "{:.2f}", "gap": "{:+.2f}"}, na_rep="–")
+            .hide(axis="index"))
+
+# %% [markdown]
+# ### 6.2 Two paper records: the scoreboard ledger and the grade book
+#
+# It is tempting to assume that the scoreboard's paper flags *are* the grade
+# book's positions. They are not the same record:
+#
+# | | Scoreboard ledger (`ai/ratings`) | Grade book (`ai/grade-book`) |
+# |---|---|---|
+# | What sets the side | the scoreboard's own pick (`long` / `short`) | the grade rule, > 70 / < 30 |
+# | Score it uses | `composite_score` | `grade_score` |
+# | Exit | hard stop on the return since the anchor close | the Drop Out Zone only |
+# | Gates | none published | six gates, checked before an opening |
+#
+# The reconciliation table below lines the two up, name by name, together with
+# the latest decisions.
+
+# %%
+ledger_legs = board[board["flag"] != "not flagged"].set_index("ticker")
+open_side = book[is_open].drop_duplicates("ticker").set_index("ticker")["side"]
+dec_by_name = dec.set_index("ticker") if not dec.empty else pd.DataFrame(columns=["side", "grade_score", "qualifies"])
+names = sorted(set(ledger_legs.index) | set(open_side.index) | set(dec_by_name.index))
+if not names:
+    print("No scoreboard paper legs, open positions or decisions to reconcile.")
+else:
+    recon = pd.DataFrame({"ticker": names})
+    recon["scoreboard_ledger"] = recon["ticker"].map(
+        lambda t: f"{ledger_legs.loc[t, 'flag']} ({ledger_legs.loc[t, 'stop_state']})" if t in ledger_legs.index else "–")
+    recon["open_in_grade_book"] = recon["ticker"].map(lambda t: open_side.get(t, "–"))
+    recon["latest_decision"] = recon["ticker"].map(
+        lambda t: (f"{dec_by_name.loc[t, 'side']} at {dec_by_name.loc[t, 'grade_score']:.0f}, "
+                   f"{'opens' if dec_by_name.loc[t, 'qualifies'] else 'held back'}") if t in dec_by_name.index else "–")
+    working = set(ledger_legs.index[ledger_legs["stop_state"] != "stopped_out"])
+    print(f"Scoreboard ledger: {len(ledger_legs)} paper legs ({len(working)} still working). "
+          f"Grade book: {len(open_side)} open positions. In both: {sorted(working & set(open_side.index)) or 'none'}.")
+    display(recon.style.format(escape="html").hide(axis="index"))
+
+# %% [markdown]
+# **How to read this.** Each row is a name that appears in at least one of the
+# three lists. A dash means the name is absent from that list. When a name is a
+# working leg in the scoreboard ledger but not open in the grade book, the two
+# records simply disagree about it: for example, the ledger took a short while
+# the book's gates held the grade back, or the book never graded it past a line.
+# Neither record is "wrong"; they answer different questions. Quote the grade
+# book when you mean the deterministic rule.
+
+# %% [markdown]
+# ### 6.3 How fragile is each scoreboard composite?
+#
+# Section 4 found which seats the published composite averages
+# (`COMPOSITE_SEATS`). Now ask a "what if" question: **if one of those seats had
+# not reported, would the composite land in a different zone?** For each name we
+# drop each seat in turn, recompute the mean of the others, and apply the rule. A
+# name whose zone flips when a single seat is removed rests on that one seat's
+# score. If that score is a blank zero (0 with no comment), the name may rest on a
+# review that was never filed rather than on an opinion. The published composite
+# averages blank zeros like any other score, so the table keeps them. The lines
+# under the table re-run the check twice: once with the blank zeros set to
+# missing, and once with **every** score that has no comment set to missing (the
+# `scored_no_comment` cells from step 5 of the scoreboard cleaning). Each run lists
+# the names that change zone, and the names left with too few seats to check.
+#
+# This is about the scoreboard's composite only. The book's grade is a separate
+# number, and nothing here changes it. We use no machine learning in this notebook
+# on purpose: a hotlist's worth of names and the book's closed positions are far
+# too few to fit a model honestly. Descriptive checks like this one are the right
+# tool.
+
+# %%
+def fragility_table(scores: pd.DataFrame) -> pd.DataFrame:
+    """Leave-one-seat-out check on the composite seats, one row per name with at least 3 scoring seats."""
+    out = []
+    for ticker, row in scores.reindex(columns=COMPOSITE_SEATS).iterrows():
+        scored = row.dropna()
+        if len(scored) < 3:
+            continue
+        loo = (scored.sum() - scored) / (len(scored) - 1)             # mean without each seat in turn
+        full = scored.mean()                                          # reproduces the published composite
+        zone = grade_side(full)
+        flips = loo[loo.map(grade_side) != zone]
+        margin = min(abs(full - LONG_ABOVE), abs(full - SHORT_BELOW))
+        out.append({"ticker": ticker, "seat_mean": full, "zone": zone, "seats": len(scored),
+                    "points_to_nearest_line": margin, "loo_min": loo.min(), "loo_max": loo.max(),
+                    "seats_that_flip_it": ", ".join(f"{s} ({grade_side(v)})" for s, v in flips.items()) or "none"})
+    return pd.DataFrame(out, columns=["ticker", "seat_mean", "zone", "seats", "points_to_nearest_line",
+                                      "loo_min", "loo_max", "seats_that_flip_it"])
+
+
+fragility = fragility_table(wide)
+if fragility.empty:
+    print("Not enough seat scores for a leave-one-seat-out check.")
+else:
+    print(f"Composite reading used: mean of {', '.join(COMPOSITE_SEATS)}.")
+    fragile = fragility[fragility["seats_that_flip_it"] != "none"]
+    print(f"{len(fragile)} of {len(fragility)} names would change zone if one seat were left out"
+          + (f": {', '.join(fragile['ticker'])}." if len(fragile) else "."))
+    display(fragility.sort_values("points_to_nearest_line")
+            .style.format({"seat_mean": "{:.1f}", "points_to_nearest_line": "{:.1f}", "loo_min": "{:.1f}",
+                           "loo_max": "{:.1f}"})
+            .map(lambda v: "font-weight: 600" if v != "none" else f"color: {MUTED}", subset=["seats_that_flip_it"])
+            .hide(axis="index"))
+
+    # Sensitivity: the same check with placeholder-like scores set to missing. Run 1 masks the blank zeros
+    # (score 0, no comment); run 2 masks every score without a comment, blank zeros included.
+    runs = [("blank zeros", "the {n} blank zero(s)", zero_no_comment),
+            ("scores without a comment", "all {n} score(s) without a comment (blank zeros included)", uncommented)]
+    for i, (short, label, mask) in enumerate(runs):
+        n_masked = int(mask.reindex(columns=COMPOSITE_SEATS).sum().sum())
+        if n_masked == 0:
+            print(f"Sensitivity: no {short} among the composite seats, so the zones do not depend on them.")
+            continue
+        if i > 0 and n_masked == int(runs[0][2].reindex(columns=COMPOSITE_SEATS).sum().sum()):
+            print("Sensitivity: every uncommented composite score is a blank zero, so the second run adds nothing.")
+            continue
+        alt = fragility_table(wide.mask(mask))
+        compare = fragility[["ticker", "zone", "seat_mean"]].merge(
+            alt[["ticker", "zone", "seat_mean"]], on="ticker", how="left", suffixes=("", "_alt"))
+        unchecked = compare[compare["zone_alt"].isna()]                # fewer than 3 seats left without them
+        changed = compare[compare["zone_alt"].notna() & (compare["zone"] != compare["zone_alt"])]
+        moves = [f"{r.ticker} {r.zone} -> {r.zone_alt} (mean {r.seat_mean:.1f} -> {r.seat_mean_alt:.1f})"
+                 for r in changed.itertuples()]
+        print(f"Sensitivity: with {label.format(n=n_masked)} set to missing, {len(changed)} of "
+              f"{len(compare) - len(unchecked)} names change zone" + (": " + "; ".join(moves) + "." if moves else "."))
+        if len(unchecked):
+            print(f"  Without them, {', '.join(unchecked['ticker'])} keep(s) fewer than 3 scoring seats and cannot "
+                  "be checked: the zone rests on scores with no review text behind them.")
+
+# %% [markdown]
+# **How to read this.** The table is sorted by distance to the nearest line (30 or
+# 70), closest first. `seat_mean` is the composite rebuilt from its seats, and
+# `loo_min` and `loo_max` show the range of averages you get by leaving out one
+# seat at a time ("loo" = leave one out). When that range crosses a line, the last
+# column names the seat whose absence would move the name into another zone, and
+# which zone. Names near a line with a wide range are the council's close calls.
+# Names far from both lines are robust to any single seat. The sensitivity lines
+# under the table list the names whose zone depends on a blank zero, then on any
+# score without a comment. A name that "cannot be checked" in the second run has
+# fewer than three scores with a review behind them: its zone, and any paper leg
+# on it, rests mostly on scores nobody explained. For those names, check whether
+# the seats really reviewed them before you read the zone as the council's view.
+
+# %% [markdown]
+# ### 6.4 Do the seats agree with each other?
+#
+# *Extension, beyond the raw API: rank correlation with permutation p-values, a
+# multiple-testing correction and a sensitivity check.*
+#
+# If two seats rank the names in a similar order, they agree. We measure that
+# with **Spearman's rank correlation, ρ (rho)**. It compares the *ranks* of the
+# scores, not the scores themselves, so one seat that scores everything 10
+# points higher still "agrees" perfectly with another. ρ = +1 means the same
+# order, 0 means no relation, and −1 means opposite orders. Tied scores (such as
+# several zeros) share an average rank.
+#
+# Each pair is computed on the names **both** seats scored, so `n` differs by
+# pair. A seat that scored fewer than `MIN_PAIR_N` names is left out of the grid,
+# and so is any pair with fewer shared names than that.
+#
+# Three details keep the result honest:
+#
+# - **A permutation p-value.** With a dozen names and several tied scores, the
+#   usual formula for Spearman's p-value is only an approximation. Instead we
+#   shuffle one seat's scores across the names thousands of times and count how
+#   often a ρ at least as far from 0 turns up by chance.
+# - **A Holm correction.** Six pairs tested at once give six chances to look
+#   "significant" by luck. Holm's method raises each p-value to allow for that.
+# - **A blank-zero check before anything is headlined.** Tied zeros are a trap
+#   when they are placeholders. Suppose one seat left several names at 0 with no
+#   comment, and those happen to be the names another seat likes least. The two
+#   seats then look aligned on names that one of them may never have reviewed.
+#   So we compute every pair twice: with the blank zeros as published, and with
+#   them left out. A pair whose ρ moves by `MAX_RHO_SHIFT` (0.3) or more, or
+#   cannot be computed without them, **rests on blank zeros**. It gets a † in the
+#   chart and is never headlined as agreement. A pair counts as distinguishable
+#   from zero only when its Holm-adjusted p-value is below 0.05 both ways, with
+#   the same sign.
+
+# %%
+def rho_and_p(x: pd.Series, y: pd.Series) -> tuple:
+    """Spearman's ρ and a permutation p-value (shuffle x's ranks; tied scores keep their average rank)."""
+    rx, ry = stats.rankdata(x), stats.rankdata(y)
+    yc = ry - ry.mean()
+
+    def rho(r, axis=-1):                                            # Pearson correlation of the ranks = Spearman
+        rc = r - r.mean(axis=axis, keepdims=True)
+        return (rc * yc).sum(axis=axis) / np.sqrt((rc**2).sum(axis=axis) * (yc**2).sum())
+
+    result = stats.permutation_test((rx,), rho, permutation_type="pairings", vectorized=True,
+                                    n_resamples=9999, random_state=BOOTSTRAP_SEED)
+    return float(result.statistic), float(result.pvalue)
+
+
+def seat_pairs(scores: pd.DataFrame) -> pd.DataFrame:
+    """ρ, permutation p and Holm-adjusted p for every pair of CORR_SEATS, on the names both seats scored."""
+    out = []
+    for i, a in enumerate(CORR_SEATS):
+        for b in CORR_SEATS[i + 1:]:
+            both = scores[[a, b]].dropna()
+            ok = len(both) >= MIN_PAIR_N and both[a].nunique() > 1 and both[b].nunique() > 1
+            rho, p = rho_and_p(both[a], both[b]) if ok else (np.nan, np.nan)
+            out.append({"seat_a": a, "seat_b": b, "n": len(both), "rho": rho, "p_value": p})
+    out = pd.DataFrame(out, columns=["seat_a", "seat_b", "n", "rho", "p_value"])
+    out["p_holm"] = np.nan
+    tested = out["p_value"].notna()
+    if tested.any():
+        out.loc[tested, "p_holm"] = multipletests(out.loc[tested, "p_value"], method="holm")[1]
+    return out
+
+
+CORR_SEATS = [s for s in SEATS if wide[s].notna().sum() >= MIN_PAIR_N]
+dropped = [s for s in SEATS if s not in CORR_SEATS]
+if dropped:
+    print(f"Left out of the agreement grid (fewer than {MIN_PAIR_N} names scored): {', '.join(dropped)}.")
+blank_seats = [s for s in CORR_SEATS if zero_no_comment[s].any()]
+
+# Every pair twice, BEFORE anything is drawn: as published, and with the blank zeros (score 0, no comment)
+# left out. Without blank zeros the second run is identical to the first.
+pairs = seat_pairs(wide)
+alt = seat_pairs(wide_without_blank_zeros) if blank_seats else pairs.copy()
+pairs = pairs.merge(alt[["seat_a", "seat_b", "n", "rho", "p_holm"]], on=["seat_a", "seat_b"],
+                    suffixes=("", "_without_blank_zeros"))
+pairs["uses_blank_zeros"] = pairs["seat_a"].isin(blank_seats) | pairs["seat_b"].isin(blank_seats)
+shift = (pairs["rho"] - pairs["rho_without_blank_zeros"]).abs()      # NaN when rho cannot be computed without them
+pairs["rests_on_blank_zeros"] = pairs["uses_blank_zeros"] & pairs["rho"].notna() & ~(shift < MAX_RHO_SHIFT)
+pairs["distinguishable_from_zero"] = ((pairs["p_holm"] < 0.05) & (pairs["p_holm_without_blank_zeros"] < 0.05)
+                                      & (np.sign(pairs["rho"]) == np.sign(pairs["rho_without_blank_zeros"])))
+shown = pairs.dropna(subset=["rho"])
+if len(shown):
+    print(f"{len(shown)} seat pairs tested. At the 5% level about {0.05 * len(shown):.1f} of them would look "
+          "'significant' by luck alone, even if no two seats were related, so the verdicts use Holm-adjusted "
+          "p-values.")
+
+if shown.empty:
+    display(Markdown(f"> Not enough overlapping seat scores (need {MIN_PAIR_N} names per pair) for agreement."))
+else:
+    def rho_needed(n: int) -> float:
+        """Roughly the smallest |rho| with p < 0.05 (two-sided) for ONE test on n names (t approximation)."""
+        t_crit = stats.t.ppf(0.975, n - 2)
+        return t_crit / np.sqrt(n - 2 + t_crit**2)
+
+    def pair_name(a: str, b: str) -> str:
+        return f"{a}–{b}"
+
+    def pair_text(r) -> str:
+        """Cell label: rho and n, with a dagger when the pair rests on blank zeros."""
+        if pd.isna(r.rho):
+            return f"n={r.n}: too few"
+        return f"{r.rho:+.2f}  (n={r.n})" + ("†" if r.rests_on_blank_zeros else "")
+
+    def pair_hover(r) -> str:
+        text = f"ρ = {r.rho:+.2f} on {r.n} names" if pd.notna(r.rho) else f"only {r.n} shared names: too few"
+        if r.uses_blank_zeros:
+            text += "<br>without the blank zeros: " + (
+                f"ρ = {r.rho_without_blank_zeros:+.2f} on {r.n_without_blank_zeros} names"
+                if pd.notna(r.rho_without_blank_zeros) else f"only {r.n_without_blank_zeros} names, too few")
+        return text
+
+    n_values = sorted(shown["n"].unique(), reverse=True)
+    needed = ", ".join(f"{rho_needed(n):.2f} at n = {n}" for n in n_values)
+
+    rows_, cols_ = CORR_SEATS[1:], CORR_SEATS[:-1]                    # lower triangle only, no diagonal
+    lookup = {(r.seat_b, r.seat_a): r for r in pairs.itertuples()}
+    cells = [[lookup.get((r, c)) for c in cols_] for r in rows_]       # None above the diagonal
+    z = [[np.nan if p is None else p.rho for p in row] for row in cells]
+    text = [["" if p is None else pair_text(p) for p in row] for row in cells]
+    hover = [["" if p is None else pair_hover(p) for p in row] for row in cells]
+
+    # Headline: never a pair that rests on blank zeros. If the strongest pair does, the title says so instead.
+    top = shown.loc[shown["rho"].idxmax()]
+    stable = shown[~shown["rests_on_blank_zeros"]]
+    if top["rests_on_blank_zeros"]:
+        lost = int(top["n"] - top["n_without_blank_zeros"])
+        in_pair = "/".join(s for s in (top["seat_a"], top["seat_b"]) if s in blank_seats)
+        without = (f"without them ρ = {top['rho_without_blank_zeros']:+.2f}"
+                   if pd.notna(top["rho_without_blank_zeros"]) else "without them too few names remain")
+        headline = (f"{pair_name(top['seat_a'], top['seat_b']).capitalize()} agreement (ρ = {top['rho']:+.2f}) "
+                    f"rests on {lost} name{'s' * (lost != 1)} with a blank {in_pair} zero: {without}")
+    else:
+        best, worst = stable.loc[stable["rho"].idxmax()], stable.loc[stable["rho"].idxmin()]
+        headline = (f"Seats agree most on {pair_name(best['seat_a'], best['seat_b'])} (ρ = {best['rho']:+.2f})"
+                    + (f" and least on {pair_name(worst['seat_a'], worst['seat_b'])} (ρ = {worst['rho']:+.2f})"
+                       if len(stable) > 1 else ""))
+
+    n_sig, n_robust = int((shown["p_holm"] < 0.05).sum()), int(shown["distinguishable_from_zero"].sum())
+    sig_text = f"{n_sig} of {len(shown)} pairs beat chance after a Holm correction"
+    if blank_seats and n_sig:
+        sig_text += (", but none does once the blank zeros are left out" if n_robust == 0 else
+                     f", {n_robust} of them also without the blank zeros")
+    threshold = f"one test alone would need |ρ| above about {needed}"
+    lines = ["Rank correlation across this checkpoint's hotlist names; n = names both seats scored."]
+    if not blank_seats:
+        lines.append(f"{sig_text} ({threshold}).")
+    else:
+        lines += [f"{sig_text}.", f"{threshold[0].upper()}{threshold[1:]}."]
+        if shown["rests_on_blank_zeros"].any():
+            lines[-1] += f" † = rests on blank zeros (ρ moves {MAX_RHO_SHIFT}+ without them; hover for the value)."
+
+    fig = go.Figure(go.Heatmap(
+        z=z, x=[c.capitalize() for c in cols_], y=[r.capitalize() for r in rows_],
+        text=text, texttemplate="%{text}", customdata=hover, hoverongaps=False,
+        colorscale=DIVERGING, zmin=-1, zmax=1, zmid=0, xgap=3, ygap=3,
+        colorbar=dict(title=dict(text="Spearman ρ"), tickvals=[-1, -0.5, 0, 0.5, 1], len=0.8, thickness=14),
+        hovertemplate="%{y} vs %{x}<br>%{customdata}<extra></extra>"))
+    fig.update_layout(
+        title=dict(text=headline, subtitle=dict(text="<br>".join(lines))),
+        xaxis=dict(title=None, showgrid=False, ticks=""),
+        yaxis=dict(title=None, autorange="reversed", showgrid=False, ticks=""),
+        height=200 + 95 * len(rows_), margin=dict(t=105 + 20 * len(lines), l=110))
+    fig.show()
+
+    # Table twin: every pair, with and without the blank zeros when there are any.
+    columns = ["seat_a", "seat_b", "n", "rho", "p_value", "p_holm"]
+    if blank_seats:
+        columns += ["n_without_blank_zeros", "rho_without_blank_zeros", "p_holm_without_blank_zeros",
+                    "rests_on_blank_zeros"]
+        print(f"Blank zeros: {int(zero_no_comment[blank_seats].sum().sum())} in {', '.join(blank_seats)}. The table "
+              "repeats every pair without them; distinguishable_from_zero needs a Holm-adjusted p below 0.05 both "
+              "ways, with the same sign.")
+    else:
+        print("No blank zeros among these seats, so every pair reads the same with or without them.")
+    formats = {"rho": "{:+.2f}", "p_value": "{:.3f}", "p_holm": "{:.3f}", "rho_without_blank_zeros": "{:+.2f}",
+               "p_holm_without_blank_zeros": "{:.3f}"}
+    display(pairs[columns + ["distinguishable_from_zero"]].sort_values("rho", ascending=False)
+            .style.format({c: f for c, f in formats.items() if c in columns}, na_rep="–").hide(axis="index"))
+
+# %% [markdown]
+# **How to read this.** Each cell is one pair of seats. Blue means the two seats
+# rank the names in a similar order; red means they tend to disagree; pale means
+# no clear relation. The small `n` is the number of names both seats scored.
+# Macro and risk score very few names, so they usually drop out of the grid. A †
+# marks a pair that rests on blank zeros; hover over it to see ρ without them.
+# The title never headlines such a pair as agreement. When the strongest pair
+# rests on blank zeros, the title says so instead. The table lists every pair
+# with its p-value (the chance of a correlation at least this strong if the two
+# seats were truly unrelated) and its Holm-adjusted p-value, which allows for
+# testing several pairs at once. When the scores carry blank zeros, the table
+# repeats each pair without them, and `distinguishable_from_zero` is True only for
+# a pair that beats chance both ways.
+#
+# **Caveats.**
+#
+# - About a dozen names is a small sample. A correlation of 0.5 can easily be
+#   noise, which is why the subtitle prints a rough threshold for a single test at
+#   each sample size. Leaving the blank zeros out shrinks `n` further, so a pair
+#   can also lose significance just for lack of names: compare the ρ values, not
+#   only the verdicts.
+# - Several pairs are tested at once. The line printed above the chart says how
+#   many would look "significant" by luck alone; the Holm correction allows for it.
+# - Blank zeros are only the clearest sign of a review that may not have been
+#   filed. Step 5 of the scoreboard cleaning also counts non-zero scores without a
+#   comment. Where those cluster on a few names, agreement on those names is just
+#   as hard to check.
+# - Hotlist names are selected for momentum, so they are not a random sample.
+#   Agreement on this list may not carry over to the wider market.
+#
+# **One seat against the rest.** A second view asks how each seat relates to the
+# average of the *other* seats in the composite (`COMPOSITE_SEATS`, found in
+# section 4). We leave the seat itself out of that average; otherwise it would
+# correlate with itself (a "part-whole" effect). Seats outside the composite get
+# no value, so every seat is compared with the same kind of benchmark. The lowest
+# value marks the seat that breaks from the council most often: its main
+# challenger. The `tilt_vs_composite` column is the seat's average score minus the
+# composite, for the names it scored: positive means the seat is more bullish than
+# the council. When there are blank zeros, `rho_with_rest_without_blank_zeros`
+# repeats the correlation without them (in the seat itself and in the other seats'
+# average), and the printed line says whether the least aligned seat stays the same.
+
+# %%
+def rho_with_rest(scores: pd.DataFrame, seat: str) -> float:
+    """Spearman ρ between one seat and the mean of the OTHER composite seats (no part-whole effect)."""
+    rest = scores[[c for c in COMPOSITE_SEATS if c != seat]].mean(axis=1)
+    pair = pd.concat([scores[seat], rest], axis=1, keys=["seat", "rest"]).dropna()
+    ok = (seat in COMPOSITE_SEATS and len(pair) >= MIN_PAIR_N and pair["seat"].nunique() > 1
+          and pair["rest"].nunique() > 1)
+    return stats.spearmanr(pair["seat"], pair["rest"])[0] if ok else np.nan
+
+
+if wide.notna().sum().sum() == 0:
+    print("No seat scores to summarise.")
+else:
+    composite_by_name = board.set_index("ticker")["composite_score"].reindex(wide.index)
+    has_blank = bool(zero_no_comment.reindex(columns=COMPOSITE_SEATS).any().any())
+    seat_stats = pd.DataFrame([{
+        "seat": s, "in_composite": s in COMPOSITE_SEATS, "names_scored": int(wide[s].notna().sum()),
+        "mean_score": wide[s].mean(), "sd_score": wide[s].std(),
+        "tilt_vs_composite": (wide[s] - composite_by_name).mean(),
+        "rho_with_rest": rho_with_rest(wide, s),
+        **({"rho_with_rest_without_blank_zeros": rho_with_rest(wide_without_blank_zeros, s)} if has_blank else {}),
+    } for s in SEATS]).set_index("seat")
+    rho_cols = [c for c in seat_stats.columns if c.startswith("rho_")]
+    display(seat_stats.style.format({"mean_score": "{:.1f}", "sd_score": "{:.1f}", "tilt_vs_composite": "{:+.1f}",
+                                     **{c: "{:+.2f}" for c in rho_cols}}, na_rep="–"))
+    if seat_stats["rho_with_rest"].notna().any():
+        contrarian = seat_stats["rho_with_rest"].idxmin()
+        line = (f"Least aligned seat at this checkpoint: {contrarian} (rank correlation with the other composite "
+                f"seats' average: {seat_stats.loc[contrarian, 'rho_with_rest']:+.2f}).")
+        if has_blank:
+            alt_rho = seat_stats["rho_with_rest_without_blank_zeros"]
+            if alt_rho.isna().all():
+                line += " Without the blank zeros, no seat keeps enough names to repeat the check."
+            elif alt_rho.idxmin() == contrarian:
+                line += f" It stays the least aligned without the blank zeros ({alt_rho[contrarian]:+.2f})."
+            else:
+                line += (f" Without the blank zeros it is {alt_rho.idxmin()} ({alt_rho.min():+.2f}), so this "
+                         "ranking rests partly on placeholder-like scores.")
+        print(line)
+
+# %% [markdown]
+# ### 6.5 How sure can we be about the outcomes?
+#
+# *Extension, beyond the raw API: interval estimates, a cluster bootstrap and a
+# test that separates the grade from the market's direction.*
+#
+# Section 5 counted the hits and averaged the returns. Two tools show how far
+# those numbers could plausibly be from the long-run truth:
+#
+# - **Wilson interval for the hit rate.** If 15 of 28 positions hit, the hit rate
+#   is 54%, but the true long-run rate could plausibly be anywhere from about 36%
+#   to 70%. The Wilson interval gives that range. It behaves better than the
+#   textbook "p ± 1.96 × standard error" when n is small or the rate is near 0% or 100%.
+# - **Bootstrap interval for the mean return.** We resample the closed positions
+#   with replacement 5,000 times and recompute the mean each time. The middle 95%
+#   of those means is the interval. It makes no assumption about the shape of the
+#   returns, which matters because a few big moves dominate.
+#
+# The `winsorised_mean_pct` column clips each side's returns at the 5th and 95th
+# percentile first. If it differs a lot from the plain mean, a few outliers drive
+# the average, and the median is the better summary.
+#
+# We also record each position's **raw price move**, `(exit − entry) / entry × 100`,
+# which is *not* side-aware, and the share of names whose price rose
+# (`share_rose`). For a LONG, a hit and a rise are the same thing; for a SHORT, a
+# hit is a fall. The rest of this section and section 6.6 use the raw moves to
+# separate what the grade did from what the market did.
+
+# %%
+closed["raw_move_pct"] = (closed["exit_price"] - closed["entry_price"]) / closed["entry_price"] * 100 + 0.0
+closed["rose"] = closed["raw_move_pct"] > 0
+
+
+def interval_row(group: pd.DataFrame, label: str) -> dict:
+    """Intervals and robustness columns for one group of closed positions."""
+    r, n, hits = group["realized_return_pct"], len(group), int(group["hit"].sum())
+    lo, hi = wilson(hits, n)
+    b_lo, b_hi = bootstrap_mean_ci(r)
+    q_lo, q_hi = r.quantile([WINSOR_Q, 1 - WINSOR_Q]) if n else (np.nan, np.nan)
+    return {"side": label, "hit_rate_lo95": lo, "hit_rate_hi95": hi, "mean_lo95": b_lo, "mean_hi95": b_hi,
+            "winsorised_mean_pct": r.clip(q_lo, q_hi).mean(), "share_rose": group["rose"].mean(),
+            "mean_price_move_pct": group["raw_move_pct"].mean()}
+
+
+if closed.empty:
+    display(Markdown("> No closed positions yet, so there is nothing to put an interval around."))
+    outcomes = pd.DataFrame()
+else:
+    intervals = pd.DataFrame([interval_row(g, side) for side, g in closed.groupby("side")]
+                             + [interval_row(closed, "All")]).set_index("side")
+    outcomes = basic_outcomes.join(intervals)[
+        ["closed", "hits", "hit_rate", "hit_rate_lo95", "hit_rate_hi95", "mean_return_pct", "mean_lo95",
+         "mean_hi95", "winsorised_mean_pct", "median_return_pct", "best_pct", "worst_pct", "median_holding_days",
+         "share_rose", "mean_price_move_pct"]]
+
+    # Positions overlap in time, so they share market moves and are not independent draws.
+    starts, ends = closed["entry_date"].to_numpy(), closed["exit_date"].to_numpy()
+    overlaps = [int(((starts <= ends[i]) & (ends >= starts[i])).sum() - 1) for i in range(len(closed))]
+    print(f"{len(closed)} closed paper positions, graded {closed['grade_date'].min():%Y-%m-%d} to "
+          f"{closed['grade_date'].max():%Y-%m-%d}, on {closed['grade_date'].nunique()} grade days and "
+          f"{closed['ticker'].nunique()} distinct tickers. The median position shared its holding window with "
+          f"{int(np.median(overlaps))} others.")
+    pct_cols = ["mean_return_pct", "mean_lo95", "mean_hi95", "winsorised_mean_pct", "median_return_pct",
+                "best_pct", "worst_pct", "mean_price_move_pct"]
+    display(outcomes.style.format({**{c: "{:+.2f}%" for c in pct_cols}, "hit_rate": "{:.0%}",
+                                   "hit_rate_lo95": "{:.0%}", "hit_rate_hi95": "{:.0%}", "share_rose": "{:.0%}",
+                                   "median_holding_days": "{:.0f}"}, na_rep="–"))
+
+# %% [markdown]
+# **Positions graded on the same day may move together.** The intervals above
+# treat every position as an independent draw. That is optimistic: positions
+# graded on the same day enter together, ride the same market days, and often
+# exit together. A second bootstrap allows for that.
 # Instead of resampling positions, it resamples whole **grade days**, keeping each
 # day's positions together (a "cluster bootstrap").
 #
@@ -1620,7 +2206,9 @@ else:
               f"{pct(spread_hi, 2)}: {verdict}.")
 
 # %% [markdown]
-# ### Chart: hit rate by side, with the sample size in view
+# ### 6.6 Chart: hit rate by side, with the sample size in view
+#
+# *Extension, beyond the raw API: interval bars and Fisher's exact test.*
 #
 # The left panel shows each side's hit rate (the dot) with three 95% intervals.
 # The coloured bar is the **Wilson** interval, our headline. The two thin grey bars
@@ -1822,366 +2410,6 @@ else:
 #   market conditions.
 # - This is a record of paper research. Past paper outcomes do not predict future
 #   ones, and none of this is a recommendation to trade.
-
-# %% [markdown]
-# ### The decisions gate table
-#
-# `decisions` lists the latest grade date's actionable grades: every name graded
-# above 70 or below 30. For each one the book records six gates and whether the
-# name qualifies to open a position:
-#
-# | Gate | Passes when | Blocks an opening? |
-# |---|---|---|
-# | G1 strict grade | the grade is strictly above 70 (LONG) or strictly below 30 (SHORT) | yes |
-# | G2 six reviews | all six seats filed a promoted review (`agents_reviewed` = `agents_expected`) | yes |
-# | G3 rationale | the six rationales meet the content contract (the expected personas and evidence) | no: warn-only when `g3_warn_only` is true |
-# | G4 review fresh | the council's `review_date` is on or after the `freshness_floor` | yes |
-# | G5 zone current | the grade day has its own Drop Out Zone and the observed price is not below it | yes |
-# | G6 no risk veto | no active risk veto (recorded from council v3_0, 2026-09-04) | yes |
-#
-# Notice what the gates check. G2, G3, G4 and G6 are about the seats' reviews:
-# are they complete, well-formed, fresh, and free of a risk veto? They can stop
-# a position from opening. None of them changes `grade_score` or `side`.
-#
-# The `review` and `zone_check` columns show the evidence behind G4 and G5, so
-# you can see *why* a gate failed, not just that it did.
-
-# %%
-def gate_mark(value) -> str:
-    if value is None or (not isinstance(value, bool) and pd.isna(value)):
-        return "– n/a"
-    return "✓ pass" if value else "✗ fail"
-
-
-def zone_check(g: dict, grade_date: str) -> str:
-    """Spell out the G5 evidence: is there a zone for the grade day, and is the observed price above it?"""
-    zone, observed, zone_date = g["drop_out_zone"], g["drop_out_observed_price"], g["drop_out_zone_date"]
-    if zone is None or observed is None:
-        return "no zone or no observed price"
-    if zone_date != grade_date:
-        return f"latest zone is from {zone_date}, not the grade day"
-    return f"observed {observed:,.2f} {'below' if observed < zone else 'at or above'} zone {zone:,.2f}"
-
-
-dec = pd.DataFrame([{
-    "ticker": str(d["ticker"]), "side": d["side"], "grade_date": d["grade_date"], "grade_score": d["grade_score"],
-    **{name: d["gates"].get(key) if key == "g6_no_active_risk_veto" else d["gates"][key]
-       for key, name in GATES.items()},                               # g6 only exists from council v3_0
-    "g3_warn_only": d["gates"]["g3_warn_only"],
-    "reviews": f"{d['gates']['agents_reviewed']}/{d['gates']['agents_expected']}",
-    "review": f"{d['gates']['review_date']} (floor {d['gates']['freshness_floor']})",
-    "review_date": d["gates"]["review_date"], "review_checkpoint": d["gates"]["review_checkpoint"],
-    "zone_check": zone_check(d["gates"], d["grade_date"]), "qualifies": d["qualifies"],
-    "reject_reasons": "; ".join(d["reject_reasons"]) or "none", "built_at": d["built_at"],
-} for d in decisions_raw], columns=["ticker", "side", "grade_date", "grade_score", *GATES.values(), "g3_warn_only",
-                                   "reviews", "review", "review_date", "review_checkpoint", "zone_check",
-                                   "qualifies", "reject_reasons", "built_at"])
-dec = dec.drop_duplicates(subset=["ticker", "grade_date"], keep="first")
-dec["grade_score"] = pd.to_numeric(dec["grade_score"], errors="coerce")
-dec["built_at"] = pd.to_datetime(dec["built_at"], utc=True)
-
-if not BOOK_AVAILABLE:
-    display(Markdown("> Grade book unavailable right now; gate table skipped."))
-elif dec.empty:
-    display(Markdown("> No opener decisions for the latest grade date. No name graded above 70 or below 30, "
-                     "or the book has not been built yet today."))
-else:
-    built = dec["built_at"].max()
-    grade_day = pd.Timestamp(dec["grade_date"].max())
-    print(f"Decisions built {built:%Y-%m-%d %H:%M} UTC ({age_text(built)}), grade date {grade_day:%Y-%m-%d}.")
-    review_day = pd.to_datetime(dec["review_date"], format="%Y-%m-%d").max()   # null when never reviewed
-    print(f"The newest council review behind them is from {review_day:%Y-%m-%d}, "
-          f"{(grade_day - review_day).days} days before the grade date." if pd.notna(review_day) else
-          "No council review is recorded behind these decisions.")
-    rule_ok = (dec["side"] == dec["grade_score"].map(grade_side)).all()
-    print(f"Side follows the rule for every decision, qualifying or not: {rule_ok}.")
-
-    # Our reading of the gates: every blocking gate must pass; G3 blocks only when it is not warn-only.
-    g6 = dec[GATES["g6_no_active_risk_veto"]].map(lambda v: True if v is None or pd.isna(v) else bool(v))
-    predicted = (dec[[GATES[k] for k in ("g1_strict_grade", "g2_six_promoted_reviews", "g4_review_fresh",
-                                          "g5_drop_out_zone_current")]].astype(bool).all(axis=1)
-                 & g6.astype(bool) & (dec[GATES["g3_rationale_contract"]].astype(bool) | dec["g3_warn_only"]))
-    n_ok = int(dec["qualifies"].sum())
-    print(f"Our gate reading reproduces `qualifies` for {int((predicted == dec['qualifies']).sum())} of {len(dec)} "
-          f"decisions. {n_ok} of {len(dec)} qualif{'ies' if n_ok == 1 else 'y'} to open.")
-    failing = {name: int(dec[name].eq(False).sum()) for name in [*blocking, GATES["g6_no_active_risk_veto"]]}
-    print("Decisions failing each blocking gate:", failing)
-    opened = set(book.loc[is_open, "ticker"])
-    qualifying = set(dec.loc[dec["qualifies"], "ticker"])
-    missing = sorted(qualifying - opened)
-    print("No decision qualified, so no new position opens from this grade date." if not qualifying
-          else "Every qualifying decision appears as an open position." if not missing
-          else f"Qualifying but not (yet) open in the book: {missing}.")
-    if not book.empty and book["grade_date"].max() < grade_day:
-        print(f"No position has opened since {book['grade_date'].max():%Y-%m-%d}, the newest grade date in the book.")
-
-    view = dec[["ticker", "side", "grade_score", *GATES.values(), "reviews", "review", "zone_check", "qualifies",
-                "reject_reasons"]].copy()
-    for col in GATES.values():
-        view[col] = view[col].map(gate_mark)
-    view["qualifies"] = view["qualifies"].map({True: "✓ opens", False: "✗ held back"})
-
-    def gate_style(v) -> str:
-        if isinstance(v, str) and v.startswith("✗"):                  # the glyph carries "fail"; no side colour
-            return f"color: {INK}; font-weight: 700"
-        return f"color: {MUTED}" if isinstance(v, str) and v.startswith("–") else ""
-
-    styled = (view.style
-              .map(gate_style, subset=[*GATES.values(), "qualifies"])
-              .map(lambda v: f"color: {SIDE_COLORS[v]}; font-weight: 600", subset=["side"])
-              .format({"grade_score": "{:.1f}"}, escape="html")
-              .set_properties(subset=["reject_reasons", "zone_check"], **{"white-space": "normal", "max-width": "320px"})
-              .hide(axis="index"))
-    display(styled)
-
-# %% [markdown]
-# **How to read this.** Read each row left to right. The side and grade come first;
-# the check printed above confirms that the side matches the rule. Then come the
-# six gates. A bold ✗ in a blocking gate is enough to hold a name back, and
-# `reject_reasons` says why in words. A ✗ in G3 alone does not block while G3 is
-# warn-only. The `review` column compares the council's review date with the
-# freshness floor (G4); when the council has not met for weeks, every grade fails
-# here. The `zone_check` column explains G5: either the grade day has no zone of
-# its own yet, or the price was below it. A name that is held back today is not
-# lost for good: once the reviews are completed and refreshed, a later grade date
-# can open it.
-#
-# **Caveats.**
-#
-# - The decisions cover one grade date only. They are not capped by `limit`.
-# - "Qualifies" means "opens a paper position". It is not a buy or sell signal.
-# - Gate names and rules are versioned (`council_contract_version` in the gate
-#   record). Gates written under an older contract have no G6.
-#
-# **Recompute the gates yourself.** Each gate record stores the evidence next to
-# the verdict: review counts, dates, the zone and the observed price. If our
-# reading of the table above is right, we can rebuild G1, G2, G4 and G5 from that
-# evidence alone, for the positions' entry-day gates and for the latest decisions.
-# Any disagreement would mean our reading is wrong, or the rules changed.
-
-# %%
-GATE_RULES = {
-    "g1_strict_grade": ("G1", "rule side of grade_score equals the gate's side, and it is not HOLD",
-                        lambda g, score, day: grade_side(score) == g["side"] and g["side"] in SIDE_SIGN),
-    "g2_six_promoted_reviews": ("G2", "agents_reviewed >= agents_expected",
-                                lambda g, score, day: g["agents_reviewed"] >= g["agents_expected"]),
-    "g4_review_fresh": ("G4", "review_date >= freshness_floor (ISO dates compare as text)",
-                        lambda g, score, day: (g["review_date"] is not None and g["freshness_floor"] is not None
-                                               and g["review_date"] >= g["freshness_floor"])),
-    "g5_drop_out_zone_current": ("G5", "zone dated on the grade day, and observed price >= zone",
-                                 lambda g, score, day: (g["drop_out_zone"] is not None
-                                                        and g["drop_out_observed_price"] is not None
-                                                        and g["drop_out_zone_date"] == day
-                                                        and g["drop_out_observed_price"] >= g["drop_out_zone"])),
-}
-gate_sources = {"positions (entry-day gates)": [(r["gates"], r["grade_score"], r["grade_date"]) for r in rows_raw],
-                "latest decisions": [(d["gates"], d["grade_score"], d["grade_date"]) for d in decisions_raw]}
-recheck = []
-for key, (short, rule, derive) in GATE_RULES.items():
-    row = {"gate": short, "our rule": rule}
-    for label, items in gate_sources.items():
-        agree = sum(bool(derive(g, score, day)) == bool(g[key]) for g, score, day in items)
-        row[label] = f"{agree} of {len(items)} agree" if items else "no rows"
-    recheck.append(row)
-display(pd.DataFrame(recheck).style.format(escape="html").hide(axis="index"))
-
-# %% [markdown]
-# When every cell reads "N of N agree", the published gates are exactly the
-# simple rules in the second column: no hidden judgement sits inside them. G3 and
-# G6 are left out because their evidence (the rationale text and the risk desk's
-# veto) is not fully published.
-
-# %% [markdown]
-# ## 6. Extension: joining the scoreboard and the book
-#
-# *This section goes beyond the raw API.* The two endpoints describe the same
-# council from two sides, and they share the `ticker` key. Joining them tests
-# whether the story holds together.
-#
-# ### 6.1 Same name, two numbers: composite and grade
-#
-# The scoreboard shows a `composite_score`; the book's rule reads `grade_score`.
-# For the latest decisions we can put the two side by side. Keep two things apart:
-#
-# - **What the data confirm.** The book's side is the rule applied to
-#   `grade_score`, never to the composite, so where the two numbers fall in
-#   different zones, the side follows the grade. That is true by construction:
-#   section 5 already checked it for every position and decision.
-# - **What the data cannot show.** Whether the seats influence `grade_score`
-#   itself cannot be tested from these fields, because the book publishes the
-#   grade but not how it was computed. For that part we rely on SurgeFlow's
-#   published disclaimer (printed with the grade book). A large gap between the
-#   two numbers is not evidence either way, especially when they come from
-#   different days: the gap then mixes the passage of time with the difference
-#   in method.
-#
-# So the cell first prints how many days separate the scoreboard's session from
-# the decisions' `grade_date`.
-
-# %%
-if dec.empty or board.empty:
-    print("Need both the latest decisions and a scoreboard to compare.")
-else:
-    both = dec[["ticker", "side", "grade_score", "qualifies"]].merge(
-        board[["ticker", "composite_score", "rule_side", "flag"]], on="ticker", how="left")
-    both["gap"] = both["composite_score"] - both["grade_score"]
-    on_board = both.dropna(subset=["composite_score"])
-    session_day = pd.to_datetime(meta["decision_session_date"], format="%Y-%m-%d")
-    graded_day = pd.to_datetime(dec["grade_date"], format="%Y-%m-%d").max()
-    day_gap = (graded_day - session_day).days
-    print(f"Scoreboard session {session_day:%Y-%m-%d}; decisions graded {graded_day:%Y-%m-%d}: "
-          f"{day_gap} day(s) apart.")
-    reviews = sorted({c for c in dec["review_checkpoint"] if isinstance(c, str) and c})   # skip nulls
-    same_meeting = meta["checkpoint_id"] in reviews
-    meeting_text = "the same meeting the scoreboard shows" if same_meeting else "a different meeting"
-    print(f"The decisions rest on council review {', '.join(reviews)}: {meeting_text}." if reviews else
-          "The decisions record no council review.")
-    if on_board.empty:
-        print("None of the decision names is on the scoreboard.")
-    else:
-        print(f"{len(on_board)} of {len(both)} decision names are on the scoreboard. The composite and the grade "
-              f"agree on the side for {int((on_board['side'] == on_board['rule_side']).sum())} of them; "
-              f"largest gap {on_board['gap'].abs().max():.1f} points.")
-        if abs(day_gap) > STALE_DAYS:
-            print(f"The two numbers are {abs(day_gap)} days apart (more than STALE_DAYS = {STALE_DAYS}), so the gap "
-                  "mixes time with method. We draw no conclusion from its size.")
-        disagree = on_board[on_board["side"] != on_board["rule_side"]]
-        if len(disagree):
-            print(f"Where the zones differ ({', '.join(disagree['ticker'])}), the book's side follows the grade. "
-                  "That is the rule at work (checked in section 5), not a test of whether the seats influence "
-                  "the grade.")
-    display(both.rename(columns={"side": "side_from_grade", "rule_side": "side_from_composite",
-                                 "flag": "scoreboard_flag"})
-            .style.format({"grade_score": "{:.2f}", "composite_score": "{:.2f}", "gap": "{:+.2f}"}, na_rep="–")
-            .hide(axis="index"))
-
-# %% [markdown]
-# ### 6.2 Two paper records: the scoreboard ledger and the grade book
-#
-# It is tempting to assume that the scoreboard's paper flags *are* the grade
-# book's positions. They are not the same record:
-#
-# | | Scoreboard ledger (`ai/ratings`) | Grade book (`ai/grade-book`) |
-# |---|---|---|
-# | What sets the side | the scoreboard's own pick (`long` / `short`) | the grade rule, > 70 / < 30 |
-# | Score it uses | `composite_score` | `grade_score` |
-# | Exit | hard stop on the return since the anchor close | the Drop Out Zone only |
-# | Gates | none published | six gates, checked before an opening |
-#
-# The reconciliation table below lines the two up, name by name, together with
-# the latest decisions.
-
-# %%
-ledger_legs = board[board["flag"] != "not flagged"].set_index("ticker")
-open_side = book[is_open].drop_duplicates("ticker").set_index("ticker")["side"]
-dec_by_name = dec.set_index("ticker") if not dec.empty else pd.DataFrame(columns=["side", "grade_score", "qualifies"])
-names = sorted(set(ledger_legs.index) | set(open_side.index) | set(dec_by_name.index))
-if not names:
-    print("No scoreboard paper legs, open positions or decisions to reconcile.")
-else:
-    recon = pd.DataFrame({"ticker": names})
-    recon["scoreboard_ledger"] = recon["ticker"].map(
-        lambda t: f"{ledger_legs.loc[t, 'flag']} ({ledger_legs.loc[t, 'stop_state']})" if t in ledger_legs.index else "–")
-    recon["open_in_grade_book"] = recon["ticker"].map(lambda t: open_side.get(t, "–"))
-    recon["latest_decision"] = recon["ticker"].map(
-        lambda t: (f"{dec_by_name.loc[t, 'side']} at {dec_by_name.loc[t, 'grade_score']:.0f}, "
-                   f"{'opens' if dec_by_name.loc[t, 'qualifies'] else 'held back'}") if t in dec_by_name.index else "–")
-    working = set(ledger_legs.index[ledger_legs["stop_state"] != "stopped_out"])
-    print(f"Scoreboard ledger: {len(ledger_legs)} paper legs ({len(working)} still working). "
-          f"Grade book: {len(open_side)} open positions. In both: {sorted(working & set(open_side.index)) or 'none'}.")
-    display(recon.style.format(escape="html").hide(axis="index"))
-
-# %% [markdown]
-# **How to read this.** Each row is a name that appears in at least one of the
-# three lists. A dash means the name is absent from that list. When a name is a
-# working leg in the scoreboard ledger but not open in the grade book, the two
-# records simply disagree about it: for example, the ledger took a short while
-# the book's gates held the grade back, or the book never graded it past a line.
-# Neither record is "wrong"; they answer different questions. Quote the grade
-# book when you mean the deterministic rule.
-
-# %% [markdown]
-# ### 6.3 How fragile is each scoreboard composite?
-#
-# Section 4 found which seats the published composite averages
-# (`COMPOSITE_SEATS`). Now ask a "what if" question: **if one of those seats had
-# not reported, would the composite land in a different zone?** For each name we
-# drop each seat in turn, recompute the mean of the others, and apply the rule. A
-# name whose zone flips when a single seat is removed rests on that one seat's
-# score. If that score is a blank zero (0 with no comment), the name may rest on a
-# review that was never filed rather than on an opinion. The published composite
-# averages blank zeros like any other score, so the table keeps them; the line
-# under the table re-runs the check with them set to missing and lists what changes.
-#
-# This is about the scoreboard's composite only. The book's grade is a separate
-# number, and nothing here changes it. We use no machine learning in this notebook
-# on purpose: a hotlist's worth of names and the book's closed positions are far
-# too few to fit a model honestly. Descriptive checks like this one are the right
-# tool.
-
-# %%
-def fragility_table(scores: pd.DataFrame) -> pd.DataFrame:
-    """Leave-one-seat-out check on the composite seats, one row per name with at least 3 scoring seats."""
-    out = []
-    for ticker, row in scores.reindex(columns=COMPOSITE_SEATS).iterrows():
-        scored = row.dropna()
-        if len(scored) < 3:
-            continue
-        loo = (scored.sum() - scored) / (len(scored) - 1)             # mean without each seat in turn
-        full = scored.mean()                                          # reproduces the published composite
-        zone = grade_side(full)
-        flips = loo[loo.map(grade_side) != zone]
-        margin = min(abs(full - LONG_ABOVE), abs(full - SHORT_BELOW))
-        out.append({"ticker": ticker, "seat_mean": full, "zone": zone, "seats": len(scored),
-                    "points_to_nearest_line": margin, "loo_min": loo.min(), "loo_max": loo.max(),
-                    "seats_that_flip_it": ", ".join(f"{s} ({grade_side(v)})" for s, v in flips.items()) or "none"})
-    return pd.DataFrame(out, columns=["ticker", "seat_mean", "zone", "seats", "points_to_nearest_line",
-                                      "loo_min", "loo_max", "seats_that_flip_it"])
-
-
-fragility = fragility_table(wide)
-if fragility.empty:
-    print("Not enough seat scores for a leave-one-seat-out check.")
-else:
-    print(f"Composite reading used: mean of {', '.join(COMPOSITE_SEATS)}.")
-    fragile = fragility[fragility["seats_that_flip_it"] != "none"]
-    print(f"{len(fragile)} of {len(fragility)} names would change zone if one seat were left out"
-          + (f": {', '.join(fragile['ticker'])}." if len(fragile) else "."))
-    display(fragility.sort_values("points_to_nearest_line")
-            .style.format({"seat_mean": "{:.1f}", "points_to_nearest_line": "{:.1f}", "loo_min": "{:.1f}",
-                           "loo_max": "{:.1f}"})
-            .map(lambda v: "font-weight: 600" if v != "none" else f"color: {MUTED}", subset=["seats_that_flip_it"])
-            .hide(axis="index"))
-
-    # Sensitivity: the same check with the blank zeros (score 0, no comment) set to missing.
-    n_blank_comp = int(zero_no_comment.reindex(columns=COMPOSITE_SEATS).sum().sum())
-    if n_blank_comp == 0:
-        print("No blank zeros among the composite seats, so the zones do not depend on them.")
-    else:
-        alt = fragility_table(wide_without_blank_zeros)
-        compare = fragility[["ticker", "zone", "seat_mean"]].merge(
-            alt[["ticker", "zone", "seat_mean"]], on="ticker", how="left", suffixes=("", "_alt"))
-        unchecked = compare[compare["zone_alt"].isna()]                # fewer than 3 seats left without them
-        changed = compare[compare["zone_alt"].notna() & (compare["zone"] != compare["zone_alt"])]
-        moves = [f"{r.ticker} {r.zone} -> {r.zone_alt} (mean {r.seat_mean:.1f} -> {r.seat_mean_alt:.1f})"
-                 for r in changed.itertuples()]
-        print(f"Sensitivity: with the {n_blank_comp} blank zero(s) set to missing, {len(changed)} of "
-              f"{len(compare) - len(unchecked)} names change zone" + (": " + "; ".join(moves) + "." if moves else "."))
-        if len(unchecked):
-            print(f"Without them, {', '.join(unchecked['ticker'])} keep(s) fewer than 3 scoring seats and cannot be "
-                  "checked: the zone rests on placeholder-like scores.")
-
-# %% [markdown]
-# **How to read this.** The table is sorted by distance to the nearest line (30 or
-# 70), closest first. `seat_mean` is the composite rebuilt from its seats, and
-# `loo_min` and `loo_max` show the range of averages you get by leaving out one
-# seat at a time ("loo" = leave one out). When that range crosses a line, the last
-# column names the seat whose absence would move the name into another zone, and
-# which zone. Names near a line with a wide range are the council's close calls.
-# Names far from both lines are robust to any single seat. The sensitivity line
-# under the table lists the names whose zone depends on a blank zero: for those,
-# check whether the seat really reviewed the name before you read the zone as the
-# council's view.
 
 # %% [markdown]
 # ## Next steps

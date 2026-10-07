@@ -148,6 +148,13 @@ print(f"News market: {MARKET_NAMES[MARKET]} ({MARKET}); exchange clock {MARKET_T
 # - `markdown_text` and `word_count` turn Markdown into plain words and count
 #   them; `quote_markdown` prepares an API's Markdown for display.
 # - `money`, `shorten` and `wrap` make readable labels.
+# - `chart_title` builds a chart's title (the takeaway) and a smaller grey
+#   subtitle, wrapped to fit a notebook cell (`even_wrap` keeps the lines of
+#   similar length), and returns the top margin they need. Plotly never wraps
+#   a title by itself, so a long one runs off the right edge and hides its last
+#   numbers. The subtitle is plain `<br>` plus a styled `<span>`, which works
+#   on every Plotly 5 (Plotly's own `title.subtitle` needs version 5.23 or
+#   later).
 # - `mean_ci`, `wilson` and `spearman_ci` compute the confidence intervals used
 #   in the statistics tables. A 95% confidence interval comes from a method
 #   that, over many repeated samples, captures the true value 95% of the time.
@@ -239,6 +246,32 @@ def shorten(text, width: int = 60) -> str:
 def wrap(text, width: int = 28) -> str:
     """Break a long label over several lines (Plotly uses <br> for a new line)."""
     return "<br>".join(textwrap.wrap(str(text), width)) or str(text)
+
+
+TITLE_CHARS, SUBTITLE_CHARS = 80, 110   # about 700 px each: fits a notebook cell (850 px or more)
+
+
+def even_wrap(text: str, width: int) -> list:
+    """Wrap into as few lines as `width` allows, then even out their lengths (no one-word last line)."""
+    lines = textwrap.wrap(str(text), width, break_on_hyphens=False)
+    if len(lines) < 2:
+        return lines
+    for w in range(int(np.ceil(len(str(text)) / len(lines))), width):   # narrowest width with the same line count
+        even = textwrap.wrap(str(text), w, break_on_hyphens=False)
+        if len(even) == len(lines):
+            return even
+    return lines
+
+
+def chart_title(takeaway: str, subtitle: str = "") -> tuple:
+    """(title dict, top margin in px): the takeaway wrapped at 80 characters, a grey 13 px subtitle at 110."""
+    head = even_wrap(takeaway, TITLE_CHARS) or [str(takeaway)]
+    sub = even_wrap(subtitle, SUBTITLE_CHARS)
+    text = "<br>".join(head)
+    if sub:
+        text += f"<br><span style='font-size:13px;color:{INK_2}'>" + "<br>".join(sub) + "</span>"
+    top = 40 + 22 * (len(head) + len(sub))     # each line is 22 px (1.3 × the 17 px title font), plus padding
+    return dict(text=text, y=1, yanchor="top", pad=dict(t=16, l=8)), top
 
 
 def mean_ci(values, level: float = 0.95):
@@ -591,11 +624,11 @@ else:
     fig.update_xaxes(type="date", title_text=f"Published (exchange local time, {tz})", range=[first - pad, last + pad])
     fig.update_yaxes(title_text="Sentiment score (−1 to +1)", range=[-1.08, 1.08], dtick=0.5, tickformat="+.1f",
                      zeroline=False)
-    fig.update_layout(
-        title=dict(text=f"{MARKET_NAMES[MARKET]} news tone is {tone}: mean score {mean:+.2f} across {n} articles",
-                   subtitle=dict(text=f"{ci_text} · {mix['positive']} positive, {mix['neutral']} "
-                                      f"neutral, {mix['negative']} negative · the newest {n} articles span {span_text}")),
-        height=500, margin=dict(t=110, b=135), legend=LEGEND_BELOW)
+    title_spec, title_px = chart_title(
+        f"{MARKET_NAMES[MARKET]} news tone is {tone}: mean score {mean:+.2f} across {n} articles",
+        f"{ci_text} · {mix['positive']} positive, {mix['neutral']} neutral, {mix['negative']} negative · "
+        f"the newest {n} articles span {span_text}")
+    fig.update_layout(title=title_spec, height=title_px + 135 + 280, margin=dict(t=title_px, b=135), legend=LEGEND_BELOW)
     fig.show()
 
     trend_text = (f"Spearman ρ between time and score = {trend.statistic:+.2f} (p = {trend.pvalue:.2f})"
@@ -698,13 +731,13 @@ else:
                 if n_tied == 1 else
                 f"No ticker dominates: {n_tied} tickers tie at {lead['articles']} article(s) each")
     n_unscored = int((~has_score).sum())
-    fig.update_layout(
-        title=dict(text=headline,
-                   subtitle=dict(text=f"Top {len(top)} of {len(by_ticker)} tickers · bar length = article count · colour and "
-                                      "label = mean sentiment of those articles (blue positive, red negative)"
-                                      + (f" · hatched = {n_unscored} with no scored article" if n_unscored else ""))),
-        height=max(380, 26 * len(top) + 160) + (50 if n_unscored else 0), barmode="overlay", showlegend=bool(n_unscored),
-        margin=dict(t=110, r=90, b=110 if n_unscored else 50), legend=LEGEND_BELOW)
+    title_spec, title_px = chart_title(
+        headline, f"Top {len(top)} of {len(by_ticker)} tickers · bar length = article count · colour and label = mean "
+                  "sentiment of those articles (blue positive, red negative)"
+                  + (f" · hatched = {n_unscored} with no scored article" if n_unscored else ""))
+    bottom = 110 if n_unscored else 50
+    fig.update_layout(title=title_spec, height=title_px + bottom + max(220, 26 * len(top) + 50), barmode="overlay",
+                      showlegend=bool(n_unscored), margin=dict(t=title_px, r=90, b=bottom), legend=LEGEND_BELOW)
     fig.show()
     display(by_ticker.head(TOP_N).style.format({"mean_sentiment": "{:+.2f}", "lowest": "{:+.1f}", "highest": "{:+.1f}",
                                                 "latest_headline": lambda t: shorten(t, 60)}, na_rep="–")
@@ -799,12 +832,13 @@ else:
         leaders = words.loc[words["headlines"] == lead["headlines"], "token"].tolist()
         named = ", ".join(f"“{t}”" for t in leaders[:3]) + (f" and {len(leaders) - 3} more" if len(leaders) > 3 else "")
         verb = "is the most common headline word" if len(leaders) == 1 else "tie as the most common headline words"
-        fig.update_layout(
-            title=dict(text=f"{named} {verb}: in {lead['headlines']} of {len(unique_heads)} distinct headlines "
-                            f"({lead['share']:.0%})",
-                       subtitle=dict(text=f"{MARKET_NAMES[MARKET]} · top {min(TOP_N, len(words))} tokens by document "
-                                          "frequency · stopwords, digits and repeated headlines removed")),
-            height=max(420, 24 * min(TOP_N, len(words)) + 170), margin=dict(t=120))
+        title_spec, title_px = chart_title(
+            f"{named} {verb}: in {lead['headlines']} of {len(unique_heads)} distinct headlines ({lead['share']:.0%})",
+            f"{MARKET_NAMES[MARKET]} · top {min(TOP_N, len(words))} tokens by document frequency · stopwords, digits "
+            "and repeated headlines removed")
+        top_px = title_px + 24                      # room for the panel titles
+        fig.update_layout(title=title_spec, height=top_px + 50 + max(250, 24 * min(TOP_N, len(words)) + 50),
+                          margin=dict(t=top_px, b=50))
         fig.show()
         for name, table in panels:                   # table twins: one per panel
             display(table.head(TOP_N).rename(columns={"token": name}).style
@@ -1291,12 +1325,13 @@ else:
     fig.update_xaxes(range=[-1.05, 1.05], dtick=0.25, tickformat="+.2f", title_text="Sentiment score (−1 to +1)")
     fig.update_yaxes(tickvals=list(range(len(order))), ticktext=[MARKET_NAMES[m] for m in order],
                      range=[-0.6, len(order) - 0.4], showgrid=False, zeroline=False, ticks="")
-    fig.update_layout(
-        title=dict(text=f"The notes' {len(note_scored)} sample articles: {mix['positive']} positive, {mix['neutral']} "
-                        f"neutral, {mix['negative']} negative",
-                   subtitle=dict(text="The three newest articles in each market note · equal scores are spread "
-                                      "vertically · far too few articles to compare the markets' mood")),
-        height=150 + 70 * len(order) + 90, margin=dict(t=110, b=110), legend=LEGEND_BELOW)
+    title_spec, title_px = chart_title(
+        f"The notes' {len(note_scored)} sample articles: {mix['positive']} positive, {mix['neutral']} neutral, "
+        f"{mix['negative']} negative",
+        "The three newest articles in each market note · equal scores are spread vertically · far too few articles "
+        "to compare the markets' mood")
+    fig.update_layout(title=title_spec, height=title_px + 110 + max(150, 60 + 60 * len(order)),
+                      margin=dict(t=title_px, b=110), legend=LEGEND_BELOW)
     fig.show()
 
 # %% [markdown]
@@ -1350,12 +1385,12 @@ else:
     headline = (f"The {NOTE_NAMES.get(longest['market'], longest['market'])} note is the longest at {longest['words']} "
                 f"words (tables included); the wordiest section is {NOTE_NAMES.get(wordiest['market'], wordiest['market'])} "
                 f"{tab_label[wordiest['tab']]} ({wordiest['words']} words)")
-    fig.update_layout(
-        title=dict(text=headline,
-                   subtitle=dict(text=f"Daily notes as of {notes['as_of_date'].max():%Y-%m-%d} · cell = words in the "
-                                      "section's headline and lines · header = sum of its column (whole-note counts, "
-                                      f"tables included, are in the table below) · {n_na} section(s) not available today")),
-        height=230 + 34 * len(tab_order), margin=dict(t=150, l=170, b=30))
+    title_spec, title_px = chart_title(
+        headline, f"Daily notes as of {notes['as_of_date'].max():%Y-%m-%d} · cell = words in the section's headline "
+                  "and lines · header = sum of its column (whole-note counts, tables included, are in the table "
+                  f"below) · {n_na} section(s) not available today")
+    top_px = title_px + 45                          # room for the two-line column headers on top
+    fig.update_layout(title=title_spec, height=top_px + 30 + 34 * len(tab_order) + 20, margin=dict(t=top_px, l=170, b=30))
     fig.show()
     display(grid.rename(index=tab_label, columns=NOTE_NAMES).rename_axis(index="section", columns="note")
             .style.format("{:.0f}", na_rep="–"))
@@ -1588,28 +1623,42 @@ else:
 # differences cannot share one colour scale.
 #
 # Professional surprise indices divide each surprise by that indicator's
-# historical surprise volatility. We do not have that history here, so we use a
-# simpler, transparent scale: the difference as a **percentage of the size of
-# the reference value**.
+# historical surprise volatility. We do not have that history here, so we use
+# two simpler, transparent scales, one for each kind of series:
 #
-# - Surprise mode (actual numbers exist): `100 × (actual − consensus) / max(|consensus|, 0.1)`.
-# - Expected-change mode (no actual numbers yet): `100 × (consensus − previous) / max(|previous|, 0.1)`.
+# - **Percent rates** are already on a common scale: the **percentage point**
+#   (pp). These are releases whose unit is `%`: growth rates such as "Retail
+#   Sales MoM" or "Inflation Rate YoY", and rates such as a mortgage or
+#   unemployment rate. A release named `MoM`, `QoQ`, `YoY` or `Growth` that
+#   arrives without a unit counts as a rate too. We compare their moves in pp.
+#   Dividing a rate by its own level would mislead: Retail Sales MoM going from
+#   1.2% to 0.1% is an ordinary −1.1 pp slowdown, but as a percentage of 1.2 it
+#   reads −92%, only because the base is small.
+# - **Levels** (jobless claims in thousands, housing starts in millions, index
+#   levels such as a sentiment survey or the CPI) are compared as a
+#   **percentage of the reference value**:
+#   - surprise mode (actual numbers exist): `100 × (actual − consensus) / max(|consensus|, 0.1)`;
+#   - expected-change mode (no actual numbers yet): `100 × (consensus − previous) / max(|previous|, 0.1)`.
 #
-# The `max(…, 0.1)` stops a reference near zero (a 0.0% monthly change) from
-# producing a huge ratio. Read it as a rough "how big a move, compared with the
-# level". It flatters level indicators (a 0.1 move on a survey near 50 is tiny)
-# and magnifies small monthly rates (a 0.1 move on a 0.4% rate is 25%). Every
-# chart also shows the raw difference in its own unit.
+#   The `max(…, 0.1)` stops a reference near zero from producing a huge ratio.
 #
-# **Where the scale breaks.** A percentage of the level means nothing when the
-# series **crosses zero** (a budget deficit turning into a surplus), when the
-# base is **near zero** (the move is larger than the level itself), or when
-# the series is itself a **balance or a change** (trade balance, "Stocks
+# A pp and a percentage of a level are different measures, so the two groups
+# are never ranked against each other: every ranking, median and colour scale
+# below works within one group. Every chart also shows the raw difference in
+# its own unit.
+#
+# **Where the % scale breaks.** For a level, a percentage means nothing when
+# the series **crosses zero** (a budget deficit turning into a surplus), when
+# the base is **near zero** (the move is larger than the level itself), or
+# when the series is itself a **balance or a change** (trade balance, "Stocks
 # Change"). Such a release can show +200% for an ordinary swing. We flag these
-# as `off_scale`, keep their raw difference, and leave them out of every
-# ranking, colour cap and median that uses the percentage. The name test is a
-# simple pattern (`Balance`, `Change`, `Current Account`, `Net`), so it misses
-# change series with other names; the sign and size tests catch most of them.
+# levels as `off_scale`, keep their raw difference, and leave them out of every
+# ranking, colour cap and median. The name test is a simple pattern
+# (`Balance`, `Change`, `Current Account`, `Net`). The sign and size tests add
+# the balances that cross or come close to zero, but a change series with
+# another name and a large base still gets through, so read the indicator
+# names in the tables. Percent rates are never off scale: a move in pp means the
+# same thing whatever the sign or size of the rate.
 #
 # The next cell picks the mode from the data, so the charts below need no
 # change on the day actual numbers start to arrive. It switches to surprises
@@ -1632,29 +1681,42 @@ MODE_TEXT = {
     "expected": dict(name="expected change", formula="consensus − previous", ref="previous", x="previous",
                      y="consensus", above="expected to rise", below="expected to fall"),
 }[MODE]
+RATE_NAMES = re.compile(r"\b(?:MoM|QoQ|YoY|Growth)\b", re.I)                    # growth rates by name
 SCALE_NAMES = re.compile(r"\b(?:Balance|Change|Current Account|Net)\b", re.I)   # balances and changes by name
 
 
-def add_scale(frame: pd.DataFrame) -> pd.DataFrame:
-    """Scaled difference (% of |reference|), raw text, and a flag for releases the % scale cannot describe."""
+def add_scale(frame: pd.DataFrame, ref_name: str) -> pd.DataFrame:
+    """Put each difference on a comparable scale: pp for percent rates, % of |reference| for levels.
+
+    `scaled` holds the number every ranking and colour uses; it is NaN for levels the % scale cannot describe.
+    """
     frame = frame.copy()
     ref, target = frame["reference"], frame["reference"] + frame["change"]
+    names = frame["indicator"].astype(str)
+    frame["rate"] = frame["unit"].eq("%") | (frame["unit"].isna() & names.str.contains(RATE_NAMES))
     frame["rel_pct"] = 100 * frame["change"] / ref.abs().clip(lower=0.1)
     frame["change_text"] = [fmt_unit(c, u, signed=True) for c, u in zip(frame["change"], frame["unit"])]
     frame["date"] = frame["local"].dt.normalize()
     reasons = pd.DataFrame({
         "sign flip": np.sign(ref) != np.sign(target),
         "near-zero base": ref.abs() < frame["change"].abs(),
-        "balance or change series": frame["indicator"].astype(str).str.contains(SCALE_NAMES),
+        "balance or change series": names.str.contains(SCALE_NAMES),
     }, index=frame.index)
-    frame["off_scale"] = reasons.any(axis=1)
-    frame["scale_note"] = [", ".join(k for k, hit in r.items() if hit) or "on scale" for r in reasons.to_dict("records")]
+    frame["off_scale"] = ~frame["rate"] & reasons.any(axis=1)      # a move in pp is fine whatever the base
+    frame["scaled"] = frame["change"].where(frame["rate"], frame["rel_pct"]).where(~frame["off_scale"])
+    frame["scale_note"] = ["percent rate: in pp" if rate else
+                           ", ".join(k for k, hit in r.items() if hit) or f"level: % of |{ref_name}|"
+                           for rate, r in zip(frame["rate"], reasons.to_dict("records"))]
+    frame["scaled_text"] = [fmt_unit(c, "%", signed=True) if rate else "off the % scale" if off
+                            else f"{rel:+.1f}% of |{ref_name}|".replace("-", "−")
+                            for c, rel, rate, off in zip(frame["change"], frame["rel_pct"], frame["rate"], frame["off_scale"])]
     return frame
 
 
-released, expected = add_scale(released), add_scale(expected)
+released, expected = add_scale(released, "consensus"), add_scale(expected, "previous")
 view = released if MODE == "surprise" else expected
 REL_COL = f"% of |{MODE_TEXT['ref']}|"
+PP_COL = f"{MODE_TEXT['name']} (pp)"
 
 print(f"{len(released)} events have an actual number and a consensus; {len(expected)} upcoming events have a "
       f"consensus and a previous value. Mode: **{MODE_TEXT['name']}** ({MODE_TEXT['formula']}).")
@@ -1663,19 +1725,29 @@ if MODE == "surprise" and not expected.empty:
 if view.empty:
     display(Markdown("> No event has the numbers either mode needs. Raise `MACRO_DAYS` and re-run."))
 else:
+    rates, levels = view[view["rate"]], view[~view["rate"]]
     n_off = int(view["off_scale"].sum())
-    print(f"{n_off} of {len(view)} releases are off the % scale (sign flip, near-zero base, or a balance or change "
-          "series): they keep their raw difference but are left out of the rankings, colour cap and medians below.")
-    on_scale = view[~view["off_scale"]]
-    display(on_scale[["market", "indicator_name", "importance", "unit", MODE_TEXT["x"], MODE_TEXT["y"], "change_text",
-                      "rel_pct"]]
-            .sort_values("rel_pct", key=lambda s: s.abs(), ascending=False).head(10)
-            .rename(columns={"change_text": MODE_TEXT["name"], "rel_pct": REL_COL})
-            .style.format({MODE_TEXT["x"]: "{:,.6g}", MODE_TEXT["y"]: "{:,.6g}", REL_COL: "{:+.1f}%"},
-                          na_rep="–").hide(axis="index"))
+    print(f"{len(rates)} of {len(view)} releases are percent rates (compared in pp) and {len(levels)} are levels "
+          f"(compared as {REL_COL}). {n_off} of the levels are off the % scale (sign flip, near-zero base, or a balance "
+          "or change series): they keep their raw difference but are left out of the rankings, colour caps and medians.")
+    shown_cols = ["market", "indicator_name", "importance", "unit", MODE_TEXT["x"], MODE_TEXT["y"]]
+    if not rates.empty:
+        display(Markdown("**Largest moves among percent rates**, in percentage points:"))
+        display(rates[shown_cols + ["change"]].sort_values("change", key=lambda s: s.abs(), ascending=False).head(10)
+                .rename(columns={"change": PP_COL})
+                .style.format({MODE_TEXT["x"]: "{:,.6g}", MODE_TEXT["y"]: "{:,.6g}", PP_COL: "{:+.2f} pp"}, na_rep="–")
+                .hide(axis="index"))
+    on_scale = levels[~levels["off_scale"]]
+    if not on_scale.empty:
+        display(Markdown(f"**Largest moves among levels**, as a percentage of |{MODE_TEXT['ref']}|:"))
+        display(on_scale[shown_cols + ["change_text", "rel_pct"]]
+                .sort_values("rel_pct", key=lambda s: s.abs(), ascending=False).head(10)
+                .rename(columns={"change_text": MODE_TEXT["name"], "rel_pct": REL_COL})
+                .style.format({MODE_TEXT["x"]: "{:,.6g}", MODE_TEXT["y"]: "{:,.6g}", REL_COL: "{:+.1f}%"},
+                              na_rep="–").hide(axis="index"))
     if n_off:
-        display(view[view["off_scale"]][["market", "indicator_name", "importance", "unit", MODE_TEXT["x"], MODE_TEXT["y"],
-                                         "change_text", "rel_pct", "scale_note"]]
+        display(Markdown("**Levels off the % scale** (raw difference only):"))
+        display(view[view["off_scale"]][shown_cols + ["change_text", "rel_pct", "scale_note"]]
                 .rename(columns={"change_text": MODE_TEXT["name"], "rel_pct": f"{REL_COL} (not meaningful)",
                                  "scale_note": "why off scale"})
                 .style.format({MODE_TEXT["x"]: "{:,.6g}", MODE_TEXT["y"]: "{:,.6g}",
@@ -1684,24 +1756,26 @@ if MODE == "expected" and not released.empty:
     display(Markdown(f"> **{len(released)} release(s) already have an actual number**: fewer than `MIN_RELEASED` = "
                      f"{MIN_RELEASED}, too few for the surprise charts, so they are listed here and the charts below keep "
                      "the expected changes."))
-    display(released[["market", "indicator_name", "importance", "consensus", "actual", "change_text", "rel_pct",
+    display(released[["market", "indicator_name", "importance", "consensus", "actual", "change_text", "scaled_text",
                       "scale_note"]]
-            .rename(columns={"change_text": "surprise", "rel_pct": "% of |consensus|"})
-            .style.format({"consensus": "{:,.6g}", "actual": "{:,.6g}", "% of |consensus|": "{:+.1f}%"}, na_rep="–")
-            .hide(axis="index"))
+            .rename(columns={"change_text": "surprise", "scaled_text": "on its scale"})
+            .style.format({"consensus": "{:,.6g}", "actual": "{:,.6g}"}, na_rep="–").hide(axis="index"))
 
 # %% [markdown]
 # ### 5.3 Chart: the surprise heatmap
 #
 # One panel per market. Rows are indicators, columns are release dates (on the
-# market's own calendar). Colour is the scaled difference on a **diverging**
-# scale: blue means above the reference, red below, pale grey close to it. The
-# scale is symmetric around zero and capped at the 75th percentile of the
-# on-scale releases' |%|, so a few large values cannot wash out the rest.
-# Off-scale releases (sign flips, near-zero bases, balances and changes; see
-# 5.2) get no colour and a dotted outline, and they take no part in the cap or
-# the headline. The text in each cell is the raw difference in its own unit.
-# Rows are limited to `MACRO_MIN_IMPORTANCE` and above.
+# market's own calendar). Colour is the difference on its own scale (see 5.2),
+# on a **diverging** scale: blue means above the reference, red below, pale
+# grey close to it. Percent rates (rows marked `· pp`) are coloured by their
+# move in percentage points; levels by their move as a percentage of the
+# reference. The two groups get **separate colour bars**, each symmetric
+# around zero and capped at the 75th percentile of that group's |moves|, so a
+# few large values cannot wash out the rest. Off-scale levels (sign flips,
+# near-zero bases, balances and changes) get no colour and a dotted outline,
+# and they take no part in the caps or the headline. The text in each cell is
+# the raw difference in its own unit. The headline names the largest move
+# within each group. Rows are limited to `MACRO_MIN_IMPORTANCE` and above.
 #
 # When actual numbers exist, the cells are **surprises**. When none exist yet
 # (the usual live case today), the heatmap says so and shows the **expected
@@ -1709,6 +1783,21 @@ if MODE == "expected" and not released.empty:
 # move, and in which direction.
 
 # %%
+def colour_cap(values: pd.Series, step: float, floor: float) -> float:
+    """The 75th percentile of |values|, rounded up to a multiple of `step`, and at least `floor`."""
+    values = values.dropna().abs()
+    return float(max(floor, np.ceil(values.quantile(0.75) / step - 1e-9) * step)) if not values.empty else floor
+
+
+def describe(b: pd.Series, with_market: bool) -> str:
+    """One release for a headline, with its move on its own scale (pp or % of the reference)."""
+    name = f"{MARKET_NAMES[b['market']]} {b['indicator_name']}" if with_market else b["indicator_name"]
+    if MODE == "surprise":
+        return (f"{name} at {fmt_unit(b['actual'], b['unit'])} vs {fmt_unit(b['consensus'], b['unit'])} expected "
+                f"({b['scaled_text']})")
+    return f"{name}, {fmt_unit(b['previous'], b['unit'])} → {fmt_unit(b['consensus'], b['unit'])} ({b['scaled_text']})"
+
+
 heat = view[view["importance_rank"] <= MIN_IMPORTANCE_RANK].copy() if not view.empty else view
 if MODE == "expected":
     have = (f"None of the {len(macro)} events in this window has an actual number" if released.empty else
@@ -1725,10 +1814,15 @@ else:
     dates = sorted(heat["date"].dropna().unique())
     date_labels = [pd.Timestamp(d).strftime("%a %d %b") for d in dates]
     shown = [m for m in MARKETS if (heat["market"] == m).any()]
-    scaled = heat.loc[~heat["off_scale"], "rel_pct"].abs()        # the colour cap ignores off-scale releases
-    R = float(np.clip(np.ceil(scaled.quantile(0.75) / 5) * 5, 5, 100)) if not scaled.empty else 100.0
-    heat["rel_on"] = heat["rel_pct"].where(~heat["off_scale"])
+    R_LEVEL = colour_cap(heat.loc[~heat["rate"], "scaled"], step=1, floor=1)        # % of |reference|
+    R_RATE = colour_cap(heat.loc[heat["rate"], "scaled"], step=0.25, floor=0.25)    # percentage points
+    heat["level_on"] = heat["scaled"].where(~heat["rate"]).clip(-R_LEVEL, R_LEVEL)  # off-scale levels stay NaN
+    heat["rate_on"] = heat["scaled"].where(heat["rate"]).clip(-R_RATE, R_RATE)
     heat["off"] = heat["off_scale"].astype(float)
+    # Each group gets its own colour axis (and colour bar); a group with no coloured cell gets none.
+    AXES = {"level": ("coloraxis", "level_on", R_LEVEL, "%", f"Levels: {MODE_TEXT['name']},<br>% of |{MODE_TEXT['ref']}|"),
+            "rate": ("coloraxis2", "rate_on", R_RATE, " pp", f"Percent rates (· pp):<br>{MODE_TEXT['name']} in pp")}
+    groups = [g for g in AXES if heat[AXES[g][1]].notna().any()]
     heights = [max(2, heat.loc[heat["market"] == m, "indicator"].nunique()) for m in shown]
     fig = make_subplots(rows=len(shown), cols=1, shared_xaxes=True, vertical_spacing=0.06 if len(shown) > 1 else 0.02,
                         row_heights=[h / sum(heights) for h in heights],
@@ -1736,6 +1830,7 @@ else:
     for row, m in enumerate(shown, start=1):
         part = heat[heat["market"] == m].sort_values(["cat_rank", "indicator", "date"])
         order = list(dict.fromkeys(part["indicator"]))
+        is_rate = part.groupby("indicator")["rate"].first().reindex(order)
 
         def cell(col):
             return part.pivot_table(index="indicator", columns="date", values=col, aggfunc="first").reindex(
@@ -1745,23 +1840,24 @@ else:
             f"<b>{n}</b> · {c} · {imp} importance<br>Released {t:%a %d %b %H:%M} local<br>"
             f"{MODE_TEXT['y'].title()} {fmt_unit(y, u)} vs {MODE_TEXT['x']} {fmt_unit(x, u)}<br>"
             + (f"{MODE_TEXT['name'].capitalize()} {s}; off the % scale ({note})" if off else
-               f"{MODE_TEXT['name'].capitalize()} {s} = {r:+.1f}% of |{MODE_TEXT['ref']}|")
-            for n, c, imp, t, y, x, u, s, r, off, note in zip(
+               f"{MODE_TEXT['name'].capitalize()} {s} (percent rate, compared in pp)" if rate else
+               f"{MODE_TEXT['name'].capitalize()} {s} = {sc}")
+            for n, c, imp, t, y, x, u, s, sc, rate, off, note in zip(
                 part["indicator_name"], part["category"], part["importance"], part["local"], part[MODE_TEXT["y"]],
-                part[MODE_TEXT["x"]], part["unit"], part["change_text"], part["rel_pct"], part["off_scale"],
-                part["scale_note"])])
-        z, txt, hv = cell("rel_on").clip(-R, R), cell("change_text").fillna(""), cell("hover").fillna("")
+                part[MODE_TEXT["x"]], part["unit"], part["change_text"], part["scaled_text"], part["rate"],
+                part["off_scale"], part["scale_note"])])
+        txt, hv = cell("change_text").fillna(""), cell("hover").fillna("")
         off = cell("off").fillna(0).to_numpy(dtype=float) > 0
-        labels = [shorten(i, 34) for i in order]
-        fig.add_trace(go.Heatmap(
-            z=z.to_numpy(dtype=float), x=date_labels, y=labels,
-            text=np.where(off, "", txt.to_numpy()), texttemplate="%{text}", textfont=dict(size=10),
-            customdata=hv.to_numpy(), hovertemplate="%{customdata}<extra></extra>", hoverongaps=False,
-            colorscale=DIVERGING, zmin=-R, zmax=R, zmid=0, xgap=2, ygap=2, showscale=(row == 1),
-            colorbar=dict(title=dict(text=f"{MODE_TEXT['name'].capitalize()}, % of |{MODE_TEXT['ref']}|",
-                                     side="right", font=dict(size=12)),
-                          ticksuffix="%", thickness=14, len=min(0.6, 300 / (30 * sum(heights) + 100)), y=1, yanchor="top")),
-            row=row, col=1)
+        labels = [f"{shorten(i, 30)} · pp" if r else shorten(i, 34) for i, r in zip(order, is_rate)]
+        for g in groups:
+            axis, col, _, _, _ = AXES[g]
+            z = cell(col).to_numpy(dtype=float)
+            if np.isnan(z).all():
+                continue
+            fig.add_trace(go.Heatmap(
+                z=z, x=date_labels, y=labels, text=np.where(np.isnan(z), "", txt.to_numpy()), texttemplate="%{text}",
+                textfont=dict(size=10), customdata=hv.to_numpy(), hovertemplate="%{customdata}<extra></extra>",
+                hoverongaps=False, coloraxis=axis, xgap=2, ygap=2), row=row, col=1)
         if off.any():                                   # off-scale releases: no colour, raw text, dotted outline
             fig.add_trace(go.Heatmap(
                 z=np.where(off, 1.0, np.nan), x=date_labels, y=labels, text=np.where(off, txt.to_numpy(), ""),
@@ -1776,54 +1872,66 @@ else:
     fig.update_yaxes(showgrid=False)
     for ann in fig.layout.annotations:
         ann.update(x=0, xanchor="left", font=dict(size=13, color=INK))
+    plot_h = 30 * sum(heights) + 40 * len(shown) + 50
+    bar_len = min(0.45 if len(groups) > 1 else 0.6, 260 / plot_h)
+    for k, g in enumerate(groups):                      # stacked colour bars on the right, levels first
+        axis, _, cap, suffix, bar_title = AXES[g]
+        fig.update_layout({axis: dict(colorscale=DIVERGING, cmin=-cap, cmax=cap, colorbar=dict(
+            title=dict(text=bar_title, side="right", font=dict(size=12)), ticksuffix=suffix, thickness=14,
+            len=bar_len, y=1 - k * (bar_len + 0.1), yanchor="top"))})
+
     n_up = int((heat["change"] > 0).sum())
     n_off = int(heat["off_scale"].sum())
-    ranked = heat[~heat["off_scale"]]                 # the headline ranks on-scale releases only
-    if ranked.empty:
+    n_rate, n_level = int(heat["rate"].sum()), int((~heat["rate"] & ~heat["off_scale"]).sum())
+    leaders = [f"{describe(grp.loc[grp['scaled'].abs().idxmax()], len(shown) > 1)} among {label}"   # rank within a group
+               for label, grp in (("percent rates", heat[heat["rate"]]), ("levels", heat[~heat["rate"] & ~heat["off_scale"]]))
+               if grp["scaled"].notna().any()]
+    noun = "surprise" if MODE == "surprise" else "expected move"
+    if not leaders:
         headline = f"Every {MODE_TEXT['name']} here is off the % scale, so there is no fair 'biggest' to name"
     else:
-        biggest = ranked.loc[ranked["rel_pct"].abs().idxmax()]
-        if MODE == "surprise":
-            headline = (f"Biggest surprise for its size: {MARKET_NAMES[biggest['market']]} {biggest['indicator_name']} at "
-                        f"{fmt_unit(biggest['actual'], biggest['unit'])} vs "
-                        f"{fmt_unit(biggest['consensus'], biggest['unit'])} expected")
-        else:
-            headline = (f"Biggest expected move for its level: {MARKET_NAMES[biggest['market']]} "
-                        f"{biggest['indicator_name']}, {fmt_unit(biggest['previous'], biggest['unit'])} → "
-                        f"{fmt_unit(biggest['consensus'], biggest['unit'])}")
+        headline = f"Largest {noun}{'s' if len(leaders) > 1 else ''}: " + "; ".join(leaders)
+    caps = [f"±{R_RATE:g} pp for the {n_rate} percent-rate cells" if "rate" in groups else "",
+            f"±{R_LEVEL:g}% for the {n_level} on-scale level cells" if "level" in groups else ""]
     print(f"{n_off} of {len(heat)} cells are off the % scale (uncoloured, dotted outline) and left out of the headline "
-          f"and the colour cap; the cap is ±{R:.0f}%, the 75th percentile of the other {len(ranked)} cells' |%|.")
-    fig.update_layout(
-        title=dict(text=headline,
-                   subtitle=dict(text=f"{n_up} of {len(heat)} {MACRO_MIN_IMPORTANCE}-or-higher importance releases "
-                                      f"{MODE_TEXT['above']} · colour = {MODE_TEXT['name']} as % of |{MODE_TEXT['ref']}|, "
-                                      f"capped at ±{R:.0f}% · text = raw {MODE_TEXT['name']}"
-                                      + (f" · dotted, uncoloured = {n_off} off the % scale" if n_off else ""))),
-        height=260 + 30 * sum(heights) + 40 * len(shown), margin=dict(t=120, l=230, b=90))
+          f"and the colour caps. Caps (the 75th percentile of each group's |moves|, rounded up): "
+          f"{'; '.join(c for c in caps if c) or 'none'}.")
+    title_spec, title_px = chart_title(
+        headline, f"{n_up} of {len(heat)} {MACRO_MIN_IMPORTANCE}-or-higher importance releases {MODE_TEXT['above']} · "
+                  f"colour: pp for percent rates (rows marked · pp), % of |{MODE_TEXT['ref']}| for levels, each with "
+                  f"its own colour bar · text = raw {MODE_TEXT['name']}"
+                  + (f" · dotted = {n_off} off the % scale" if n_off else ""))
+    top_px = title_px + 24                              # room for the first panel title
+    fig.update_layout(title=title_spec, height=top_px + 90 + plot_h, margin=dict(t=top_px, l=230, b=90))
     fig.show()
     display(heat[["market", "date", "indicator_name", "category", "importance", MODE_TEXT["x"], MODE_TEXT["y"],
-                  "change_text", "rel_on", "scale_note"]].sort_values(["market", "date", "importance"])
-            .rename(columns={"change_text": MODE_TEXT["name"], "rel_on": REL_COL, "scale_note": "% scale"})
-            .style.format({"date": "{:%Y-%m-%d}", MODE_TEXT["x"]: "{:,.6g}", MODE_TEXT["y"]: "{:,.6g}",
-                           REL_COL: "{:+.1f}%"}, na_rep="–").hide(axis="index"))
+                  "change_text", "scaled_text", "scale_note"]].sort_values(["market", "date", "importance"])
+            .rename(columns={"change_text": MODE_TEXT["name"], "scaled_text": "on its scale", "scale_note": "scale"})
+            .style.format({"date": "{:%Y-%m-%d}", MODE_TEXT["x"]: "{:,.6g}", MODE_TEXT["y"]: "{:,.6g}"}, na_rep="–")
+            .hide(axis="index"))
 
 # %% [markdown]
 # **How to read this.** Find a market panel, then read across: each coloured
 # cell is one release. Deep blue means a big move up against the reference,
-# deep red a big move down, and pale cells were close to it. An uncoloured cell
-# with a dotted outline is off the % scale: read its raw text, not a colour. A
-# row with several cells (weekly jobless claims) shows the same indicator over
+# deep red a big move down, and pale cells were close to it. "Big" is judged
+# within the row's group: a row marked `· pp` is a percent rate and follows the
+# pp colour bar; every other row is a level and follows the % colour bar. So
+# compare shades within a group, not across groups. An uncoloured cell with a
+# dotted outline is off the % scale: read its raw text, not a colour. A row
+# with several cells (weekly jobless claims) shows the same indicator over
 # time. Hover for the full numbers; the table under the chart has every cell
-# as numbers, with the reason for each off-scale cell.
+# as numbers, on its own scale, with the reason for each off-scale cell.
 #
 # **Caveats.**
 #
 # - "Above" is not always good news. More jobless claims than expected is a
 #   **weak** reading, even though it is blue here. Colour shows direction, not
 #   good or bad.
-# - The relative scale is a rough comparison tool (see above). For a serious
-#   study, collect months of releases and divide each surprise by that
-#   indicator's own surprise volatility.
+# - Both scales are rough comparison tools (see 5.2). Even in pp, a volatile
+#   rate (a year-on-year change in home sales) moves more than a steady one (core
+#   inflation) without being more surprising. For a serious study, collect
+#   months of releases and divide each surprise by that indicator's own
+#   surprise volatility.
 # - Releases without a consensus (very common: check the NaN table) have
 #   neither a surprise nor an expected change, so they are not in the heatmap.
 # - The same number can appear under two names (a price index can be listed as
@@ -1864,6 +1972,14 @@ UNIT_TITLES = {"%": "Percent (%)", "index": "Index level or no unit", "K": "Thou
 UNIT_AXIS = {"%": ("%", "pp"), "index": ("level", "points"), "K": ("thousands", "thousands"),
              "M": ("millions", "millions"), "B": ("billions", "billions"), "T": ("trillions", "trillions")}
 MARKET_SYMBOLS = dict(zip(MARKETS, ["circle", "square", "diamond", "triangle-up"]))
+
+
+def median_moves(part: pd.DataFrame) -> tuple:
+    """Median |move| within each group: pp for percent rates, % of |reference| for on-scale levels."""
+    return (part.loc[part["rate"], "scaled"].abs().median(),
+            part.loc[~part["rate"] & ~part["off_scale"], "scaled"].abs().median())
+
+
 if view.empty:
     display(Markdown("> No release has both numbers in this window, so there is no difference to plot."))
 else:
@@ -1896,8 +2012,8 @@ else:
             pm = part[part["market"] == m]
             if pm.empty:
                 continue
-            rel_text = [f"off the % scale: {note}" if off else f"{v:+.1f}% of |{MODE_TEXT['ref']}|"
-                        for v, off, note in zip(pm["rel_pct"], pm["off_scale"], pm["scale_note"])]
+            rel_text = [f"off the % scale: {note}" if off else "a percent rate, compared in pp" if rate else sc
+                        for sc, rate, off, note in zip(pm["scaled_text"], pm["rate"], pm["off_scale"], pm["scale_note"])]
             fig.add_trace(go.Scatter(
                 x=pm[xcol], y=pm["change"], mode="markers", name=MARKET_NAMES[m], legendgroup=m,
                 showlegend=not any(t.name == MARKET_NAMES[m] for t in fig.data),
@@ -1923,22 +2039,24 @@ else:
         fig.update_xaxes(visible=False, row=j // cols + 1, col=j % cols + 1)
         fig.update_yaxes(visible=False, row=j // cols + 1, col=j % cols + 1)
     ups, downs = int((pts["change"] > 0).sum()), int((pts["change"] < 0).sum())
-    median_move = pts.loc[~pts["off_scale"], "rel_pct"].abs().median()
-    median_text = f"{median_move:.1f}%" if pd.notna(median_move) else "not defined (every release is off the % scale)"
+    med_pp, med_level = median_moves(pts)
+    medians = " and ".join(text for text, value in [(f"{med_pp:.2f} pp for percent rates", med_pp),
+                                                     (f"{med_level:.1f}% of |{MODE_TEXT['ref']}| for levels", med_level)]
+                           if pd.notna(value)) or "not defined (every release is an off-scale level)"
     if MODE == "surprise":
-        verdict = ("stray from the forecasts by an unknown amount" if pd.isna(median_move) else
-                   "hug the forecasts" if median_move <= 10 else "often stray from the forecasts")
-        headline = f"Actual numbers {verdict}: the median miss is {median_text} of the consensus"
+        headline = (f"{ups} of {len(pts)} releases came in above the consensus and {downs} below; "
+                    f"median miss {medians}")
     else:
         headline = (f"Economists expect {ups} of {len(pts)} releases to rise and {downs} to fall; "
-                    f"the median expected move is {median_text} of the previous value")
-    fig.update_layout(
-        title=dict(text=headline,
-                   subtitle=dict(text=f"{ups} {MODE_TEXT['above']}, {downs} {MODE_TEXT['below']}, "
-                                      f"{len(pts) - ups - downs} unchanged · {len(collapsed)} duplicate row(s) collapsed · "
-                                      "one panel per unit, each on its own scale · median over on-scale releases · the "
-                                      f"largest {MODE_TEXT['name']} in each panel is labelled")),
-        height=230 + 330 * rows, margin=dict(t=120, b=110), legend=LEGEND_BELOW)
+                    f"median expected move {medians}")
+    title_spec, title_px = chart_title(
+        headline, f"{ups} {MODE_TEXT['above']}, {downs} {MODE_TEXT['below']}, {len(pts) - ups - downs} unchanged · "
+                  f"{len(collapsed)} duplicate row(s) collapsed · one panel per unit, each on its own scale · medians "
+                  "within each group, off-scale levels left out · the largest "
+                  f"{MODE_TEXT['name']} in each panel is labelled")
+    top_px = title_px + 24                              # room for the panel titles
+    fig.update_layout(title=title_spec, height=top_px + 110 + 330 * rows, margin=dict(t=top_px, b=110),
+                      legend=LEGEND_BELOW)
     fig.show()
 
     rows_ = []
@@ -1948,15 +2066,18 @@ else:
         rows_.append({"group": name, "releases": len(part), "up": k, "down": n_ - k, "unchanged": len(part) - n_,
                       "share_up": k / n_ if n_ else np.nan, "ci_low": low, "ci_high": high,
                       "sign_test_p": stats.binomtest(k, n_, 0.5).pvalue if n_ else np.nan,
-                      "median_abs_rel_move": part.loc[~part["off_scale"], "rel_pct"].abs().median()})
+                      **dict(zip(["median_pp_rates", "median_pct_levels"], median_moves(part)))})
     display(pd.DataFrame(rows_).set_index("group").rename(columns={
-        "up": MODE_TEXT["above"], "down": MODE_TEXT["below"], "median_abs_rel_move": "median |move|, on-scale"})
+        "up": MODE_TEXT["above"], "down": MODE_TEXT["below"], "median_pp_rates": "median |move|, rates (pp)",
+        "median_pct_levels": f"median |move|, levels ({REL_COL})"})
         .style.format({"share_up": "{:.0%}", "ci_low": "{:.0%}", "ci_high": "{:.0%}", "sign_test_p": "{:.2f}",
-                       "median |move|, on-scale": "{:.1f}%"}, na_rep="–"))
+                       "median |move|, rates (pp)": "{:.2f}", f"median |move|, levels ({REL_COL})": "{:.1f}%"},
+                      na_rep="–"))
     display(pts.sort_values(["unit_group", "market", "change"])
-            [["unit_group", "market", "indicator_name", "importance", xcol, ycol, "change_text", "rel_pct", "scale_note"]]
-            .rename(columns={"change_text": MODE_TEXT["name"], "rel_pct": REL_COL, "scale_note": "% scale"})
-            .style.format({xcol: "{:,.6g}", ycol: "{:,.6g}", REL_COL: "{:+.1f}%"}, na_rep="–")
+            [["unit_group", "market", "indicator_name", "importance", xcol, ycol, "change_text", "scaled_text",
+              "scale_note"]]
+            .rename(columns={"change_text": MODE_TEXT["name"], "scaled_text": "on its scale", "scale_note": "scale"})
+            .style.format({xcol: "{:,.6g}", ycol: "{:,.6g}"}, na_rep="–")
             .hide(axis="index"))
 
 # %% [markdown]
@@ -1964,7 +2085,10 @@ else:
 # the dashed zero line is the size of the move, in that panel's unit
 # (percentage points, thousands, ...). Its position across only says where the
 # indicator sits; it is not a move. Hover for the full numbers, including the
-# move as a percentage of the reference (or why it is off that scale).
+# move on its comparison scale from 5.2 (pp for a percent rate, % of the
+# reference for a level, or why a level is off that scale). The headline gives
+# one median per group, because a median of pp and percentages mixed together
+# would mean nothing.
 #
 # The first table under the chart asks a simple question: are moves up more
 # common than moves down? `share_up` counts the ups among the releases that were
@@ -2032,12 +2156,13 @@ else:
     else:
         headline = (f"{high_d:%a %d %b}{where(high_m)} carries the most high-importance releases "
                     f"({int(counts['high'].max())}); {busy_d:%a %d %b}{where(busy_m)} is the busiest overall ({int(totals.max())})")
-    fig.update_layout(
-        barmode="stack", height=200 + 210 * len(shown), margin=dict(t=120, b=150), legend=dict(LEGEND_BELOW, traceorder="normal"),
-        title=dict(text=headline,
-                   subtitle=dict(text=f"Releases per day on each market's own calendar · window of {MACRO_DAYS} days · "
-                                      f"{len(cal)} releases in all, {n_high} high importance · the same y scale in every "
-                                      "panel · days without a bar have no release (weekends, holidays)")))
+    title_spec, title_px = chart_title(
+        headline, f"Releases per day on each market's own calendar · window of {MACRO_DAYS} days · {len(cal)} releases "
+                  f"in all, {n_high} high importance · the same y scale in every panel · days without a bar have no "
+                  "release (weekends, holidays)")
+    top_px = title_px + 24                              # room for the panel titles
+    fig.update_layout(barmode="stack", title=title_spec, height=top_px + 150 + 230 * len(shown),   # 230 px per panel
+                      margin=dict(t=top_px, b=150), legend=dict(LEGEND_BELOW, traceorder="normal"))
     fig.show()
     display(counts.assign(total=totals).reset_index().query("total > 0")
             .style.format({"day": "{:%a %Y-%m-%d}"}).hide(axis="index"))
@@ -2117,12 +2242,30 @@ else:
 # points. There are no freshness fields at any level, so we print each fund's
 # `latest_bar_date` (the last daily price) and `treasury_curve_date` (the
 # Treasury curve used for the spread) ourselves.
+#
+# One definition is missing. The API does not say whether `return_1y_pct` and
+# `return_ytd_pct` include **distributions** (the interest a bond fund pays
+# out). A *total* return includes them; a *price* return does not. For bond
+# funds that yield 4% to 7% a year the two differ by several points, so this
+# notebook calls them "returns as reported". One thing holds either way: a
+# negative reported return means the **price** fell, because distributions can
+# only add to a return.
+#
+# The board's response wraps an upstream service, like the news (`data.ok`,
+# then `data.data.etfs`), so it too can answer HTTP 200 with an error inside.
+# The call uses `sf_try`: if the board cannot be read, the bond cells print
+# short notes and the rest of the notebook carries on.
 
 # %%
-bond_payload = sf_get("/api/v1/bond/etfs")
-show_freshness(bond_payload, "Bond ETFs:")
-bonds_raw = to_frame(bond_payload, "bond_etfs")
-if bonds_raw.empty:
+bond_payload = sf_try("/api/v1/bond/etfs")
+bonds_ok = bond_payload is not None
+if bonds_ok:
+    show_freshness(bond_payload, "Bond ETFs:")
+bonds_raw = to_frame(bond_payload, "bond_etfs") if bonds_ok else pd.DataFrame()
+if not bonds_ok:
+    display(Markdown("> **No bond board this run.** The bond cells below print short notes instead of charts, and "
+                     "extension 7.3 skips its bond check. Run the notebook again later: the cells need no change."))
+elif bonds_raw.empty:
     display(Markdown("> The bond board is empty right now. Try again later."))
 else:
     print(f"Latest price bars: {bonds_raw['latest_bar_date'].min()} to {bonds_raw['latest_bar_date'].max()}; "
@@ -2182,8 +2325,11 @@ bonds["age_years"] = (TODAY.tz_localize(None) - bonds["inception_date"]).dt.days
 
 print(f"{n_before} funds -> {len(bonds)} after de-duplication; "
       f"{int((bonds[BOND_NUM].isna().sum() - missing_before).sum())} values became NaN when coerced.")
-print(f"Credit-spread identity: largest gap {spread_gap.max() if spread_gap.notna().any() else float('nan'):.2f} bp "
-      f"({'rounding only' if spread_gap.max() <= 0.1 else 'larger than rounding: check the contract'}).")
+if spread_gap.notna().any():
+    print(f"Credit-spread identity: largest gap {spread_gap.max():.2f} bp "
+          f"({'rounding only' if spread_gap.max() <= 0.1 else 'larger than rounding: check the contract'}).")
+else:
+    print("Credit-spread identity: no funds to check (no fund has all three numbers).")
 nav_pair = bonds[["price_vs_last_nav_pct", "pct_change_1d"]].dropna()
 if len(nav_pair) >= 3 and nav_pair.nunique().min() > 1:
     r_nav = float(np.corrcoef(nav_pair["price_vs_last_nav_pct"], nav_pair["pct_change_1d"])[0, 1])
@@ -2197,7 +2343,8 @@ elif (gaps > 0).any():
     display(pd.DataFrame({"missing": gaps[gaps > 0]}).rename_axis("column"))
 else:
     display(Markdown("> No numeric gaps: every fund has every number."))
-display(bonds[["ticker", *BOND_META]].set_index("ticker").T)
+if not bonds.empty:
+    display(bonds[["ticker", *BOND_META]].set_index("ticker").T)
 
 # %% [markdown]
 # ### Chart: size versus 1-year return
@@ -2235,8 +2382,8 @@ else:
                         color=CATEGORY_COLORS[group], opacity=0.8, line=dict(width=1.5, color=SURFACE)),
             customdata=np.column_stack([part["ticker"], part["name"], part["aum"].map(money), part["avg_maturity_years"],
                                         part["return_ytd_pct"], part["expense_ratio"], part["sec_yield_30d_pct"]]),
-            hovertemplate=("<b>%{customdata[0]}</b> · %{customdata[1]}<br>AUM %{customdata[2]} · 1-year return %{y:+.2f}%"
-                           "<br>YTD %{customdata[4]:+.2f}% · average maturity %{customdata[3]:.1f} years"
+            hovertemplate=("<b>%{customdata[0]}</b> · %{customdata[1]}<br>AUM %{customdata[2]} · 1-year return "
+                           "%{y:+.2f}% (as reported)<br>YTD %{customdata[4]:+.2f}% · average maturity %{customdata[3]:.1f} years"
                            "<br>Expense ratio %{customdata[5]:.2f}% · 30-day SEC yield %{customdata[6]:.2f}%<extra></extra>")))
     to_label = pd.concat([plot.nlargest(1, "aum"), plot.nlargest(1, "return_1y_pct"), plot.nsmallest(1, "return_1y_pct"),
                           plot.nlargest(1, "avg_maturity_years")]).drop_duplicates(subset="ticker")
@@ -2251,7 +2398,7 @@ else:
              if lo_x - 0.2 <= np.log10(s * 10.0 ** e) <= hi_x + 0.2]
     fig.update_xaxes(type="log", title_text="Assets under management (USD, log scale)", tickvals=ticks,
                      ticktext=[money(t, 0) for t in ticks])
-    fig.update_yaxes(title_text="1-year total return (%)", ticksuffix="%", zeroline=False)
+    fig.update_yaxes(title_text="1-year return as reported (%)", ticksuffix="%", zeroline=False)
     # Size key: two reference bubbles drawn in the right margin, in pixels, with the same area rule as the data.
     candidates = [y for y in (1, 2, 5, 10, 20, 30) if y <= plot["avg_maturity_years"].max()]
     key_years = [candidates[-3], candidates[-1]] if len(candidates) >= 3 else candidates[-2:]
@@ -2270,8 +2417,8 @@ else:
     size_ci = f"[{lo_size:+.2f}, {hi_size:+.2f}]"
     maturity_clear = pd.notna(rho_mat) and abs(rho_mat) >= 0.5 and (pd.isna(rho_size) or abs(rho_mat) > abs(rho_size))
     if pd.isna(rho_size):
-        headline = (f"{worst['ticker']} fell most over the year ({worst['return_1y_pct']:+.1f}%); too few funds to relate "
-                    "size and return")
+        headline = (f"{worst['ticker']} has the weakest reported 1-year return ({worst['return_1y_pct']:+.1f}%); too few "
+                    "funds to relate size and return")
     elif lo_size <= 0 <= hi_size:                     # the size interval includes 0: say so, then add maturity if it is clear
         headline = f"Fund size says little about 1-year return (ρ = {rho_size:+.2f} {size_ci})"
         if maturity_clear:
@@ -2279,12 +2426,13 @@ else:
     else:                                             # size is related too: state both correlations, rank neither
         headline = (f"Over 1 year, bigger funds did {'better' if rho_size > 0 else 'worse'}: ρ(log AUM, return) = "
                     f"{rho_size:+.2f} {size_ci}; ρ(maturity, return) = {rho_mat:+.2f}")
-    fig.update_layout(
-        title=dict(text=headline, subtitle=dict(text=(
-            f"{int((plot['return_1y_pct'] < 0).sum())} of {len(plot)} funds are down over 1 year · bubble area = average maturity · "
-            f"Spearman ρ(log AUM, return) = {rho_size:+.2f} {size_ci}, "
-            f"ρ(maturity, return) = {rho_mat:+.2f} [{lo_mat:+.2f}, {hi_mat:+.2f}], n = {n_mat}"))),
-        height=540, margin=dict(t=120, b=110, r=160), legend=dict(LEGEND_BELOW, itemsizing="constant"))
+    title_spec, title_px = chart_title(
+        headline, f"{int((plot['return_1y_pct'] < 0).sum())} of {len(plot)} fund prices are down over 1 year (reported "
+                  "return below 0) · bubble area = average maturity · "
+                  f"Spearman ρ(log AUM, return) = {rho_size:+.2f} {size_ci}, "
+                  f"ρ(maturity, return) = {rho_mat:+.2f} [{lo_mat:+.2f}, {hi_mat:+.2f}], n = {n_mat}")
+    fig.update_layout(title=title_spec, height=title_px + 110 + 330, margin=dict(t=title_px, b=110, r=160),
+                      legend=dict(LEGEND_BELOW, itemsizing="constant"))
     fig.show()
     display(plot[["ticker", "category", "aum", "return_1y_pct", "return_ytd_pct", "avg_maturity_years", "sec_yield_30d_pct",
                   "credit_spread_bps"]].sort_values("return_1y_pct").style.format(
@@ -2293,7 +2441,8 @@ else:
 
 # %% [markdown]
 # **How to read this.** Further right is a bigger fund; each gridline step on a
-# log axis is a multiple, not a fixed amount. Higher is a better 1-year return.
+# log axis is a multiple, not a fixed amount. Higher is a better reported 1-year
+# return (see the note on distributions above).
 # Watch the big bubbles: they are long-maturity funds. When interest rates rise,
 # existing bonds lose value, and long bonds lose the most. So if the big bubbles
 # sit low, the year was driven by rates. If the high-yield funds (green) sit
@@ -2333,17 +2482,19 @@ else:
             hovertemplate=("<b>%{y}</b> · %{customdata[0]}<br>YTD %{x:+.2f}% · 1 year %{customdata[1]:+.2f}%"
                            " · last day %{customdata[2]:+.2f}%<extra></extra>")))
     span = ytd["return_ytd_pct"].abs().max()
-    fig.update_xaxes(title_text="Return since 1 January (%)", ticksuffix="%",
+    fig.update_xaxes(title_text="Return since 1 January, as reported (%)", ticksuffix="%",
                      range=[min(0, ytd["return_ytd_pct"].min()) - span * 0.25, max(0, ytd["return_ytd_pct"].max()) + span * 0.25])
     fig.update_yaxes(type="category", categoryorder="array", categoryarray=list(ytd["ticker"]), title_text=None)
     worst, best = ytd.iloc[0], ytd.iloc[-1]
     n_down = int((ytd["return_ytd_pct"] < 0).sum())
-    fig.update_layout(
-        title=dict(text=f"{n_down} of {len(ytd)} bond ETFs are down this year; {worst['ticker']} is the weakest at "
-                        f"{worst['return_ytd_pct']:+.1f}%",
-                   subtitle=dict(text=f"Best: {best['ticker']} ({best['return_ytd_pct']:+.1f}%) · prices as of "
-                                      f"{ytd['latest_bar_date'].max():%Y-%m-%d}")),
-        height=max(400, 34 * len(ytd) + 190), margin=dict(t=110, b=110), barmode="overlay", legend=LEGEND_BELOW)
+    title_spec, title_px = chart_title(
+        f"{n_down} of {len(ytd)} bond ETF prices are down this year; {worst['ticker']} is the weakest at "
+        f"{worst['return_ytd_pct']:+.1f}% as reported",
+        f"Best: {best['ticker']} ({best['return_ytd_pct']:+.1f}%) · prices as of {ytd['latest_bar_date'].max():%Y-%m-%d} · "
+        "the API does not say whether these returns include distributions; a negative one means the price fell "
+        "either way")
+    fig.update_layout(title=title_spec, height=title_px + 110 + max(180, 34 * len(ytd)), margin=dict(t=title_px, b=110),
+                      barmode="overlay", legend=LEGEND_BELOW)
     fig.add_vline(x=0, line=dict(color=AXIS, width=1))
     fig.show()
     display(ytd[["ticker", "short_label", "category", "return_ytd_pct", "return_1y_pct", "pct_change_1d", "latest_bar_date"]]
@@ -2351,14 +2502,21 @@ else:
                                       "latest_bar_date": "{:%Y-%m-%d}"}).hide(axis="index"))
 
 # %% [markdown]
-# **How to read this.** Bars to the left of the line lost money this year; bars
-# to the right made money. Long bars in one colour point to a whole segment
-# moving together. Compare this ranking with the bubble chart: a fund that ranks
-# low on both horizons has had a consistently hard year.
+# **How to read this.** Bars to the left of the line have a negative reported
+# return: the fund's price fell this year. Bars to the right have a positive
+# one. Long bars in one colour point to a whole segment moving together.
+# Compare this ranking with the bubble chart: a fund that ranks low on both
+# horizons has had a consistently hard year.
 #
-# **Caveats.** Year-to-date windows have different lengths depending on the
-# date you run this, so compare YTD numbers only within one run. Returns are
-# total returns as the provider reports them.
+# **Caveats.**
+#
+# - Year-to-date windows have different lengths depending on the date you run
+#   this, so compare YTD numbers only within one run.
+# - The API does not say whether these returns include distributions. For bond
+#   funds yielding 4% to 7% a year that changes a return by several points, so
+#   a fund whose price fell may still have paid its holders more in interest
+#   than it lost in price. Extension 7.4 shows one way to look for a hint in
+#   the data.
 #
 # ### The expense ratio table
 #
@@ -2507,13 +2665,11 @@ else:
         ranking = (f" · {MARKET_NAMES[best]} has the largest positive share, and its 95% interval clears every other "
                    "market's, but the models differ" if clears else
                    " · the positive shares' 95% intervals overlap, so no market stands out")
-    fig.update_layout(
-        barmode="stack", height=200 + 55 * len(tone_plot), margin=dict(t=110, r=200, b=110),
-        title=dict(text=title,
-                   subtitle=dict(text=f"{n_clear} of {n_plotted} market(s) have a mean tone whose 95% CI excludes 0"
-                                      f"{ranking} · right: mean score with 95% CI · each market uses its own sentiment "
-                                      "model and source mix")),
-        legend=dict(LEGEND_BELOW, traceorder="normal"))
+    title_spec, title_px = chart_title(
+        title, f"{n_clear} of {n_plotted} market(s) have a mean tone whose 95% CI excludes 0{ranking} · right: mean "
+               "score with 95% CI · each market uses its own sentiment model and source mix")
+    fig.update_layout(barmode="stack", title=title_spec, height=title_px + 110 + max(160, 55 * n_plotted),
+                      margin=dict(t=title_px, r=200, b=110), legend=dict(LEGEND_BELOW, traceorder="normal"))
     fig.update_xaxes(range=[0, 1], tickformat=".0%", title_text="Share of scored articles (%)")
     fig.update_yaxes(ticks="")
     fig.show()
@@ -2636,13 +2792,12 @@ else:
     fig.update_yaxes(title_text="One-day price change (%, winsorised)", ticksuffix="%", zeroline=False)
     strength = "lines up with" if lo > 0 else "runs against" if hi < 0 else "is only loosely related to"
     n_clipped = int((joined["clipped"] != 0).sum())
-    fig.update_layout(
-        title=dict(text=f"Across tickers, same-day news tone {strength} the day's price change: Spearman ρ = {rho:+.2f} "
-                        f"[{lo:+.2f}, {hi:+.2f}]",
-                   subtitle=dict(text=f"{n} tickers · OLS slope {slope:+.2f} pp per +1 sentiment (HC3 s.e. {se:.2f}; 95% CI "
-                                      f"{ci_lo:+.2f} to {ci_hi:+.2f}, t-based) · price session {session} · "
-                                      f"{n_clipped} clipped · dot size = article count")),
-        height=520, margin=dict(t=120, b=110), legend=LEGEND_BELOW)
+    title_spec, title_px = chart_title(
+        f"Across tickers, same-day news tone {strength} the day's price change: Spearman ρ = {rho:+.2f} "
+        f"[{lo:+.2f}, {hi:+.2f}]",
+        f"{n} tickers · OLS slope {slope:+.2f} pp per +1 sentiment (HC3 s.e. {se:.2f}; 95% CI {ci_lo:+.2f} to "
+        f"{ci_hi:+.2f}, t-based) · price session {session} · {n_clipped} clipped · dot size = article count")
+    fig.update_layout(title=title_spec, height=title_px + 110 + 320, margin=dict(t=title_px, b=110), legend=LEGEND_BELOW)
     fig.show()
     display(joined[["ticker", "name", "sector", "articles", "mean_sentiment", "change_pct", "clipped", "sector_mean_1d"]]
             .assign(clipped=joined["clipped"].map({1: "at 99th pct", -1: "at 1st pct", 0: ""}))
@@ -2724,6 +2879,9 @@ else:
                        "endpoint says": "–", "agree": None})
     elif found is None:
         checks.append({"check": "global note: bond line", "note says": "could not parse", "endpoint says": "–", "agree": None})
+    elif bonds.empty:                                                            # board unavailable or empty: no check
+        checks.append({"check": f"global note: {found['ticker']}", "note says": found.group(0),
+                       "endpoint says": "bond board not read (unavailable or empty)", "agree": None})
     elif not (bonds["ticker"] == found["ticker"]).any():
         checks.append({"check": f"global note: {found['ticker']}", "note says": found.group(0),
                        "endpoint says": "ticker not on the bond board", "agree": False})
@@ -2815,6 +2973,14 @@ else:
         .style.format("{:+.3f}").format("{:.3f}", subset=["HC3 s.e.", "p-value"]))
     print(f"n = {int(fit.nobs)} funds, R² = {fit.rsquared:.2f}: maturity accounts for {fit.rsquared:.0%} of the "
           f"differences in 1-year return between these funds.")
+    # A clue to the return definition: a fund with zero maturity is close to cash, so its 1-year TOTAL return
+    # should be near a cash yield (positive, several percent), not well below zero.
+    cash_like = reg["matched_treasury_yield_pct"].min()
+    print(f"Intercept (fitted return at zero maturity): {fit.params['const']:+.2f}%; the lowest matched Treasury yield on "
+          f"the board is {cash_like:.2f}%."
+          + (" A total return near zero maturity would sit near a cash yield, so a clearly negative intercept hints that "
+             "the reported returns leave distributions out. The API does not say; treat it as a hint, not a fact."
+             if fit.params["const"] < 0 and pd.notna(cash_like) and cash_like > 0 else ""))
 
     xs = np.linspace(reg["avg_maturity_years"].min(), reg["avg_maturity_years"].max(), 50)
     band = fit.get_prediction(sm.add_constant(pd.Series(xs, name="avg_maturity_years"))).summary_frame(alpha=0.05)
@@ -2828,7 +2994,8 @@ else:
         fig.add_trace(go.Scatter(
             x=part["avg_maturity_years"], y=part["return_1y_pct"], mode="markers", name=group, customdata=part[["ticker"]],
             marker=dict(size=12, color=CATEGORY_COLORS[group], line=dict(width=1, color=SURFACE)),
-            hovertemplate="<b>%{customdata[0]}</b><br>Average maturity %{x:.1f} years<br>1-year return %{y:+.2f}%<extra></extra>"))
+            hovertemplate=("<b>%{customdata[0]}</b><br>Average maturity %{x:.1f} years<br>1-year return %{y:+.2f}% "
+                           "(as reported)<extra></extra>")))
     reg = reg.assign(residual=fit.resid)                     # distance above (+) or below (−) the line, in pp
     to_label = pd.concat([reg.nlargest(1, "return_1y_pct"), reg.nsmallest(1, "return_1y_pct"),
                           reg.loc[[reg["residual"].abs().idxmax()]]]).drop_duplicates(subset="ticker")
@@ -2839,12 +3006,12 @@ else:
                            xanchor="left", standoff=7, font=dict(size=11, color=INK_2))
     fig.add_hline(y=0, line=dict(color=AXIS, width=1))
     fig.update_xaxes(title_text="Average maturity of the fund's bonds (years)")
-    fig.update_yaxes(title_text="1-year total return (%)", ticksuffix="%", zeroline=False)
-    fig.update_layout(
-        title=dict(text=f"Each extra year of maturity went with {b:+.2f} pp of 1-year return (95% CI {ci_lo:+.2f} to {ci_hi:+.2f})",
-                   subtitle=dict(text=f"OLS with HC3 standard errors and t-based intervals ({int(fit.df_resid)} df) · "
-                                      f"n = {int(fit.nobs)} funds · R² = {fit.rsquared:.2f} · descriptive, not a forecast")),
-        height=500, margin=dict(t=110, b=110), legend=LEGEND_BELOW)
+    fig.update_yaxes(title_text="1-year return as reported (%)", ticksuffix="%", zeroline=False)
+    title_spec, title_px = chart_title(
+        f"Each extra year of maturity went with {b:+.2f} pp of reported 1-year return (95% CI {ci_lo:+.2f} to {ci_hi:+.2f})",
+        f"OLS with HC3 standard errors and t-based intervals ({int(fit.df_resid)} df) · n = {int(fit.nobs)} funds · "
+        f"R² = {fit.rsquared:.2f} · descriptive, not a forecast")
+    fig.update_layout(title=title_spec, height=title_px + 110 + 320, margin=dict(t=title_px, b=110), legend=LEGEND_BELOW)
     fig.show()
     display(reg[["ticker", "category", "avg_maturity_years", "return_1y_pct", "residual"]].sort_values("avg_maturity_years")
             .style.format({"avg_maturity_years": "{:.1f} y", "return_1y_pct": "{:+.2f}%", "residual": "{:+.2f} pp"})
@@ -2868,6 +3035,14 @@ else:
 #   sensitivity), which the board does not send.
 # - High-yield funds are short-maturity *and* carry credit risk, so part of the
 #   slope may be a credit effect. Fixing that needs more funds than ten.
+# - The returns are as reported, and the API does not say whether they include
+#   distributions (see section 6). The **intercept** gives a rough clue: it is
+#   the fitted return of a fund with zero maturity, which is close to cash. A
+#   1-year *total* return for cash would sit near a cash yield (several
+#   percent), so an intercept well below zero suggests price-only returns. The
+#   cell prints the intercept next to the lowest matched Treasury yield. A
+#   straight line through ten funds is a weak instrument, so this is a hint,
+#   not a fact.
 
 # %% [markdown]
 # ## Next steps

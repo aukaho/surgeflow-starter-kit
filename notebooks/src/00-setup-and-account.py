@@ -77,6 +77,29 @@ if unknown:
 print(f"Markets shown: {', '.join(MARKET_NAMES[m] for m in MARKETS_SHOWN)}")
 
 # %% [markdown]
+# ### Check your key
+#
+# Health and the catalogue (sections 3 and 4) are open endpoints, so they answer even when the key
+# is wrong. This is the first call that needs your key: `GET /api/v1/me`, the cheapest way to check
+# that a key works. If the key is mistyped, revoked or not reaching the notebook, the cell stops
+# here with a short explanation, before any other cell can blame something else. It prints only
+# your plan and the number of scopes. Section 5 reads the same response in detail.
+
+# %%
+try:
+    me = sf_get("/api/v1/me")  # section 5 reuses this response; nothing that identifies you is shown
+except SurgeFlowError as err:
+    if err.status in (401, 403):  # the key is never echoed, only the status and code
+        raise SystemExit(
+            f"Your key was rejected (HTTP {err.status} {err.code}). Check that the Colab secret is named "
+            "SURGEFLOW_API_KEY and has Notebook access switched on (or that the environment variable holds the "
+            "whole key), then re-run the Connect cell and this one. Lost or revoked key? Create a new one at "
+            "https://surgeflows.capital/membership#api-key."
+        ) from None
+    raise
+print(f"Key accepted: plan “{me['plan']}”, {len(me['scopes'])} scopes. Section 5 shows what it allows.")
+
+# %% [markdown]
 # A few small formatting tools keep labels readable. They are plain Python, so you can reuse them.
 
 # %%
@@ -147,14 +170,12 @@ def market_order(frame: pd.DataFrame) -> pd.DataFrame:
 # pipeline has published its latest session, and it discloses data-quality limits.
 # Check it first when numbers look odd.
 #
-# The status words have an order of severity. We give each one an **icon and a word**, so the
-# meaning never depends on colour alone. Both are drawn in ink, so they stay legible; a small
-# coloured dot beside them is a quick visual cue. The status colours are reserved for state. They
-# are never used for a market.
+# The status words have an order of severity. We give each one an **icon and a word**, both drawn
+# in ink, so the meaning never depends on colour. The status gets **no colour of its own**: in this
+# kit hue means market (China is orange, Hong Kong amber, Japan green), so a green, amber or orange
+# status mark beside a market's name would read as that market's identity, not its state.
 
 # %%
-# warning is a dark amber (4.4:1 on the background) so a warning fill stays visible on a pale track.
-STATUS_COLORS = {"good": "#0ca30c", "warning": "#9a7a00", "serious": "#ec835a", "critical": "#d03b3b", "unknown": MUTED}
 STATUS_ICONS = {"good": "✓", "warning": "!", "serious": "▲", "critical": "✕", "unknown": "?"}
 STATUS_LEVEL = {
     "healthy": "good", "full": "good", "ready": "good",
@@ -291,15 +312,13 @@ else:
         showlegend=False,
     ))
     for row in plot_h.itertuples():
-        color, icon = STATUS_COLORS[row.level], STATUS_ICONS[row.level]
+        icon = STATUS_ICONS[row.level]
         detail = f"session {day(row.published_session_date)}"
         if row.data_quality_status != "full":  # a data-quality disclosure gets its own icon + word
-            dq = status_level(row.data_quality_status)
-            detail += (f" · <span style='color:{STATUS_COLORS[dq]}'>●</span>"
-                       f" {STATUS_ICONS[dq]} data {row.data_quality_status}")
-        fig.add_annotation(  # icon and word in ink (always legible); the coloured dot is a cue only
+            detail += f" · {STATUS_ICONS[status_level(row.data_quality_status)]} data {row.data_quality_status}"
+        fig.add_annotation(  # icon and word in ink: no status colour, because hue belongs to the markets
             x=1.02, xref="paper", xanchor="left", y=row.market_name, yref="y", showarrow=False, align="left",
-            text=(f"<span style='color:{color}'>●</span> <b>{icon} {row.status}</b>"
+            text=(f"<b>{icon} {row.status}</b>"
                   f"<br><span style='color:{INK_2}'>{detail}</span>"),
             font=dict(size=12, color=INK),
         )
@@ -680,7 +699,12 @@ try:
     sf_get("/api/v1/markets/tw/hotlist")  # Taiwan was retired
     print("tw answered without an error. Check the catalogue: the market list may have changed.")
 except SurgeFlowError as err:
-    print(f"tw -> HTTP {err.status}, code {err.code}. Use one of: {', '.join(catalog['markets'])}.")
+    if err.status in (401, 403):  # the key failed before the market was even checked
+        print(f"Key problem (HTTP {err.status} {err.code}), not a market problem: see “Check your key” in section 2.")
+    elif err.status in (400, 404, 422) or "MARKET" in err.code:
+        print(f"tw -> HTTP {err.status}, code {err.code}. Use one of: {', '.join(catalog['markets'])}.")
+    else:  # a server-side failure, for example: say what it is rather than blame the market
+        print(f"tw -> HTTP {err.status}, code {err.code}. That is not the usual market refusal: {err}")
 
 # %% [markdown]
 # Errors come in three forms. `sf_get` turns each one into a `SurgeFlowError`:
@@ -720,21 +744,11 @@ except SurgeFlowError as err:
 # including any new one, stays hidden. (The usage chart uses `key_created_at` only to work out the
 # key's age in whole days. The timestamp itself is never shown.)
 #
-# If your key is wrong, revoked or not reaching the notebook, this is where you find out. The cell
-# then stops with a short explanation instead of a long error.
+# The key check in section 2 already made this call (`me = sf_get("/api/v1/me")`), so this section
+# reads that response instead of spending another request. Its counters are therefore a snapshot from
+# that moment, a few requests ago. If the key had been rejected, the check would have stopped there.
 
 # %%
-try:
-    me = sf_get("/api/v1/me")
-except SurgeFlowError as err:
-    if err.status in (401, 403):  # the key is never echoed, only the status and code
-        raise SystemExit(
-            f"Your key was rejected (HTTP {err.status} {err.code}). Check that the Colab secret is named "
-            "SURGEFLOW_API_KEY and has Notebook access switched on (or that the environment variable holds the "
-            "whole key), then re-run the Connect cell and this one. Lost or revoked key? Create a new one at "
-            "https://surgeflows.capital/membership#api-key."
-        ) from None
-    raise
 show_freshness(me, "Key:")
 
 SAFE_TO_SHOW = ["plan", "scopes", "rate_limit", "usage"]  # an allow-list: any new field stays hidden
@@ -866,9 +880,12 @@ def meter_level(fraction: float) -> str:
     return "good" if fraction < 0.7 else "warning" if fraction < 0.9 else "critical"
 
 
+# Neutral ink while there is room; a magenta ramp only when there is a state to signal. Magenta is
+# outside every market's hue family (ΔE76 above 50 from all four MARKET_COLORS), so it never reads as
+# a market, and both shades stay visible on the pale track (3.7:1 and 7.1:1 against GRID).
+METER_COLORS = {"good": INK_2, "warning": "#b5459b", "critical": "#7a1f6e"}
 windows["level"] = windows["share"].map(meter_level)
-# Neutral ink while there is room; a status colour only when there is a state to signal.
-windows["fill"] = [INK_2 if lv == "good" else STATUS_COLORS[lv] for lv in windows["level"]]
+windows["fill"] = windows["level"].map(METER_COLORS)
 # A tiny share (0.3% is about 1 px) would look like "unused". Draw any use as at least a short stub;
 # the label and the hover keep the exact share.
 MIN_VISIBLE = 0.012
@@ -926,8 +943,9 @@ windows[["window", "used", "capacity", "share", "counted by"]]
 # - Any use is drawn as at least a short stub, so a tiny share does not look like "unused". The
 #   numbers on the right are exact.
 # - The thin mark on the top bar shows where one more kit notebook (`NOTEBOOK_BUDGET`) would take you.
-# - The fill is grey while there is plenty of room. It turns dark amber with a "!" above 70% and red
-#   with a "✕" above 90%. On the free plan that is rare.
+# - The fill is grey while there is plenty of room. It turns magenta with a "!" above 70% and deep
+#   magenta with a "✕" above 90%. On the free plan that is rare. (Magenta, because the other hues
+#   in this kit name markets.)
 #
 # **Which endpoints can this key call?** Join your scopes to the catalogue:
 
@@ -1008,8 +1026,13 @@ else:
 # **Cleaning.**
 #
 # - `total_turnover` is in **local currency**: each exchange trades in its own currency. We write
-#   that down once (`LOCAL_CURRENCY`) and check it against the `currency` that each market's
-#   `market_cap_history` reports. The FX table gives **local units per USD**, so dividing converts to USD.
+#   that down once (`LOCAL_CURRENCY`) and check the turnover itself, with no extra request: each
+#   `market_cap_history` row carries `total_turnover_local` and its `currency`, so we find the row for
+#   the summary's own session (`as_of_date`). If its turnover equals `total_turnover` and its currency
+#   agrees, we convert. If the amounts or the currencies disagree, `total_turnover_usd` is left blank
+#   (NaN) for that market and the cell says so, because a yen/dollar mix-up is a 150x error. With no
+#   row for that date the check cannot run, so the cell uses `LOCAL_CURRENCY` and marks the turnover
+#   "unverified". The FX table gives **local units per USD**, so dividing converts to USD.
 # - `avg_change_pct` is **expected** to be a decimal (0.01 means +1%), like `change_pct` on the
 #   screen. But the realtime board's `intraday_return_pct` is a percent, and the live summary's
 #   units are not confirmed. So the cell checks: a market-wide *average* daily move above 20% is
@@ -1032,17 +1055,48 @@ else:
         fx.index = fx.index.astype(str).str.replace("PerUsd", "", regex=False).str.upper()  # 'jpyPerUsd' -> 'JPY'
     fx["USD"] = 1.0
 
-    mk = summary_raw.loc[:, SUMMARY_FIELDS].copy()
-    mk["reported_currency"] = [h[-1].get("currency") if isinstance(h, list) and h and isinstance(h[-1], dict) else None
-                               for h in summary_raw.get("market_cap_history", pd.Series([None] * len(summary_raw)))]
-    mk["currency"] = mk["market"].map(LOCAL_CURRENCY)
-    mismatch = mk[mk["reported_currency"].notna() & (mk["reported_currency"] != mk["currency"])]
-    if not mismatch.empty:
-        print("Currency check failed - trust the API and update LOCAL_CURRENCY:",
-              mismatch[["market", "reported_currency"]].to_dict("records"))
+    def same_session_row(record: dict):
+        """The market_cap_history row dated as_of_date (the summary's own session), or None."""
+        as_of = pd.to_datetime(record.get("as_of_date"), errors="coerce")
+        history = record.get("market_cap_history")
+        if pd.isna(as_of) or not isinstance(history, list):
+            return None
+        rows = [h for h in history if isinstance(h, dict) and pd.to_datetime(h.get("date"), errors="coerce") == as_of]
+        return rows[-1] if rows else None
 
+    mk = summary_raw.loc[:, SUMMARY_FIELDS].copy()
     for col in ["institutional_count", "surge_count", "above_ma10_count", "avg_change_pct", "total_turnover"]:
         mk[col] = pd.to_numeric(mk[col], errors="coerce")
+
+    # Currency check on the turnover itself: the history row for the same session states its currency.
+    session_rows = [same_session_row(r) for r in summary_markets]  # same order as summary_raw and mk
+    mk["reported_currency"] = [r.get("currency") if r else None for r in session_rows]
+    history_turnover = pd.to_numeric(pd.Series([r.get("total_turnover_local") if r else None for r in session_rows],
+                                               index=mk.index), errors="coerce")
+    expected_currency = mk["market"].map(LOCAL_CURRENCY)
+    amounts_match = np.isclose(mk["total_turnover"], history_turnover, rtol=1e-6)  # NaN on either side -> False
+    has_row = np.array([r is not None for r in session_rows])
+    mk["turnover_check"] = np.select(
+        [mk["total_turnover"].isna(),
+         ~has_row,
+         ~amounts_match,
+         mk["reported_currency"].isna(),
+         mk["reported_currency"] != expected_currency],
+        ["n/a: total_turnover is missing",
+         "unverified: no market_cap_history row for as_of_date",
+         "✕ total_turnover differs from that session's total_turnover_local",
+         "unverified: that session's row states no currency",
+         "✕ currency differs from LOCAL_CURRENCY"],
+        default="✓ matches that session's row and currency")
+    mk["currency"] = mk["reported_currency"].fillna(expected_currency)
+    failed_currency = mk["turnover_check"].str.startswith("✕")
+    for row in mk[failed_currency].itertuples():
+        print(f"WARNING: {row.market}: {row.turnover_check} (row currency: {text_or(row.reported_currency)}, "
+              f"expected {LOCAL_CURRENCY.get(row.market)}). Its USD turnover is left blank rather than converted "
+              "with a currency that may be wrong.")
+    unverified = mk.loc[mk["turnover_check"].str.startswith("unverified"), "market"].tolist()
+    if unverified:
+        print(f"Turnover currency unverified for {', '.join(unverified)}: converted with LOCAL_CURRENCY, unchecked.")
 
     # Plausibility checks for the unconfirmed units and denominator. A failed check blanks that
     # measure (NaN) and says so, rather than charting numbers that may be 100x off.
@@ -1059,14 +1113,16 @@ else:
         print("WARNING: surge_count or above_ma10_count exceeds institutional_count for "
               f"{', '.join(over['market'])}, so institutional_count is not their denominator. The breadth shares "
               "are left blank.")
-    if units_ok and denominator_ok:
-        print("Checks passed: avg_change_pct looks like a decimal, and no breadth count exceeds institutional_count.")
+    if units_ok and denominator_ok and not failed_currency.any():
+        print("Checks passed: no turnover failed its currency check, avg_change_pct looks like a decimal, "
+              "and no breadth count exceeds institutional_count.")
     mk["as_of_date"] = pd.to_datetime(mk["as_of_date"], errors="coerce")
     mk = market_order(mk.drop_duplicates(subset="market", keep="first"))
 
     mk["market_name"] = mk["market"].map(MARKET_NAMES)
     mk["fx_per_usd"] = mk["currency"].map(fx)
-    mk["total_turnover_usd"] = mk["total_turnover"] / mk["fx_per_usd"]
+    # A failed currency check blanks that market's USD turnover (panel 4 and the FX chart skip it).
+    mk["total_turnover_usd"] = (mk["total_turnover"] / mk["fx_per_usd"]).where(~mk["turnover_check"].str.startswith("✕"))
     universe = mk["institutional_count"].where(mk["institutional_count"] > 0)  # 0 names -> NaN, not a division error
     if not denominator_ok:
         universe = universe * np.nan  # the denominator is wrong, so no share is shown
@@ -1081,8 +1137,9 @@ else:
     complete = mk["eod_session_complete"].map(lambda v: bool(v) if pd.notna(v) else False)  # missing = not complete
     loading = mk.loc[~complete, "market_name"].tolist()
     print("Every session is fully loaded." if not loading else f"Session still loading for: {', '.join(loading)}")
-    display(mk[["market_name", "as_of_date", "days_old", "eod_session_complete", "currency", "fx_per_usd",
-                "total_turnover", "total_turnover_usd", "avg_change_pct", "surge_share", "above_ma10_share"]])
+    display(mk[["market_name", "as_of_date", "days_old", "eod_session_complete", "currency", "turnover_check",
+                "fx_per_usd", "total_turnover", "total_turnover_usd", "avg_change_pct", "surge_share",
+                "above_ma10_share"]])
 
 # %% [markdown]
 # **Chart: four markets at a glance.** Four small panels share one row per market. Read the
@@ -1095,18 +1152,33 @@ elif mk.empty:
     print("The summary lists none of the markets in MARKETS_SHOWN, so there is nothing to chart.")
 else:
     stale_mk = mk[mk["days_old"] > 3]
-    leader = mk.loc[mk["total_turnover_usd"].idxmax(), "market_name"] if mk["total_turnover_usd"].notna().any() else None
+    n_usd = int(mk["total_turnover_usd"].notna().sum())
+    leader = mk.loc[mk["total_turnover_usd"].idxmax(), "market_name"] if n_usd else None
+    leads = "leads turnover in USD" + ("" if n_usd == len(mk) else f" among the {n_usd} markets converted")
     if not stale_mk.empty:
         worst = stale_mk.loc[stale_mk["days_old"].idxmax()]
-        title = (f"{worst['market_name']}'s figures are {worst['days_old']:.0f} days old; "
-                 f"{leader or 'no market'} leads turnover in USD")
+        title = f"{worst['market_name']}'s figures are {worst['days_old']:.0f} days old; {leader or 'no market'} {leads}"
     else:
-        title = f"Every market is on a recent session; {leader or 'no market'} leads turnover in USD"
+        title = f"Every market is on a recent session; {leader or 'no market'} {leads}"
+
+    # Panel 3 names what surge_count counts. The friendly words fit one known definition only; any
+    # other (or a mix) is shown as the raw surge_definition rather than under a label that may be wrong.
+    SURGE_WORDS = {"turnover_today_gt_turnover_ma10": "Turnover above 10-day average"}
+    definitions = mk["surge_definition"].dropna().astype(str).unique().tolist()
+    if len(definitions) == 1 and definitions[0] in SURGE_WORDS:
+        surge_title = f"{SURGE_WORDS[definitions[0]]}<br><sup>% of institutional_count names</sup>"
+        surge_hover = "%{x:.1%} of the institutional_count universe traded above their 10-day average turnover"
+    else:
+        raw = " / ".join(definitions) or "definition not given"
+        wrapped = [line.replace("_ ", "_") for line in textwrap.wrap(raw.replace("_", "_ "), 26)]
+        surge_title = "surge_count share<br><sup>" + "<br>".join(wrapped) + "</sup>"
+        surge_hover = "%{x:.1%} of the institutional_count universe met surge_definition %{customdata}"
+    extra_lines = surge_title.count("<br>") - 1  # a long raw definition needs more room above the panels
 
     panels = [
         ("days_old", "Data age<br><sup>days since the last EOD session</sup>"),
-        ("avg_change_pct", "Average 1-day change<br><sup>% across screened names</sup>"),
-        ("surge_share", "Turnover above 10-day average<br><sup>% of screened names</sup>"),
+        ("avg_change_pct", "Average 1-day change<br><sup>% as reported, base unconfirmed</sup>"),
+        ("surge_share", surge_title),
         ("total_turnover_usd", "Total turnover<br><sup>USD, log scale</sup>"),
     ]
     fig = make_subplots(rows=1, cols=4, shared_yaxes=True, horizontal_spacing=0.045,
@@ -1121,11 +1193,13 @@ else:
     }
     hover = {
         "days_old": "Last EOD session %{customdata}<br>%{x} days before the summary build",
-        "avg_change_pct": "Average 1-day change: %{x:+.2%}",
-        "surge_share": "%{x:.1%} of screened names traded above their 10-day average turnover",
+        "avg_change_pct": ("Average 1-day change: %{x:+.2%} (avg_change_pct as reported)"
+                           "<br>Which names it averages, and how they are weighted, is unconfirmed"),
+        "surge_share": surge_hover,
         "total_turnover_usd": "Turnover: %{customdata} (converted at the summary FX rate)",
     }
-    custom = {"days_old": mk["as_of_date"].map(day), "total_turnover_usd": [f"${compact(v)}" for v in mk["total_turnover_usd"]]}
+    custom = {"days_old": mk["as_of_date"].map(day), "total_turnover_usd": [f"${compact(v)}" for v in mk["total_turnover_usd"]],
+              "surge_share": mk["surge_definition"].map(lambda v: text_or(v, "(not given)"))}
     for col_i, (col, _) in enumerate(panels, start=1):
         common = dict(y=mk["market_name"], x=mk[col], text=labels[col], showlegend=False, cliponaxis=False,
                       customdata=custom.get(col), textfont=dict(color=INK_2, size=12),
@@ -1147,7 +1221,8 @@ else:
     fig.update_xaxes(range=[0, (max(oldest, 1) if pd.notna(oldest) else 1) * 1.35], title="days", row=1, col=1)
     fig.update_xaxes(range=[-span, span], tickformat=".1%", zeroline=True, zerolinecolor=AXIS, title="% change",
                      row=1, col=2)
-    fig.update_xaxes(range=[0, 1.15], tickvals=[0, 0.5, 1], tickformat=".0%", title="% of names", row=1, col=3)
+    fig.update_xaxes(range=[0, 1.15], tickvals=[0, 0.5, 1], tickformat=".0%", title="% of institutional_count",
+                     row=1, col=3)
     if not usd.empty:
         lo, hi = np.floor(np.log10(usd.min() / 2)), np.ceil(np.log10(usd.max() * 2))
         decades = [10 ** k for k in range(int(lo), int(hi) + 1)]  # one tick per power of ten
@@ -1160,7 +1235,7 @@ else:
     fig.update_layout(
         title=chart_title(title, f"Summary {built}. Colour = market (turnover dots also differ in shape). "
                                  "Each panel has its own scale."),
-        height=400, margin=dict(l=115, r=40, t=125, b=60), barcornerradius=4,
+        height=400 + 14 * extra_lines, margin=dict(l=115, r=40, t=125 + 14 * extra_lines, b=60), barcornerradius=4,
     )
     fig.show()
 
@@ -1170,13 +1245,18 @@ else:
 # - **Data age first.** One day is normal: the summary is built after the session ends. A
 #   larger number means a holiday, a weekend or a stale feed. Read that market's other panels
 #   as of its own date, not as of today.
-# - **Average 1-day change** is expected to be the plain mean of the screened names' one-day
-#   changes, with every name counting equally, so it can differ from a cap-weighted index. The
-#   equal weighting, like the decimal unit, is this kit's unconfirmed expectation until the live
-#   summary is back. A blank panel means the units check above failed.
-# - **Turnover above its 10-day average** is a breadth measure: the share of names trading more
-#   than usual, out of `institutional_count` (again the kit's unconfirmed expectation). If the
-#   counts cover the **whole** screened universe rather than a sample, there is no sampling error to
+# - **Average 1-day change** is `avg_change_pct` as reported. This kit expects it to be a plain
+#   mean of one-day changes, with every name counting equally, so it can differ from a cap-weighted
+#   index. Which names it averages over (its base) and the equal weighting are, like the decimal
+#   unit, unconfirmed until the live summary is back, hence "base unconfirmed" on the panel. A blank
+#   panel means the units check above failed.
+# - **Turnover above its 10-day average** is a breadth measure: `surge_count` divided by
+#   `institutional_count`, the share of names trading more than usual. That denominator is the
+#   kit's unconfirmed expectation, and it is **not** "all screened names": a summary record can
+#   also carry a larger `screen_eligible_tickers` (1,220 against 1,000 in this kit's sample). The
+#   panel's title comes from `surge_definition`. If the summary reports a definition other than
+#   `turnover_today_gt_turnover_ma10`, the panel shows that raw string instead of the friendly words.
+#   If the counts cover the **whole** universe rather than a sample, there is no sampling error to
 #   put a confidence interval on. The real uncertainty is about freshness and definitions.
 # - **Turnover in USD** uses a log axis, because markets differ by orders of magnitude. Equal
 #   gaps mean equal *ratios*.
