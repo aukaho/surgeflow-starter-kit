@@ -3058,7 +3058,7 @@ else:
 #   section 5 switches from expected changes to surprises. After a few months you can divide each surprise by that
 #   indicator's own surprise volatility, the way professional surprise indices do.
 # - Join the notes' `top_rows` tickers with the screen (notebook 01) or the ML
-#   clusters (notebook 03) on `ticker`.
+#   clusters (notebook 02) on `ticker`.
 # - Track the bond board daily and chart the credit spreads of HYG and LQD over
 #   time.
 #

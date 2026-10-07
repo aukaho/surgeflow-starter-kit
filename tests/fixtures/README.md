@@ -61,8 +61,6 @@ means 0.05 = 5%. **Percent** means 5.0 = 5%.
 | `GET /api/v1/markets/{m}/ml/clusters` | `ml_clusters_{m}.json` | `data.clusters` (`ml_clusters`), `data.anomaly_watch` (`ml_anomalies`) |
 | `GET /api/v1/markets/{m}/whales` | `whales_{m}.json` | `data.signal_board.signals` (`whales`): a **dict of six boards** |
 | `GET /api/v1/markets/{m}/factor-portfolios` | `factor_portfolios_{m}.json` | `data.data.factors` (`factor_portfolios`) |
-| `GET /api/v1/ai/ratings` | `ai_ratings.json` | `data.names` (`ai_ratings`) |
-| `GET /api/v1/ai/grade-book` | `ai_grade_book.json` | `data.rows` (`ai_grade_book`), `data.decisions` (`ai_grade_book_decisions`) |
 | `GET /api/v1/notes/daily` | `notes_daily.json` (market=all), `notes_daily_{m}.json` (**inferred**) | `data.notes` (`notes`) |
 | `GET /api/v1/macro/calendar` | `macro_calendar.json` (market=us), `macro_calendar_{cn,jp,hk}.json` (**inferred** market copies) | `data.data.events` (`macro_calendar`) |
 | `GET /api/v1/bond/etfs` | `bond_etfs.json` | `data.data.etfs` (`bond_etfs`) |
@@ -80,9 +78,8 @@ How `tools/mock_api.py` resolves a request (see its docstring):
   probe saved only the defaults (`market=us` for the calendar, `market=all`
   for notes), so the per-market files are inferred copies of the same shape.
 - **Every other query parameter is ignored offline**: `page_size`, `sort`,
-  `dir`, `tab`, `limit`, `ticker`, `sentiment`, `days`, `checkpoint`,
-  `as_of_date`, and `market` on `ai/grade-book`. Notebooks must not assert that
-  a filter was applied.
+  `dir`, `tab`, `limit`, `ticker`, `sentiment`, `days` and `as_of_date`.
+  Notebooks must not assert that a filter was applied.
 
 ## Regenerate
 
@@ -121,7 +118,6 @@ fixtures). Each line is expected and documented below:
 | `factor_portfolios_{us,cn,jp}.json` | 0 / −16 | 0 / −22 | Live blocked all seven factors, so `return_series[]`, `top_holdings[]` and the `factor_correlation` object were empty or null. The fixture publishes most factors (live-empty shapes). `factor_portfolios_hk.json` is identical to live. |
 | `hotlist_cn.json` | 0 / −13 | 0 / −14 | Live CN was empty; the fixture has 20 rows with the live US row shape. |
 | `ml_clusters_{m}.json` | 5–10 / 2–8 | 0 / 0 | `sector_mix` and `top_features` keys are data, not schema. Every fixture key belongs to the live vocabulary. |
-| `ai_ratings.json` | 0 / −8 | 0 / 0 | The fixture's rank-1 name is a paper long, so `return_since` and `stop.stop_price` appear in the first five names. Live has them only on the shorts. |
 | every other file | 0 / 0 | 0 / 0 | |
 
 JSON types also match for every shared path. The only exceptions are the
@@ -142,8 +138,8 @@ York, Golden Week in China, the afternoon session in Tokyo and Hong Kong.
 | ML run `as_of_date` / `age_days` / `stale` | 2026-10-05 / 2 / false | 2026-09-30 / 7 / **true** | 2026-10-06 / 1 / false | 2026-10-06 / 1 / false |
 | Factor portfolios | 6 of 7 published (LIQ blocked) | 5 of 7 (CMA, LIQ blocked) | 6 of 7 (LIQ blocked) | **all 7 blocked**, as every market was live |
 
-The AI council checkpoint is a month old (session 2026-09-03), as it was
-live. That is why today's grade-book openers are all rejected as stale.
+The AI research committee is paused and its two endpoints are retired (HTTP
+410), so there are no AI fixtures.
 
 ## The synthetic universe
 
@@ -197,7 +193,6 @@ Structure built in, so the tutorials find something:
     flow signal.
   - The notes `whales` section repeats the top five rows of each whales board.
     The `news` section embeds three articles from `news_{m}.json`.
-  - Grade-book `decisions` are names from `ai/ratings`.
 - **Empty and null, as live.**
   - cn screen `previous_day_turnover` is always `null`.
   - hk screen `dividend_yield` is always `null`, and
@@ -210,8 +205,7 @@ Structure built in, so the tutorials find something:
     id that no longer exists).
   - The cn notes `turnover` section has no `top_rows`.
 
-  The live API can also return an empty realtime board, ratings list or
-  grade book, so **notebooks must handle an empty list everywhere**.
+  The live API can also return an empty realtime board or hotlist, so **notebooks must handle an empty list everywhere**.
 
 ---
 
@@ -224,7 +218,7 @@ Envelope keys differ by endpoint (all live unless marked):
 | screen | `ok, schema_version, market, as_of_date, generated_at, page, page_size, total_pages, count, data_quality, rows`; legacy shape: no `data` |
 | realtime, hotlist | `ok, schema_version, source_schema_version, data` |
 | sector, whales, ml/clusters, macro/calendar | `ok, schema_version, source, market, data` |
-| factor-portfolios, ai/ratings, ai/grade-book | `ok, schema_version, source, market, note, data` |
+| factor-portfolios | `ok, schema_version, source, market, note, data` |
 | notes/daily | `ok, schema_version, source, market` (`"all"` by default), `data` |
 | bond/etfs | `ok, schema_version, source, data` |
 | me | flat: `ok, schema_version, ...` |
@@ -235,8 +229,7 @@ Envelope keys differ by endpoint (all live unless marked):
 `surgeflow.market_realtime.v1`, `surgeflow.market_hotlist.v1`,
 `surgeflow.market_sector.v1`, `surgeflow.market_news.v1`,
 `surgeflow.ml_clusters.v1`, `surgeflow.market_whales.v1`,
-`surgeflow.factor_portfolios.v1`, `surgeflow.ai_ratings.v1`,
-`surgeflow.ai_grade_book.v1`, `surgeflow.daily_notes.v1`,
+`surgeflow.factor_portfolios.v1`, `surgeflow.daily_notes.v1`,
 `surgeflow.macro_calendar.v1`, `surgeflow.bond_etfs.v1`); `me` uses
 `surgeflow.public_api.v1`. `source` names the backend twin
 (`/api/page/sector`, `/api/ml/latest`, ...).
@@ -438,43 +431,6 @@ disclosed, not used as a row filter.
 | `word_cloud` | list | `[]` live and in the fixture | live |
 | `narrative_coverage` | dict | `holdings_total, holdings_with_narrative, coverage_pct` | live |
 
-### `GET /api/v1/ai/ratings` → `ai_ratings.json`
-
-The AI analyst council's scoreboard for the latest US hotlist checkpoint.
-**Analyst comments are member-only content**: fine to show in the user's own
-notebook, never to copy into committed files. The fixture comments are
-placeholders.
-
-| Field | Type | Notes | Source |
-|---|---|---|---|
-| `data.checkpoint_id, checkpoint_time, checkpoint_index, as_of_date, market, decision_session_date, hotlist_size, source (panel_tables)` | | | live |
-| `names[].ticker, rank, composite_score (0–100), in_top5, duration_on_list_days, headline_comment` | | `composite_score` = mean of the four core seats (fundamental, factor, technical, sentiment) | live |
-| `names[].per_analyst` | dict | Seat → `{score: float?, comment: str?}`. Four seats always, plus `macro` and `risk` for the top five (their score is usually null). Key order varies. A score can come without a comment | live |
-| `names[].long`, `short` | bool | Paper-book flags | live |
-| `names[].return_since` | dict? | Null unless long or short: `anchor_close, anchor_date, return_since_pct` (percent, direction-adjusted), `current_price, current_source (live), anchor_status, direction` | live |
-| `names[].pick_ledger` | dict | `pick_id, checkpoint_id, picked_at, session_date, direction (long / short / watch), hotlist_first_seen_at?, hotlist_last_seen_at?, hotlist_snapshot_minutes?, best_hotlist_rank?, entry_mark{price?, snapshot_ts?, rank?, projected_yest?, intraday_return_pct?, source}, return_anchor{price?, date?, status?}, stop{state (watch_only / working / stopped_out), stop_hit, hard_stop_pct (−8), warning_pct (−5), stop_price (only on paper legs), message}, decision{direction (paper long / paper short / watch only), summary, strongest_agents[3]{agent, score, comment}, caution_agents[3]{agent, score?, comment}}, reflection?` | live |
-| `data.top5[]`, `left_convictions[]` (empty live and in the fixture), `stop_reflections[]{ticker, direction, return_since_pct, picked_at, message}`, `analysts[]` (6 seats) | | | live |
-
-### `GET /api/v1/ai/grade-book` → `ai_grade_book.json`
-
-The single deterministic paper book. A grade above 70 opens LONG, below 30
-opens SHORT. The only exit is the Drop Out Zone (`exit_contract`). The fixture
-holds 80 closed positions (40 long, 40 short), as live.
-
-| Field | Type | Notes | Source |
-|---|---|---|---|
-| `rows[].ticker, side (LONG/SHORT), grade_date, entry_date, entry_price, grade_score` | | LONG ⇔ `grade_score > 70`, SHORT ⇔ `< 30` | live |
-| `rows[].drop_out_zone, drop_out_zone_date, drop_out_zone_day_high, drop_out_zone_day_low` | float, str | Zone = day_low + (day_high − day_low) / 3 of the exit session; `stop_price` equals it | live |
-| `rows[].drop_out_observed_price, drop_out_observed_at` | float, str UTC | The ~19:56 UTC observation below the zone that closed the trade | live |
-| `rows[].status` (`closed`), `close_reason` (`drop_out_zone`), `exit_date`, `exit_price` | | `exit_price` = observed price | live |
-| `rows[].realized_return_pct`, `unrealized_return_pct` | float, percent | Side-adjusted vs `entry_price` (from `exit_price` and `latest_price`) | live |
-| `rows[].peak_price` | float | Best close since entry (max for LONG, min for SHORT) | live |
-| `rows[].latest_price, latest_price_date, holding_days` (calendar days), `take_profit_price` (null), `ratchet_armed` (false), `horizon_end_date` (null) | | | live |
-| `rows[].gates` | dict | `g1_strict_grade, side, score_rule, g2_six_promoted_reviews, agents_reviewed, agents_expected, g3_rationale_contract, g3_warn_only, rationale_contract{promoted_review_count, personas[], failures[]}, review_checkpoint, council_contract_version, rating_schema_version, g4_review_fresh, review_date, freshness_floor, g5_drop_out_zone_current, drop_out_zone, drop_out_zone_date, drop_out_observed_price, exit_rule, drop_out_formula, g3_warnings[]` (the entry-day gates) | live |
-| `decisions[]` | list | Today's opener candidates: `ticker, side, grade_date, grade_score, qualifies, reject_reasons[], built_at, gates{... + g6_no_active_risk_veto}`. Live and fixture: all rejected (stale council review) | live |
-| `exit_contract` | dict | `rule (drop_out_zone_only), formula, trigger, entry_cutoff_can_exit, fixed_stop_enabled, take_profit_enabled, profit_ratchet_enabled, time_exit_enabled` (all false) | live |
-| `disclaimer` | str | | live |
-
 ### `GET /api/v1/notes/daily` → `notes_daily.json`, `notes_daily_{m}.json`
 
 **Member-only content.** Show it in the user's own notebook, never copy it
@@ -579,7 +535,7 @@ Ten US credit ETFs at `payload["data"]["data"]["etfs"]`.
 - Units differ between fields:
   - fractions: screen `change_pct`, `ma*_excess`, `ep/bp/sp`,
     `dividend_yield`, sector means, `crowdedness_pct`, factor `ret`;
-  - percents: `intraday_return_pct`, grade-book returns, `*_portfolio_pct`,
+  - percents: `intraday_return_pct`, `*_portfolio_pct`,
     bond `*_pct`, `expense_ratio`;
   - ratios: `turnover_vs_10d`, `projected_vs_yesterday`;
   - local currency: screen and realtime money fields;

@@ -1,8 +1,8 @@
 # Contributing to the SurgeFlow Starter Kit
 
-The notebooks teach every one of the 15 authenticated SurgeFlow API v1
-endpoints, then go further: cleaning the data, visualising it, and applying
-basic machine learning. These rules keep the series consistent.
+The notebooks teach every authenticated SurgeFlow API v1 endpoint (13 since
+the paused AI committee's two endpoints were retired), then go further:
+cleaning the data, visualising it, and applying basic machine learning. These rules keep the series consistent.
 
 ## Layout
 

@@ -2,7 +2,7 @@
 
     python tools/run_notebooks.py --mock            # offline, tests/fixtures/*.json
     python tools/run_notebooks.py --live            # real API; needs SURGEFLOW_API_KEY
-    python tools/run_notebooks.py --mock 06-ml-lab  # one notebook
+    python tools/run_notebooks.py --mock 05-ml-lab  # one notebook
     python tools/run_notebooks.py --mock --fixtures tests/fixtures/live   # saved live snapshots
 
 Executed copies (with outputs) go to build/executed/ (git-ignored); the

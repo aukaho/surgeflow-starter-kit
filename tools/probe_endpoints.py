@@ -1,4 +1,4 @@
-"""Call all 15 authenticated endpoints and compare live shapes with the fixtures.
+"""Call every authenticated endpoint the kit uses and compare live shapes with the fixtures.
 
     SURGEFLOW_API_KEY=sf_live_... python tools/probe_endpoints.py
 
@@ -28,8 +28,6 @@ GLOBAL = {
     "catalog": "/api/v1/catalog",
     "me": "/api/v1/me",
     "summary": "/api/v1/summary",
-    "ai_ratings": "/api/v1/ai/ratings",
-    "ai_grade_book": "/api/v1/ai/grade-book",
     "notes_daily": "/api/v1/notes/daily",
     "macro_calendar": "/api/v1/macro/calendar",
     "bond_etfs": "/api/v1/bond/etfs",

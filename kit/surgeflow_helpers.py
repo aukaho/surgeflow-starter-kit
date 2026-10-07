@@ -23,9 +23,6 @@ RESPONSE_SHAPES = {
     "screen": ("rows",),
     "realtime": ("data", "rows"),
     "hotlist": ("data", "rows"),
-    "ai_ratings": ("data", "names"),
-    "ai_grade_book": ("data", "rows"),
-    "ai_grade_book_decisions": ("data", "decisions"),
     "ml_clusters": ("data", "clusters"),
     "ml_anomalies": ("data", "anomaly_watch"),
     "whales": ("data", "signal_board", "signals"),
@@ -109,7 +106,10 @@ def sf_try(path: str, **params) -> dict | None:
     try:
         return sf_get(path, **params)
     except SurgeFlowError as exc:
-        display(Markdown(f"**{path} is unavailable right now** ({exc}). Skipping this section - try again later."))
+        if exc.status == 410:  # retired endpoint: retrying will not help
+            display(Markdown(f"**{path} has been retired** ({exc}). Skipping this section."))
+        else:
+            display(Markdown(f"**{path} is unavailable right now** ({exc}). Skipping this section - try again later."))
         return None
 
 

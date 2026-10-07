@@ -157,6 +157,10 @@ print(f"Studying {MARKET_NAMES[MARKET]} ({MARKET}); focus factor {FOCUS_FACTOR.u
 # - `add_end_labels` writes each line's name at its right end. It nudges the
 #   labels apart so they never overlap, and ties each one to its line with a
 #   thin leader in the line's colour.
+# - `chart_title` breaks a long chart title and subtitle onto several lines
+#   and returns the top margin they need. Plotly never wraps a title, so a long
+#   one would run off the right edge of a narrow output (for example Colab with
+#   the Secrets sidebar open). Notebook 05 uses the same helper.
 # - `pick`, `pct`, `money`, `shorten`, `plural`, `rgba`, `grid_shape` and
 #   `hide_unused_panels` are small formatting helpers. `note` prints a friendly
 #   sentence when there is nothing to show.
@@ -238,9 +242,10 @@ GATE_STYLE = {   # outcome -> legend text, marker symbol, colour, size. Status c
     "failed": ("Failed", "x", "#d03b3b", 16),
     "pending": ("Pending: not run yet, or too little history", "circle-open", MUTED, 16),
     "unreported": ("No code reported (not necessarily run)", "circle", MUTED, 7),
-    "passed": ("Passed (the factor is published)", "circle", "#0ca30c", 10),
+    "passed": ("No blocking code (the factor is published)", "circle", "#0ca30c", 10),
 }
-GATE_MARK = {"failed": "✕ failed", "pending": "○ pending", "unreported": "· not reported", "passed": "✓ passed"}
+GATE_MARK = {"failed": "✕ failed", "pending": "○ pending", "unreported": "· not reported",
+             "passed": "✓ no blocking code (published)"}
 VERDICT_STYLE = {   # the same visual language for whole factors (section 4)
     "published": ("Published", "circle", "#0ca30c"),
     "failed a test": ("Withheld: failed a test", "x", "#d03b3b"),
@@ -324,6 +329,27 @@ def label_lowest_panels(fig, filled: list, rows: int, cols: int) -> None:
 def note(text: str) -> None:
     """A friendly one-line note in place of a chart or table (empty is normal)."""
     display(Markdown(f"> {text}"))
+
+
+def chart_title(title: str, subtitle: str = "", extra_top: int = 0, width: int = 80) -> tuple:
+    """Wrap a long title (about `width` characters a line) and subtitle (about 1.45 × `width`, broken at its
+    ' · ' separators where possible; '<br>' still forces a new line), pin them to the top of the figure, and
+    return Plotly's title dict plus the top margin in pixels that keeps them clear of the plot. `extra_top`
+    reserves room for anything else above the plot area, such as panel titles or a top x-axis."""
+    def pack(line: str, limit: int) -> list:
+        lines = []
+        for piece in line.split(" · "):
+            if lines and len(lines[-1]) + 3 + len(piece) <= limit:
+                lines[-1] += " · " + piece
+            else:
+                lines += textwrap.wrap(piece, limit, break_on_hyphens=False)
+        return lines
+
+    head = textwrap.wrap(title, width, break_on_hyphens=False)
+    sub = [line for part in subtitle.split("<br>") for line in pack(part, int(width * 1.45))] if subtitle else []
+    top = 40 + 23 * len(head) + 18 * len(sub) + extra_top
+    return dict(text="<br>".join(head), subtitle=dict(text="<br>".join(sub)), y=1, yref="container",
+                yanchor="top", pad=dict(t=12 + 22 * (len(head) > 1))), top
 
 
 def gate_codes(reason) -> list:
@@ -728,11 +754,14 @@ if N_PUBLISHED == 0:
 # %% [markdown]
 # **Chart: the gate checklist.** One row per factor and one column per test.
 # A red ✕ is a failed test and a grey ○ a pending one. A green dot (✓ in the
-# table) appears only for a **published** factor, which passed every test. For
-# a withheld factor, a test with no code gets a small grey dot ("· not
-# reported" in the table): the API listed no problem with it, but it does not
-# say that the test ran. Each mark has its own symbol, so the chart still reads
-# in black and white.
+# table) appears only for a **published** factor: SurgeFlow reports no
+# blocking code for it and released its data. That is SurgeFlow's verdict on
+# its own evidence, not a check this notebook makes. Section 3.10 re-runs the
+# premium test on the one-year series the API sends, and the two can
+# disagree. For a withheld factor, a test with no code gets a small grey dot
+# ("· not reported" in the table): the API listed no problem with it, but it
+# does not say that the test ran. Each mark has its own symbol, so the chart
+# still reads in black and white.
 
 # %%
 cells = []
@@ -747,11 +776,11 @@ for _, f in factors.iterrows():
         cells.append({"factor_id": f["factor_id"], "factor": f["name"], "test": test, "outcome": outcome,
                       "detail": text})
     published = f["publish_state"] == "published"
-    for test in GATE_TESTS:                             # no code for this test: passed only if the factor is published
+    for test in GATE_TESTS:                             # no code for this test: "passed" only if the factor is published
         if test not in found:
             cells.append({"factor_id": f["factor_id"], "factor": f["name"], "test": test,
                           "outcome": "passed" if published else "unreported",
-                          "detail": "passed (the factor is published)" if published else
+                          "detail": "no blocking code: SurgeFlow published the factor" if published else
                                     "no code reported; the API does not say whether this test ran"})
 checklist = pd.DataFrame(cells)
 tests = GATE_TESTS + sorted(set(checklist["test"]) - set(GATE_TESTS))      # 'Other' only for codes not seen before
@@ -781,7 +810,7 @@ n_f, n_pub = len(factors), len(groups["published"])
 withheld = [c for v in VERDICTS[1:] for c in groups[v]]
 n_fail = len(groups["failed a test"])
 if n_pub == n_f:
-    title = f"{MARKET_NAMES[MARKET]}: all {n_f} factors passed their gates and are published"
+    title = f"{MARKET_NAMES[MARKET]}: all {n_f} factors cleared SurgeFlow's gates and are published"
 elif n_pub == 0:
     title = (f"{MARKET_NAMES[MARKET]}: all {n_f} factors are withheld; "
              + (f"{n_fail} failed a test, the other {n_f - n_fail} are pending" if 0 < n_fail < n_f else
@@ -790,9 +819,10 @@ else:
     title = (f"{MARKET_NAMES[MARKET]}: {n_pub} of {n_f} factors are published; "
              f"{and_list(withheld)} {'is' if len(withheld) == 1 else 'are'} withheld")
 subtitle = " · ".join(f"{v.capitalize()}: {and_list(groups[v])}" for v in VERDICTS if groups[v])
+heading, top = chart_title(title, subtitle, extra_top=40)          # room for the test names above the grid
 fig.update_layout(
-    title=dict(text=title, subtitle=dict(text=subtitle)),
-    height=230 + 46 * n_f, margin=dict(t=150, b=80, l=270, r=30), legend=BOTTOM_LEGEND, hovermode="closest",
+    title=heading, height=top + 80 + 46 * n_f, margin=dict(t=top, b=80, l=270, r=30), legend=BOTTOM_LEGEND,
+    hovermode="closest",
     xaxis=dict(categoryorder="array", categoryarray=[wrap(t) for t in tests], side="top", showgrid=False,
                ticks="", tickangle=0, tickfont=dict(size=12, color=INK_2), range=[-0.6, len(tests) - 0.4]),
     yaxis=dict(categoryorder="array", categoryarray=rows, autorange="reversed", gridcolor=GRID, ticks="",
@@ -825,8 +855,10 @@ display(twin.rename_axis(index="factor", columns=None))
 # - "No code reported" is not the same as "passed". For a blocked factor the
 #   API lists the reasons it is blocked; it does not say which other tests were
 #   run. That is why only published factors get a green ✓.
-# - A published factor passed SurgeFlow's gates on in-sample evidence. That
-#   makes it worth studying; it does not make it profitable in future.
+# - A published factor cleared SurgeFlow's gates on in-sample evidence. That
+#   makes it worth studying; it does not make it profitable in future. The
+#   API sends no per-test results for a published factor, only the absence of
+#   a blocking code, so the ✓ is SurgeFlow's word, not a test you can see.
 # - `agreement_score` (0–1) is part of the gate evidence, but its exact formula
 #   is not documented. Use it only to compare factors within one release.
 
@@ -1064,7 +1096,7 @@ else:
     lo_y, hi_y = float(np.nanmin(level.to_numpy())), float(np.nanmax(level.to_numpy()))
     pad = (hi_y - lo_y) * 0.06 + 0.5
     y_range = [lo_y - pad, hi_y + pad]
-    HEIGHT, TOP, BOTTOM = 540, 115, 100
+    PLOT_PX, BOTTOM = 325, 100                   # plot-area height and bottom margin (pixels); the top fits the title
 
     fig = go.Figure()
     fig.add_hline(y=100, line=dict(color=AXIS, width=1), layer="below")
@@ -1075,7 +1107,7 @@ else:
     ends = pd.DataFrame({"x": [level[f].last_valid_index() for f in IDS], "y": [final[f] for f in IDS],
                          "text": [f"{CODE[f]} {final[f]:.0f}" for f in IDS],
                          "color": [FACTOR_COLORS[f] for f in IDS]})
-    add_end_labels(fig, ends, y_range, HEIGHT - TOP - BOTTOM)
+    add_end_labels(fig, ends, y_range, PLOT_PX)
 
     above = int((rank > 100).sum())
     start, end = level.index.min(), returns.index.max()
@@ -1093,11 +1125,11 @@ else:
               f"<br>The factors start or end on different dates (section 3.3): the title ranks 100 invested over "
               f"{shared_from:%b %d, %Y} to {shared_to:%b %d, %Y}, the window all share; end labels show each line's "
               "own final value" if shared_from < shared_to else "<br>The factors' windows do not overlap")
+    heading, top = chart_title(
+        title, f"Value of 100 invested in each published factor, {start:%b %d, %Y} to {end:%b %d, %Y} · "
+               f"daily compounding, before costs · ERP is measured in excess of cash{window}")
     fig.update_layout(
-        title=dict(text=title, subtitle=dict(
-            text=f"Value of 100 invested in each published factor, {start:%b %d, %Y} to {end:%b %d, %Y} · "
-                 f"daily compounding, before costs · ERP is measured in excess of cash{window}")),
-        height=HEIGHT + (20 if window else 0), margin=dict(t=TOP + (20 if window else 0), b=BOTTOM, r=105),
+        title=heading, height=top + PLOT_PX + BOTTOM, margin=dict(t=top, b=BOTTOM, r=105),
         hovermode="x unified",
         legend=dict(BOTTOM_LEGEND, itemclick=False, itemdoubleclick=False),   # the end labels cannot hide with a line
         xaxis=dict(hoverformat="%b %d, %Y", range=[start - pd.Timedelta(days=2), end + pd.Timedelta(days=2)]),
@@ -1180,9 +1212,10 @@ else:
     fig.update_yaxes(title_text="Below peak (%)", col=1)
     label_lowest_panels(fig, [(k // cols + 1, k % cols + 1) for k in range(len(IDS))], rows, cols)
     hide_unused_panels(fig, len(IDS), rows, cols)
-    fig.update_layout(title=dict(text=title, subtitle=dict(
-                          text="Distance below each factor's running peak · dot = maximum drawdown · shared y-axis")),
-                      height=250 * rows + 200, margin=dict(t=120, b=70), showlegend=False, hovermode="x")
+    heading, top = chart_title(title, "Distance below each factor's running peak · dot = maximum drawdown · "
+                                      "shared y-axis", extra_top=22)                 # + room for the panel titles
+    fig.update_layout(title=heading, height=top + 250 * rows + 80, margin=dict(t=top, b=70), showlegend=False,
+                      hovermode="x")
     fig.show()
     display(dd_table.style.format({"max drawdown": "{:.1%}", "drawdown today": "{:.1%}"}).hide(axis="index"))
 
@@ -1239,10 +1272,10 @@ else:
         fig.update_yaxes(title_text="Volatility (% a year)", col=1)
         label_lowest_panels(fig, [(k // cols + 1, k % cols + 1) for k in range(len(IDS))], rows, cols)
         hide_unused_panels(fig, len(IDS), rows, cols)
-        fig.update_layout(title=dict(text=title, subtitle=dict(
-                              text=f"Standard deviation of the last {ROLL_DAYS} daily returns × √252 · "
-                                   "dashed line = whole-period volatility · shared y-axis")),
-                          height=250 * rows + 200, margin=dict(t=120, b=70), showlegend=False, hovermode="x")
+        heading, top = chart_title(title, f"Standard deviation of the last {ROLL_DAYS} daily returns × √252 · "
+                                          "dashed line = whole-period volatility · shared y-axis", extra_top=22)
+        fig.update_layout(title=heading, height=top + 250 * rows + 80, margin=dict(t=top, b=70), showlegend=False,
+                          hovermode="x")
         fig.show()
         vol_table = pd.DataFrame({"factor": [NAME[f] for f in IDS], "whole period": full[IDS].to_numpy(),
                                   "rolling low": roll[IDS].min().to_numpy(), "rolling high": roll[IDS].max().to_numpy(),
@@ -1298,12 +1331,13 @@ else:
         colorscale=DIVERGING, zmin=-1, zmax=1, zmid=0, xgap=2, ygap=2, hoverongaps=False,
         hovertemplate="%{y} vs %{x}: %{z:+.2f}<extra></extra>",
         colorbar=dict(title=dict(text="Correlation"), tickvals=[-1, -0.5, 0, 0.5, 1], len=0.85, thickness=14)))
+    heading, top = chart_title(
+        f"{CODE[strongest[0]]} and {CODE[strongest[1]]} are the most linked ({signed(pairs[strongest])}); "
+        f"{n_sig} of {len(pairs)} pairs lie outside the ±{r_crit:.2f} noise band",
+        f"Correlation of daily returns over {n_al} aligned days · blue = move together, red = move opposite, "
+        "grey ≈ unrelated")
     fig.update_layout(
-        title=dict(text=f"{CODE[strongest[0]]} and {CODE[strongest[1]]} are the most linked ({signed(pairs[strongest])}); "
-                        f"{n_sig} of {len(pairs)} pairs lie outside the ±{r_crit:.2f} noise band",
-                   subtitle=dict(text=f"Correlation of daily returns over {n_al} aligned days · blue = move together, "
-                                      "red = move opposite, grey ≈ unrelated")),
-        height=150 + 66 * len(codes), margin=dict(t=110, l=70, r=40, b=60),
+        title=heading, height=top + 40 + 66 * len(codes), margin=dict(t=top, l=70, r=40, b=60),
         xaxis=dict(side="bottom", showgrid=False, ticks="", constrain="domain"),
         yaxis=dict(autorange="reversed", showgrid=False, ticks="", scaleanchor="x", constrain="domain"))
     fig.show()
@@ -1348,20 +1382,26 @@ else:
 #
 # Both are daily, positive loss fractions (0.02 = a 2% loss), like the API's
 # `var_95_252d` and `es_95_252d`. We also show the ES that a **normal** (bell
-# curve) distribution with the same mean and volatility would give. If the
-# real ES is clearly larger, the factor has **fat tails**: bad days are worse
-# than the bell curve predicts. "Clearly" matters: the ES averages only about
-# 13 days, so a ratio of 1.05 is well inside sampling noise. We count a factor
-# only when its ES is more than `FAT_TAIL` (1.1×) the normal-curve ES, and the
-# table adds a Jarque–Bera test of normality (a p-value below 0.05 rejects the
-# bell curve).
+# curve) distribution with the same mean and volatility would give, and the
+# ratio of the two (`ES ÷ normal ES`).
+#
+# That ratio **describes** the tail; it is **not a test for fat tails**. At the
+# 95% level, ES sits close enough to the middle of the distribution that it
+# barely reacts to fat tails. A Student-t distribution with 4 degrees of
+# freedom is a textbook fat-tailed case: its kurtosis is infinite. Yet its ES
+# is only about **1.10×** that of a normal curve with the same volatility. And
+# with one year of data the sample ratio is noisy, because it averages only
+# about 13 days. To ask whether the returns follow a bell curve, use the
+# table's **excess kurtosis** (above 0: fatter tails than normal) and the
+# **Jarque–Bera test** (a p-value below 0.05 rejects the bell curve). The bar
+# colour follows that test.
 
 # %%
 if not HAVE_RETURNS:
     note("No published factor has a return series today, so there is no tail to measure.")
 else:
     z_tail = stats.norm.ppf(1 - TAIL)                       # -1.645 at the 95% level
-    FAT_TAIL = 1.1                                          # ES ÷ normal ES above this counts as a fatter tail
+    NORMALITY_P = 0.05                                      # a Jarque–Bera p-value below this rejects the bell curve
     tail_rows = []
     for fid in IDS:
         r = returns[fid].dropna()
@@ -1376,23 +1416,25 @@ else:
     tail = pd.DataFrame(tail_rows)
     tail["ES ÷ normal ES"] = tail["ES"] / tail["ES if normal"]
     tail = tail.sort_values("ES").reset_index(drop=True)            # biggest tail drawn at the top
-    top = tail.iloc[-1]
-    fat = tail["ES ÷ normal ES"] > FAT_TAIL
-    n_fat = int(fat.sum())
+    worst = tail.iloc[-1]
+    not_normal = tail["Jarque–Bera p"] < NORMALITY_P                # colour = the normality test, not the ES ratio
+    n_not_normal = int(not_normal.sum())
 
     fig = go.Figure()
-    for is_fat, label, color in ((True, f"Fatter tail: ES more than {FAT_TAIL:.1f}× the normal-curve ES",
-                                  rgba(SERIES[0], 0.55)),
-                                 (False, f"ES within {FAT_TAIL:.1f}× the normal-curve ES", AXIS)):
-        part = tail[fat == is_fat]
+    for is_not_normal, label, color in (
+            (True, f"Returns fail a normality test (Jarque–Bera p < {NORMALITY_P})", rgba(SERIES[0], 0.55)),
+            (False, f"A normal curve is not rejected (p ≥ {NORMALITY_P})", AXIS)):
+        part = tail[not_normal == is_not_normal]
         if part.empty:
             continue
         fig.add_trace(go.Bar(
             x=part["ES"], y=part["factor"], orientation="h", name=label, width=0.56, marker=dict(color=color),
-            customdata=part[["days in the tail", "skew", "excess kurtosis", "ES ÷ normal ES"]].to_numpy(),
+            customdata=part[["days in the tail", "skew", "excess kurtosis", "ES ÷ normal ES",
+                             "Jarque–Bera p"]].to_numpy(),
             hovertemplate=("<b>%{y}</b><br>Expected shortfall: %{x:.2%} a day (average of %{customdata[0]} worst "
                            "days)<br>%{customdata[3]:.2f}× the normal-curve ES · skew %{customdata[1]:+.2f} · "
-                           "excess kurtosis %{customdata[2]:.1f}<extra></extra>")))
+                           "excess kurtosis %{customdata[2]:.1f} · Jarque–Bera p %{customdata[4]:.3f}"
+                           "<extra></extra>")))
     fig.add_trace(go.Scatter(
         x=tail["VaR"], y=tail["factor"], mode="markers", name=f"VaR {TAIL:.0%}: where the worst {1 - TAIL:.0%} of days begin",
         marker=dict(symbol="line-ns", size=20, line=dict(width=3, color=INK)),
@@ -1405,14 +1447,21 @@ else:
         x=tail[["ES", "ES if normal"]].max(axis=1), y=tail["factor"], mode="text", showlegend=False,
         text=["   " + pct(v, 2) for v in tail["ES"]], textposition="middle right", textfont=dict(size=12, color=INK_2),
         hoverinfo="skip", cliponaxis=False))
-    title = (f"On its worst {1 - TAIL:.0%} of days, {top['factor'].split(' · ')[0]} lost {top['ES']:.2%} a day on "
-             f"average; in this sample, {n_fat} of {len(tail)} lost over {FAT_TAIL - 1:.0%} more than a normal curve "
-             "predicts")
+    if len(tail) == 1:
+        normality = ("its daily returns fail a normality test" if n_not_normal else
+                     "a normality test cannot reject a normal curve for it")
+    elif n_not_normal == 0:
+        normality = "no factor's daily returns fail a normality test"
+    else:
+        normality = (f"the daily returns of {'all' if n_not_normal == len(tail) else f'{n_not_normal} of'} "
+                     f"{len(tail)} factors fail a normality test")
+    heading, top = chart_title(
+        f"On its worst {1 - TAIL:.0%} of days, {worst['factor'].split(' · ')[0]} lost {worst['ES']:.2%} a day on "
+        f"average; {normality}",
+        f"Bars: expected shortfall ({TAIL:.0%}), the average daily loss on the worst {1 - TAIL:.0%} of days · "
+        f"tick: VaR · diamond: the normal-curve ES · colour: Jarque–Bera test of normality at {NORMALITY_P:.0%}")
     fig.update_layout(
-        title=dict(text=title, subtitle=dict(
-            text=f"Bars: expected shortfall ({TAIL:.0%}), the average daily loss on the worst "
-                 f"{1 - TAIL:.0%} of days · tick: VaR · diamond: the normal-curve ES")),
-        height=210 + 52 * len(tail), margin=dict(t=110, b=130, r=60), legend=BOTTOM_LEGEND,
+        title=heading, height=top + 100 + 52 * len(tail), margin=dict(t=top, b=130, r=60), legend=BOTTOM_LEGEND,
         xaxis=dict(title="Daily loss (% of capital)", tickformat=".1%", rangemode="tozero",
                    range=[0, float(tail[["ES", "ES if normal"]].to_numpy().max()) * 1.2]),
         yaxis=dict(ticks="", categoryorder="array", categoryarray=tail["factor"].tolist()))
@@ -1425,21 +1474,33 @@ else:
 # **How to read this.** Each bar is one factor's expected shortfall: its
 # average daily loss on its worst 5% of days, with the biggest at the top. The
 # black tick is the VaR, the loss at which that worst 5% begins, so the bar
-# always reaches past it. The open diamond is what a normal curve would predict.
-# A blue bar reaches more than 10% past its diamond: the real bad days were
-# clearly worse than the bell curve suggests. A grey bar is within 10%, which
-# one year of data cannot tell apart from a bell curve. The table adds **skew**
-# (negative: the big moves are mostly losses), **excess kurtosis** (above 0:
-# fat tails) and the **Jarque–Bera p-value** (below 0.05: the returns are
-# unlikely to come from a normal curve).
+# always reaches past it. The open diamond is what a normal curve with the
+# same mean and volatility would predict, and the table's `ES ÷ normal ES`
+# column divides the bar by the diamond. The **colour** answers a different
+# question: is the bell curve a fair description of this factor's daily
+# returns at all? A blue bar means the Jarque–Bera test says no (p below 0.05),
+# so treat its diamond as a rough guide only. A grey bar means one year of
+# data cannot reject a bell curve. A bar can sit close to its diamond and
+# still be blue: at 95%, ES hardly separates fat tails from thin ones (see the
+# caveats). The table adds **skew** (negative: the big moves are mostly
+# losses), **excess kurtosis** (above 0: fat tails) and the **Jarque–Bera
+# p-value**.
 #
 # **Caveats.**
 #
 # - At 95% with one year of data, the ES averages only about 13 days. One more
 #   crash day would change it a lot.
-# - The normal-curve benchmark uses the sample volatility, which fat tails
-#   themselves inflate. That makes the diamonds a little generous, so the
-#   ratio understates fat tails rather than overstating them.
+# - **A 95% ES ratio has low power as a fat-tail check.** For a Student-t with
+#   4 degrees of freedom the true ratio is only about 1.10, and in a one-year
+#   sample such a series shows a ratio above 1.1 less than half the time. So a
+#   ratio near 1 does not mean "bell-shaped": judge normality by the excess
+#   kurtosis and the Jarque–Bera p-value. Set `TAIL = 0.99` to look deeper
+#   into the tail, where fat tails do show (the same t gives about 1.39×), at
+#   the price of averaging only about 3 days.
+# - Jarque–Bera reacts to skew as well as kurtosis, and to big gains as well as
+#   big losses. A low p-value says the returns are not bell-shaped; it does not
+#   say that the loss tail in particular is fat. It also treats days as
+#   independent.
 # - These are one-day losses. A run of bad days (section 3.6) can lose far more.
 # - The numbers describe the past year, before costs. Tails in the next year
 #   can be fatter.
@@ -1471,13 +1532,18 @@ else:
 # are bigger than others (including calm and stormy spells), and when returns
 # are correlated from one day to the next, a move that tends to carry on or to
 # reverse. The plain t-test assumes neither. SurgeFlow's own gates run the same
-# kind of test (see the gate code `premium_hac_not_tested`). A t-statistic grows with √years, so the last column
-# says roughly how many years of data you would need for t ≈ 2 at today's ratio.
+# kind of test (see the gate code `premium_hac_not_tested`), so the table puts
+# SurgeFlow's premium verdict next to ours. The two can disagree: the API does
+# not say which sample, how many lags or what one- or two-sided rule its gate
+# uses, and it sends only the last year of returns. A t-statistic grows with
+# √years, so the `years for t ≈ 2` column says roughly how many years of data
+# you would need for t ≈ 2 at today's ratio.
 
 # %%
 if not HAVE_RETURNS:
     note("No published factor has a return series today, so there is nothing to annualise.")
 else:
+    gate_rows = factors.set_index("factor_id")
     score_rows = []
     for fid in IDS:
         r = returns[fid].dropna()
@@ -1485,12 +1551,18 @@ else:
         s = risk_stats(r)
         sr, se, lo, hi = sharpe_interval(r)
         test = hac_test(r)
+        codes = gate_codes(gate_rows.at[fid, "gate_reason"])      # SurgeFlow's premium verdict, from its gate codes
+        gate = ("failed" if "premium_not_significant_5pct" in codes else
+                "not tested" if "premium_hac_not_tested" in codes else
+                "cleared" if gate_rows.at[fid, "publish_state"] == "published" else "no code reported")
         score_rows.append({
             "factor_id": fid, "factor": NAME[fid], "days": len(r),
             "mean a year": s["mean_annual"], "CAGR": (1 + r).prod() ** (1 / years) - 1,
             "volatility a year": s["vol_annual"], "volatility drag": s["vol_annual"] ** 2 / 2,
             "Sharpe-like": sr, "standard error": se,
             "95% low": lo, "95% high": hi, "HAC t": test["t"], "p-value": test["p"],
+            "our HAC test (5%)": "significant" if test["p"] < 0.05 else "not significant",
+            "premium gate (SurgeFlow)": gate,
             "years for t ≈ 2": (2 / abs(sr)) ** 2 if sr != 0 else np.inf, "max drawdown": s["max_dd"]})
     score = pd.DataFrame(score_rows)
     years_used = score["days"].median() / TRADING_DAYS
@@ -1519,11 +1591,11 @@ else:
              if clear.empty else
              f"With {span} of data, only {len(clear)} of {len(score)} Sharpe-like ratios are clearly different "
              "from zero")
+    heading, top = chart_title(title, "Dot: yearly mean ÷ yearly volatility, before costs · whisker: 95% interval "
+                                      "(Mertens standard error, about ±2 ÷ √years)")
     fig.update_layout(
-        title=dict(text=title, subtitle=dict(
-            text="Dot: yearly mean ÷ yearly volatility, before costs · whisker: 95% interval "
-                 "(Mertens standard error, about ±2 ÷ √years)")),
-        height=190 + 58 * len(score), margin=dict(t=110, b=110, r=40), legend=BOTTOM_LEGEND, showlegend=True,
+        title=heading, height=top + 80 + 58 * len(score), margin=dict(t=top, b=110, r=40), legend=BOTTOM_LEGEND,
+        showlegend=True,
         xaxis=dict(title="Sharpe-like ratio (yearly)", zeroline=False),
         yaxis=dict(ticks="", categoryorder="array", categoryarray=score["factor"].tolist()[::-1]))   # ERP at the top
     fig.show()
@@ -1535,13 +1607,41 @@ else:
         "years for t ≈ 2": lambda v: "more than 100" if v > 100 else f"{v:.0f}"}).hide(axis="index"))
     print(f"HAC t-statistics use {hac_test(returns[IDS[0]])['lags']} Newey-West lags.")
 
+    # SurgeFlow's premium gate vs our own HAC test on the series the API sends.
+    cleared = score[score["premium gate (SurgeFlow)"] == "cleared"]
+    differ = cleared[cleared["our HAC test (5%)"] == "not significant"]
+    if cleared.empty:
+        print("No factor here has cleared SurgeFlow's premium gate, so there is no verdict to compare with.")
+    elif differ.empty:
+        print(f"SurgeFlow's premium gate cleared {and_list(CODE[f] for f in cleared['factor_id'])}, and our HAC "
+              "test agrees: each average return is significant at 5% on the one-year series.")
+    else:
+        if len(differ) == len(cleared) > 1:
+            found = (f"none of them significant at 5% (p from {differ['p-value'].min():.2f} to "
+                     f"{differ['p-value'].max():.2f})")
+        else:
+            found = (f"{and_list(CODE[f] for f in differ['factor_id'])} not significant at 5% "
+                     f"(p = {and_list(f'{p:.2f}' for p in differ['p-value'])})")
+        display(Markdown(
+            f"**Two verdicts on the same premium.** SurgeFlow's premium gate cleared "
+            f"{and_list(CODE[f] for f in cleared['factor_id'])}, but on the one-year `return_series` our two-sided "
+            f"HAC test finds {found}. Both can be right, because the API does not "
+            "say how its gate runs the test. It may use a longer history than the last year the API sends, a "
+            "different number of Newey–West lags, or a one-sided test (which halves the p-value). Read the gate "
+            "as SurgeFlow's claim, and this table as what the data you can see supports."))
+
 # %% [markdown]
 # **How to read this.** Each dot is a factor's Sharpe-like ratio; the whisker
 # is its 95% interval. A grey whisker crosses the zero line: the data cannot
 # tell that factor's true ratio apart from zero. A blue one stays clear of it. The table adds the
 # arithmetic mean, the CAGR and the volatility drag between them (largest for
 # the most volatile factor), the HAC t-statistic and its p-value, and the years
-# of data you would need for t ≈ 2 at the current ratio.
+# of data you would need for t ≈ 2 at the current ratio. `our HAC test (5%)`
+# turns that p-value into a verdict. `premium gate (SurgeFlow)` is SurgeFlow's
+# own verdict, read from the gate codes: *cleared* for a published factor.
+# When the two disagree, a note under the table says so and why that can
+# happen. The ✓ in section 3.2 is SurgeFlow's claim; this is the check you can
+# run yourself.
 #
 # **Caveats.**
 #
@@ -1738,13 +1838,14 @@ else:
         else:
             buy, sell = ("highest", "lowest") if long_is_high else ("lowest", "highest")
             title = f"{CODE[focus]} buys the {buy} {sig_noun} and shorts the {sell}, at ±{w:.2%} of capital each"
+    heading, top = chart_title(
+        title, f"{NAME[focus]} · preview of {len(longs) or len(show)} of the {n_leg:,} names "
+               f"{'in the index' if is_index else 'in each leg'} · holdings as of {meta['holdings_as_of']} · "
+               f"bars: signed weight · dots: {'the ranking signal' if has_signal else 'market cap'}",
+        extra_top=22)                                     # + room for the two panel titles
     fig.update_layout(
-        title=dict(text=title, subtitle=dict(
-            text=f"{NAME[focus]} · preview of {len(longs) or len(show)} of the {n_leg:,} names "
-                 f"{'in the index' if is_index else 'in each leg'} · holdings as of {meta['holdings_as_of']} · "
-                 "bars: signed weight · "
-                 f"dots: {'the ranking signal' if has_signal else 'market cap'}")),
-        height=170 + 27 * len(show), margin=dict(t=120, b=90, l=230), legend=BOTTOM_LEGEND, bargap=0.3,
+        title=heading, height=top + 50 + 27 * len(show), margin=dict(t=top, b=90, l=230), legend=BOTTOM_LEGEND,
+        bargap=0.3,
         showlegend=show["side"].nunique() > 1)            # one leg needs no legend: the title names it
     fig.show()
     display(show[["side", "ticker", "name", "sector", "weight", "leg_weight", "signal_value", "market_cap",
@@ -1865,15 +1966,15 @@ elif len(fetched) == 1:
              "(set COMPARE_MARKETS = True to add the other markets)")
     subtitle = "Gate verdict of each factor · hover a mark for its main reason"
 else:
-    top = per_market[per_market == per_market.max()].index.tolist()
+    leaders = per_market[per_market == per_market.max()].index.tolist()
     none_in = per_market[per_market == 0].index.tolist()
-    title = (f"{n_pub} of {n_pairs} factor-market pairs are published; most in {and_list(top)} "
-             f"({per_market.max()} of {len(factors)}{' each' if len(top) > 1 else ''})"
+    title = (f"{n_pub} of {n_pairs} factor-market pairs are published; most in {and_list(leaders)} "
+             f"({per_market.max()} of {len(factors)}{' each' if len(leaders) > 1 else ''})"
              + (f", none in {and_list(none_in)}" if none_in else ""))
     subtitle = f"Gate verdict of each factor in each market · published in every market: {and_list(everywhere)}"
+heading, top = chart_title(title, subtitle, extra_top=22)          # + room for the factor codes above the grid
 fig.update_layout(
-    title=dict(text=title, subtitle=dict(text=subtitle)),
-    height=200 + 52 * len(fetched), margin=dict(t=120, b=80, l=130, r=30), legend=BOTTOM_LEGEND,
+    title=heading, height=top + 80 + 52 * len(fetched), margin=dict(t=top, b=80, l=130, r=30), legend=BOTTOM_LEGEND,
     hovermode="closest",
     xaxis=dict(categoryorder="array", categoryarray=codes_order, side="top", showgrid=False, ticks="",
                tickfont=dict(size=13, color=INK), range=[-0.6, len(codes_order) - 0.4]),
@@ -2020,11 +2121,12 @@ else:
     fig.update_xaxes(type="date")                     # an empty panel cannot guess its axis type
     label_lowest_panels(fig, filled, rows, cols)
     hide_unused_panels(fig, len(fetched), rows, cols)
-    fig.update_layout(title=dict(text=title, subtitle=dict(
-                          text=f"{NAME.get(CROSS, code)}: value of 100 invested, each market on its own trading "
-                               "calendar · line colour = market · before costs · shared axes"
-                               f"<br>{window}panel titles: each market's own window")),
-                      height=250 * rows + 210, margin=dict(t=140, b=80), hovermode="x", legend=BOTTOM_LEGEND,
+    heading, top = chart_title(
+        title, f"{NAME.get(CROSS, code)}: value of 100 invested, each market on its own trading calendar · "
+               f"line colour = market · before costs · shared axes<br>{window}panel titles: each market's own window",
+        extra_top=22)                                         # + room for the panel titles
+    fig.update_layout(title=heading, height=top + 250 * rows + 70, margin=dict(t=top, b=80), hovermode="x",
+                      legend=BOTTOM_LEGEND,
                       showlegend=len(live) >= 2)              # one series needs no legend: the title names it
     fig.show()
 
@@ -2183,14 +2285,14 @@ else:
                   annotation_text=f"average factor {avg_vol:.1%}", annotation_position="top",
                   annotation_font=dict(size=11, color=INK_2))
     verdict_text = ("better than" if reached > bench * 1.02 else "short of" if reached < bench * 0.98 else "about")
+    heading, top = chart_title(
+        f"Mixing {len(IDS)} factors cut volatility to {ew_vol:.1%} a year, against {avg_vol:.1%} for the average "
+        f"factor ({reached:.2f}× less)",
+        f"Yearly volatility over the {len(aligned)} aligned days · the mix holds every published factor in equal "
+        f"weights<br>{bench:.2f}× if they were uncorrelated (√N = {np.sqrt(len(IDS)):.2f}× only when risks are "
+        f"equal), so the mix did {verdict_text} that", extra_top=16)     # + room for the "average factor" label
     fig.update_layout(
-        title=dict(text=f"Mixing {len(IDS)} factors cut volatility to {ew_vol:.1%} a year, against {avg_vol:.1%} "
-                        f"for the average factor ({reached:.2f}× less)",
-                   subtitle=dict(text=f"Yearly volatility over the {len(aligned)} aligned days · the mix holds every "
-                                      f"published factor in equal weights<br>{bench:.2f}× if they were uncorrelated "
-                                      f"(√N = {np.sqrt(len(IDS)):.2f}× only when risks are equal), so the mix did "
-                                      f"{verdict_text} that")),
-        height=190 + 50 * len(names), margin=dict(t=140, b=60, r=60),
+        title=heading, height=top + 50 + 50 * len(names), margin=dict(t=top, b=60, r=60),
         xaxis=dict(title="Volatility (% a year)", tickformat=".0%", rangemode="tozero",
                    range=[0, max(values) * 1.18]),
         yaxis=dict(autorange="reversed", ticks=""))
@@ -2257,7 +2359,7 @@ else:
                           "alpha t (HAC)": hac.tvalues["const"], "R²": hac.rsquared})
     betas = pd.DataFrame(beta_rows)
     clear = betas[(betas["95% low"] > 0) | (betas["95% high"] < 0)]
-    biggest = betas.loc[betas["beta"].abs().idxmax()]
+    NEUTRAL_BAND = 0.1                  # "close to market-neutral" only if every 95% interval sits inside ±0.1
 
     fig = go.Figure()
     fig.add_vline(x=0, line=dict(color=AXIS, width=1), layer="below")
@@ -2276,15 +2378,24 @@ else:
             customdata=part[["95% low", "95% high", "R²"]].to_numpy(),
             hovertemplate=("<b>%{y}</b><br>beta %{x:+.2f} (95%: %{customdata[0]:+.2f} to %{customdata[1]:+.2f})"
                            "<br>R² %{customdata[2]:.2f}<extra></extra>")))
-    title = ("No long-short factor has a market beta clearly different from zero: they are close to market-neutral"
-             if clear.empty else
-             f"{len(clear)} of {len(betas)} long-short factors carry a clear market beta; "
-             f"{biggest['factor'].split(' · ')[0]}'s is the strongest ({signed(biggest['beta'])})")
+    if clear.empty:                     # "cannot be told from 0" is not "near 0" when the intervals are wide
+        inside = bool(((betas["95% low"] >= -NEUTRAL_BAND) & (betas["95% high"] <= NEUTRAL_BAND)).all())
+        widest = float((betas["95% high"] - betas["95% low"]).max() / 2)
+        title = (f"No long-short factor's market beta can be told from zero, and every 95% interval sits inside "
+                 f"±{NEUTRAL_BAND:.1f}: they are close to market-neutral" if inside else
+                 f"No long-short factor's market beta can be told from zero with {len(aligned)} days "
+                 f"(widest 95% interval ±{widest:.2f})")
+    else:                               # name the strongest beta among the clear ones, never a grey dot
+        biggest = clear.loc[clear["beta"].abs().idxmax()]
+        title = (f"1 of {len(betas)} long-short factors carries a clear market beta: "
+                 f"{CODE[biggest['factor_id']]} ({signed(biggest['beta'])})" if len(clear) == 1 else
+                 f"{len(clear)} of {len(betas)} long-short factors carry a clear market beta; "
+                 f"{CODE[biggest['factor_id']]}'s is the strongest ({signed(biggest['beta'])})")
+    heading, top = chart_title(title, f"Slope of each factor's daily return on ERP's, {len(aligned)} aligned days · "
+                                      f"whisker: 95% interval with HAC (Newey–West, {lags} lags) standard errors")
     fig.update_layout(
-        title=dict(text=title, subtitle=dict(
-            text=f"Slope of each factor's daily return on ERP's, {len(aligned)} aligned days · whisker: 95% interval "
-                 f"with HAC (Newey–West, {lags} lags) standard errors")),
-        height=190 + 58 * len(betas), margin=dict(t=110, b=110, r=40), legend=BOTTOM_LEGEND, showlegend=True,
+        title=heading, height=top + 80 + 58 * len(betas), margin=dict(t=top, b=110, r=40), legend=BOTTOM_LEGEND,
+        showlegend=True,
         xaxis=dict(title="Market beta (factor move per 1% market move)", zeroline=False),
         yaxis=dict(ticks="", categoryorder="array", categoryarray=betas["factor"].tolist()[::-1]))
     fig.show()
@@ -2294,8 +2405,10 @@ else:
 
 # %% [markdown]
 # **How to read this.** Each dot is a factor's market beta, with its 95%
-# interval. A grey whisker crosses zero: the factor is market-neutral as far
-# as one year of data can tell. A blue one stays clear of zero. A clearly positive beta means the factor
+# interval. A grey whisker crosses zero: one year of data cannot tell that
+# factor's beta from zero. That makes it close to market-neutral only if the
+# whisker is also short; a long whisker means the data cannot say either way.
+# A blue whisker stays clear of zero. A clearly positive beta means the factor
 # tends to rise with the market: its long leg amplifies the market's moves more
 # than its short leg does (for SMB, that would be small stocks moving more than
 # the giants they are paired against). The table adds both standard errors.
@@ -2327,7 +2440,7 @@ else:
 #   momentum proxy) against its leg.
 # - Set `ROLL_DAYS = 21` for a twitchier one-month volatility, or `TAIL = 0.99`
 #   for a deeper tail (and see how few days that averages).
-# - Notebook 03's ML clusters describe similar styles (momentum, value, size)
+# - Notebook 02's ML clusters describe similar styles (momentum, value, size)
 #   from the stocks' side: compare a cluster's members with a factor's legs.
 #
 # ---

@@ -21,15 +21,17 @@ hash and cannot show it again.
 
 ## What the key can access
 
-The key unlocks 15 authenticated, read-only endpoints in four markets: `us`
+The key unlocks 13 authenticated, read-only endpoints in four markets: `us`
 (United States), `cn` (China), `jp` (Japan) and `hk` (Hong Kong). They cover:
 
 - identity, plan and usage;
 - the four-market summary, the market screen and the sector snapshot;
 - current-session turnover boards and momentum hotlists;
-- AI analyst ratings and the AI paper grade book;
 - ML clusters and institutional-holdings (whale) boards;
 - news, factor portfolios, daily Notes, the macro calendar and bond ETFs.
+
+The AI research committee is paused. Its endpoints, `/api/v1/ai/ratings` and
+`/api/v1/ai/grade-book`, are retired and answer HTTP 410.
 
 The live catalogue is authoritative for endpoints, plans, limits and response
 shapes:
@@ -62,19 +64,22 @@ preview to confirm that the key works and to look at the response shape.
 4. Choose any of the four supported markets.
 
 Then work through the notebook series, `00-setup-and-account` to
-`06-ml-lab`, listed in the repository README. Each endpoint section below
-names the notebook that teaches it. Colab runs in your browser, so you do not
-need to install Python.
+`05-ml-lab`, listed in the [README](../README.md#notebook-series). Each
+endpoint section below links to the notebook that teaches it. Colab runs in
+your browser, so you do not need to install Python.
 
 ### Path C: Google Sheets
 
 The included Apps Script wrapper refreshes current-session and hotlist tables
 for `us`, `cn`, `jp` and `hk`. The authenticated API and Colab notebooks
-support the same four markets.
+support the same four markets. The wrapper uses the keyless `/api/addin`
+endpoints, so it needs no API key.
 
 The Google Sheets add-on has been submitted for Google authentication and
 Workspace Marketplace review. It is **not yet available for public one-click
-installation**.
+installation**. Until then, add the Apps Script source to a Google Sheets copy
+of the starter workbook:
+[Use it today](../apps-script/README.md#use-it-today) has the steps.
 
 Current status:
 
@@ -179,8 +184,6 @@ names the main record list for each endpoint:
 |---|---|
 | `screen` | `payload.rows` |
 | `realtime`, `hotlist`, `sector` | `payload.data.rows` |
-| `ai/ratings` | `payload.data.names` |
-| `ai/grade-book` | `payload.data.rows` (positions) and `payload.data.decisions` |
 | `ml/clusters` | `payload.data.clusters` and `payload.data.anomaly_watch` |
 | `whales` | `payload.data.signal_board.signals` (a dict of boards) |
 | `news` | `payload.data.articles` |
@@ -279,7 +282,9 @@ The response never includes the secret.
   `referral_code`, `invite_url`, `referrals` and founding-member details. Do
   not print the whole object in a notebook, terminal or screenshot that you
   might share. Select the fields above instead.
-- Taught in: 00 Setup and account, and the 60-second quick start.
+- Taught in: [00 Setup and account](../notebooks/00-setup-and-account.ipynb),
+  and the
+  [60-second quick start](../notebooks/surgeflow-realtime-hotlist-60s.ipynb).
 
 ```bash
 curl -sS -H "Authorization: Bearer ${SURGEFLOW_API_KEY}" \
@@ -306,7 +311,7 @@ A four-market market-watch summary with freshness metadata and FX context.
   working live response; check it when the endpoint answers again. Each
   market's `total_turnover` is in local currency, so convert it before you
   compare markets.
-- Taught in: 00 Setup and account.
+- Taught in: [00 Setup and account](../notebooks/00-setup-and-account.ipynb).
 
 ```bash
 curl -sS -H "Authorization: Bearer ${SURGEFLOW_API_KEY}" \
@@ -349,7 +354,8 @@ change, turnover, market cap, trend, valuation and quality fields.
   `institutional_default`.
 - **Do not fetch every page.** The US screen holds about 3,300 stocks (33
   pages of 100). Fetch the first few pages of the largest companies.
-- Taught in: 01 Market boards. Used again in 06 ML lab.
+- Taught in: [01 Market boards](../notebooks/01-market-boards.ipynb). Used
+  again in [05 ML lab](../notebooks/05-ml-lab.ipynb).
 
 ```bash
 curl -sS -H "Authorization: Bearer ${SURGEFLOW_API_KEY}" \
@@ -385,8 +391,9 @@ with turnover per second, projected turnover and pace versus yesterday.
   currency) and `projected_vs_yesterday` (ratio). `intraday_return_pct` is
   measured differently from the screen's `change_pct`, so do not compare or
   combine the two.
-- Taught in: 01 Market boards and the 60-second quick start. Used again in
-  06 ML lab.
+- Taught in: [01 Market boards](../notebooks/01-market-boards.ipynb) and the
+  [60-second quick start](../notebooks/surgeflow-realtime-hotlist-60s.ipynb).
+  Used again in [05 ML lab](../notebooks/05-ml-lab.ipynb).
 
 ```bash
 curl -sS -H "Authorization: Bearer ${SURGEFLOW_API_KEY}" \
@@ -417,7 +424,8 @@ names.
   `rows: []`, `data_quality: "empty"` and
   `stale_reason: "no_current_hotlist_members"`. Several markets can be empty
   at once. Print a friendly message instead of raising.
-- Taught in: 01 Market boards and the 60-second quick start.
+- Taught in: [01 Market boards](../notebooks/01-market-boards.ipynb) and the
+  [60-second quick start](../notebooks/surgeflow-realtime-hotlist-60s.ipynb).
 
 ```bash
 curl -sS -H "Authorization: Bearer ${SURGEFLOW_API_KEY}" \
@@ -444,7 +452,7 @@ sector and industry means and a whale overlay.
   `industry_mean_1d` (cap-weighted means, fractions), `is_microcap`,
   `whale_fund_count`, `whale_trend` and `whale_confidence`. The sector means
   repeat on every row, so de-duplicate by `sector` to get the sector table.
-- Taught in: 01 Market boards.
+- Taught in: [01 Market boards](../notebooks/01-market-boards.ipynb).
 
 ```bash
 curl -sS -H "Authorization: Bearer ${SURGEFLOW_API_KEY}" \
@@ -456,72 +464,6 @@ rows = get("/api/v1/markets/us/sector")["data"]["rows"]
 sectors = {row["sector"]: row["sector_mean_1d"] for row in rows}
 for sector, mean in sorted(sectors.items(), key=lambda item: item[1]):
     print(f"{sector:<25} {mean:+.2%}")
-```
-
-### AI research council
-
-#### `GET /api/v1/ai/ratings`
-
-The AI analyst panel scoreboard for the US hotlist. It gives each name a
-composite score, plus a score and a comment from each analyst, paper long and
-short flags, tenure and stop states. This is research documentation, not
-investment advice.
-
-- Scope: `ai`. Query: `checkpoint` (default `latest`; also `morning`,
-  `midday`, `close`).
-- Records: `payload.data.names`, with `checkpoint_id`, `checkpoint_time` and
-  `as_of_date` beside it. Each name has `ticker`, `rank`, `composite_score`,
-  `long`, `short` and `per_analyst` (seat to `score` and `comment`).
-- **Check the meeting's age.** `latest` is the most recent meeting, which can
-  be days or weeks old. Compare `checkpoint_time` (UTC) with today before you
-  read the scores.
-- The analyst comments are member content. Read them in your own notebook, but
-  do not republish them.
-- Taught in: 02 AI research council.
-
-```bash
-curl -sS -H "Authorization: Bearer ${SURGEFLOW_API_KEY}" \
-  "https://stock-api-c4qdowjxva-uc.a.run.app/api/v1/ai/ratings?checkpoint=latest"
-```
-
-```python
-from datetime import datetime, timezone
-
-data = get("/api/v1/ai/ratings", checkpoint="latest")["data"]
-age = datetime.now(timezone.utc) - datetime.fromisoformat(data["checkpoint_time"])
-print(data["checkpoint_id"], data["as_of_date"], f"{age.days} days old")
-for name in data["names"][:5]:
-    print(name["ticker"], name["composite_score"], name["long"], name["short"])
-```
-
-#### `GET /api/v1/ai/grade-book`
-
-The deterministic paper book. A grade above 70 opens a LONG and a grade below
-30 opens a SHORT. Each position records its side-aware entry, exit and
-outcome, and the book includes today's gate decisions. This is research
-documentation, not investment advice.
-
-- Scope: `ai`. Query: `market` (default `us`) and `limit` (1 to 200,
-  default 80; caps `rows` only).
-- Records: positions at `payload.data.rows` (`ticker`, `side`, `status`,
-  `entry_price`, `exit_price`, `realized_return_pct` in percent, ...),
-  opener decisions at `payload.data.decisions` (`qualifies`,
-  `reject_reasons`). Read `payload.data.exit_contract` for the exit rule in
-  force before you chart stops or targets.
-- Taught in: 02 AI research council.
-
-```bash
-curl -sS -H "Authorization: Bearer ${SURGEFLOW_API_KEY}" \
-  "https://stock-api-c4qdowjxva-uc.a.run.app/api/v1/ai/grade-book?market=us&limit=80"
-```
-
-```python
-from collections import Counter
-
-data = get("/api/v1/ai/grade-book", market="us", limit=80)["data"]
-positions, decisions = data["rows"], data["decisions"]
-print(Counter(row["status"] for row in positions), "exit rule:", data["exit_contract"]["rule"])
-print(sum(decision["qualifies"] for decision in decisions), "of", len(decisions), "openers qualify today")
 ```
 
 ### ML market map and whales
@@ -537,7 +479,9 @@ analytics, not prediction.
   `payload.data.anomaly_watch`. Freshness is at `payload.data.run`
   (`as_of_date`, `stale`). `cluster_id` is an id, not a position: the ids skip
   numbers, and clusters are listed by size.
-- Taught in: 03 ML market map and whales. Used again in 06 ML lab.
+- Taught in:
+  [02 ML market map and whales](../notebooks/02-ml-map-and-whales.ipynb). Used
+  again in [05 ML lab](../notebooks/05-ml-lab.ipynb).
 
 ```bash
 curl -sS -H "Authorization: Bearer ${SURGEFLOW_API_KEY}" \
@@ -563,7 +507,9 @@ consensus, conviction, crowdedness, position deltas and network reads.
   date each row by its `as_of_date`. `quarter` is a free-text label whose
   format varies by market (`cn` mixes `2026-Q2` with fund-report titles; `jp`
   and `hk` carry a date), so do not group or parse by it.
-- Taught in: 03 ML market map and whales. Used again in 06 ML lab.
+- Taught in:
+  [02 ML market map and whales](../notebooks/02-ml-map-and-whales.ipynb). Used
+  again in [05 ML lab](../notebooks/05-ml-lab.ipynb).
 
 ```bash
 curl -sS -H "Authorization: Bearer ${SURGEFLOW_API_KEY}" \
@@ -593,7 +539,8 @@ The latest scored news articles, with sentiment, tickers and keywords.
   (`published_utc`, `sentiment_score`, and `tickers` and `keywords` as
   JSON-encoded strings that you decode with `json.loads`) have not been
   confirmed against a working live response; check them when articles return.
-- Taught in: 04 News, notes, macro and bonds.
+- Taught in:
+  [03 News, notes, macro and bonds](../notebooks/03-news-notes-macro-bonds.ipynb).
 
 ```bash
 curl -sS -H "Authorization: Bearer ${SURGEFLOW_API_KEY}" \
@@ -623,7 +570,8 @@ The complete daily research notes: the global note plus one note per market.
   `label`, `ok`, `headline`, plus tab-specific fields).
 - The notes are member content. Read them in your own notebook, but do not
   republish them.
-- Taught in: 04 News, notes, macro and bonds.
+- Taught in:
+  [03 News, notes, macro and bonds](../notebooks/03-news-notes-macro-bonds.ipynb).
 
 ```bash
 curl -sS -H "Authorization: Bearer ${SURGEFLOW_API_KEY}" \
@@ -650,7 +598,8 @@ consensus.
   `local_time`, `previous`, `consensus`, `unit` and `status` (`scheduled`, or
   `missing_consensus` when there is no consensus). `actual` and `surprise`
   (`actual - consensus`) stay null until the figure is released.
-- Taught in: 04 News, notes, macro and bonds.
+- Taught in:
+  [03 News, notes, macro and bonds](../notebooks/03-news-notes-macro-bonds.ipynb).
 
 ```bash
 curl -sS -H "Authorization: Bearer ${SURGEFLOW_API_KEY}" \
@@ -673,7 +622,8 @@ yields and credit spreads across the US credit and rates complex.
 - Records: `payload.data.data.etfs` (two `data` levels). Percent fields
   (`pct_change_1d`, `*_pct`, `expense_ratio`) are in percent, so 0.14 means
   0.14%. `aum` is in US dollars and `credit_spread_bps` in basis points.
-- Taught in: 04 News, notes, macro and bonds.
+- Taught in:
+  [03 News, notes, macro and bonds](../notebooks/03-news-notes-macro-bonds.ipynb).
 
 ```bash
 curl -sS -H "Authorization: Bearer ${SURGEFLOW_API_KEY}" \
@@ -701,8 +651,9 @@ being filtered out.
   listing the checks it has not passed, `stats` whose values are null
   (`n_obs: 0`) and an empty `return_series`. All seven can be blocked at the
   same time, so handle a release with no returns.
-- Taught in: 05 Factor portfolios. Used again in 06 ML lab (PCA on factor
-  returns).
+- Taught in: [04 Factor portfolios](../notebooks/04-factor-portfolios.ipynb).
+  Used again in [05 ML lab](../notebooks/05-ml-lab.ipynb) (a second PCA, run
+  only when factors are published).
 
 ```bash
 curl -sS -H "Authorization: Bearer ${SURGEFLOW_API_KEY}" \

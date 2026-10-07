@@ -73,8 +73,7 @@ function refreshMarket(market) {
     throw new Error('Unsupported market: ' + market);
   }
 
-  // 100 rows: the documented maximum for the realtime board's limit.
-  var realtime = fetchJson('/api/addin/realtime?market=' + encodeURIComponent(market) + '&limit=100');
+  var realtime = fetchJson('/api/addin/realtime?market=' + encodeURIComponent(market) + '&limit=1000');
   var hotlist = fetchJson('/api/addin/hotlist?market=' + encodeURIComponent(market));
 
   var ss = SpreadsheetApp.getActiveSpreadsheet();
@@ -116,16 +115,18 @@ function fetchJson(path) {
   return JSON.parse(response.getContentText());
 }
 
-// Freshness rows written above each table. A closed market returns its last
-// session, so always show when the data is from and why it may be stale or empty.
+// Three-row freshness block written above each table.
+// Columns A:B keep the original add-on layout (section, market_status,
+// market_quality). The starter workbook's Dashboard finds market_status and
+// market_quality by these labels and reads the first realtime row 5 rows below
+// "REALTIME TABLE", so do not rename these labels or add rows to the block.
+// Columns C:D show when the data is from and why it may be stale or empty:
+// a closed market returns its last session.
 function metaRows(payload, label) {
   return [
-    ['section', label],
-    ['market_status', scalar(payload.market_status)],
-    ['data_quality', scalar(payload.data_quality)],
-    ['stale_reason', scalar(payload.stale_reason)],
-    ['as_of_local', scalar(payload.as_of_local)],
-    ['as_of_utc', scalar(payload.as_of_utc)]
+    ['section', label, 'as_of_local', scalar(payload.as_of_local)],
+    ['market_status', scalar(payload.market_status), 'as_of_utc', scalar(payload.as_of_utc)],
+    ['market_quality', scalar(payload.data_quality), 'stale_reason', scalar(payload.stale_reason)]
   ];
 }
 
@@ -145,9 +146,10 @@ function scalar(value) {
 
 function writeSection(sheet, startRow, title, payload, cols) {
   var meta = metaRows(payload, title);
-  sheet.getRange(startRow, 1, meta.length, 2).setValues(meta);
+  sheet.getRange(startRow, 1, meta.length, 4).setValues(meta);
   sheet.getRange(startRow, 1, meta.length, 1).setFontWeight('bold');
-  sheet.getRange(startRow, 1, 1, 2).setBackground('#f8fafc');
+  sheet.getRange(startRow, 3, meta.length, 1).setFontWeight('bold');
+  sheet.getRange(startRow, 1, 1, 4).setBackground('#f8fafc');
 
   var headerRow = startRow + meta.length + 1;
   sheet.getRange(headerRow, 1, 1, cols.length).setValues([cols]);

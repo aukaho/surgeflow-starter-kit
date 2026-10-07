@@ -534,11 +534,12 @@ scope_matrix = pd.DataFrame({name: ["✓" if s in p["scopes"] else "·" for s in
 scope_matrix.T
 
 # %% [markdown]
-# ### 4.4 The 15 authenticated endpoints (tidy table)
+# ### 4.4 The authenticated endpoints (tidy table)
 #
 # `KIT_MAP` records which notebook of this kit teaches each endpoint (the first name in each
 # list) and which notebooks use it again. We join it to the catalogue, so a new endpoint shows up
-# as "not in the kit yet".
+# as "not in the kit yet". `RETIRED` marks endpoints the kit no longer calls: the AI research
+# committee is paused, and its two endpoints answer HTTP 410.
 
 # %%
 KIT_MAP = {
@@ -546,19 +547,21 @@ KIT_MAP = {
     "/api/v1/catalog": ["00-setup-and-account"],
     "/api/v1/me": ["00-setup-and-account"],
     "/api/v1/summary": ["00-setup-and-account"],
-    "/api/v1/markets/{market}/screen": ["01-market-boards", "06-ml-lab"],
-    "/api/v1/markets/{market}/realtime": ["01-market-boards", "06-ml-lab"],
+    "/api/v1/markets/{market}/screen": ["01-market-boards", "05-ml-lab"],
+    "/api/v1/markets/{market}/realtime": ["01-market-boards", "05-ml-lab"],
     "/api/v1/markets/{market}/hotlist": ["01-market-boards"],
-    "/api/v1/markets/{market}/sector": ["01-market-boards", "04-news-notes-macro-bonds"],
-    "/api/v1/ai/ratings": ["02-ai-research-council"],
-    "/api/v1/ai/grade-book": ["02-ai-research-council"],
-    "/api/v1/markets/{market}/ml/clusters": ["03-ml-map-and-whales", "06-ml-lab"],
-    "/api/v1/markets/{market}/whales": ["03-ml-map-and-whales", "06-ml-lab"],
-    "/api/v1/markets/{market}/news": ["04-news-notes-macro-bonds"],
-    "/api/v1/notes/daily": ["04-news-notes-macro-bonds"],
-    "/api/v1/macro/calendar": ["04-news-notes-macro-bonds"],
-    "/api/v1/bond/etfs": ["04-news-notes-macro-bonds"],
-    "/api/v1/markets/{market}/factor-portfolios": ["05-factor-portfolios", "06-ml-lab"],
+    "/api/v1/markets/{market}/sector": ["01-market-boards", "03-news-notes-macro-bonds"],
+    "/api/v1/markets/{market}/ml/clusters": ["02-ml-map-and-whales", "05-ml-lab"],
+    "/api/v1/markets/{market}/whales": ["02-ml-map-and-whales", "05-ml-lab"],
+    "/api/v1/markets/{market}/news": ["03-news-notes-macro-bonds"],
+    "/api/v1/notes/daily": ["03-news-notes-macro-bonds"],
+    "/api/v1/macro/calendar": ["03-news-notes-macro-bonds"],
+    "/api/v1/bond/etfs": ["03-news-notes-macro-bonds"],
+    "/api/v1/markets/{market}/factor-portfolios": ["04-factor-portfolios", "05-ml-lab"],
+}
+RETIRED = {
+    "/api/v1/ai/ratings": "retired: AI committee paused (HTTP 410)",
+    "/api/v1/ai/grade-book": "retired: AI committee paused (HTTP 410)",
 }
 
 # %% [markdown]
@@ -574,7 +577,7 @@ n_listed = len(endpoints)
 endpoints = endpoints.drop_duplicates(subset=["method", "path"]).reset_index(drop=True)
 n_long = int((endpoints["description"].str.len() > DESCRIPTION_CHARS).sum())
 endpoints["description"] = endpoints["description"].str.slice(0, DESCRIPTION_CHARS)
-endpoints["taught in"] = endpoints["path"].map(lambda p: KIT_MAP.get(p, ["not in the kit yet"])[0])
+endpoints["taught in"] = endpoints["path"].map(lambda p: KIT_MAP[p][0] if p in KIT_MAP else RETIRED.get(p, "not in the kit yet"))
 print(f"Listed: {n_listed} | duplicate (method, path) rows dropped: {n_listed - len(endpoints)} | "
       f"descriptions shortened to {DESCRIPTION_CHARS} characters: {n_long}")
 print(f"{len(endpoints)} authenticated endpoints; methods: {sorted(endpoints['method'].unique())}")
@@ -615,8 +618,8 @@ print("Scopes not on the free plan:", ", ".join(not_free) if not_free else "none
 # **How to read this**
 #
 # - Each row is a scope (a permission) and the endpoints it unlocks. `{m}` stands for a market code.
-# - Most scopes unlock one endpoint. `screen` also covers `sector`, `ai` covers ratings and the
-#   grade book, and `macro` covers the calendar and bond ETFs.
+# - Most scopes unlock one endpoint. `screen` also covers `sector`, and `macro` covers the calendar
+#   and bond ETFs. The `ai` scope belongs to the paused AI committee, whose endpoints are retired.
 # - The `free` column says whether a free key holds that scope. Section 5 checks the scopes of your
 #   own key.
 
@@ -634,8 +637,8 @@ print("records(example, 'realtime') ->", records(example, "realtime"))
 print("dig(example, 'data', 'rows') ->", dig(example, "data", "rows"), "(the same walk, by hand)")
 
 # %% [markdown]
-# Now compare the two sources, key by key. Two helper keys are companions of one catalogue
-# entry: `ai_grade_book_decisions` and `ml_anomalies` are the second list in their responses.
+# Now compare the two sources, key by key. One helper key is a companion of a catalogue entry:
+# `ml_anomalies` is the second list in the `ml/clusters` response.
 
 # %%
 def catalogue_paths(sentence: str) -> list[tuple]:
@@ -643,7 +646,7 @@ def catalogue_paths(sentence: str) -> list[tuple]:
     return [tuple(p.split(".")) for p in re.findall(r"payload\.([A-Za-z_][\w.]*\w)", sentence)]
 
 
-COMPANION = {"ai_grade_book_decisions": "ai_grade_book", "ml_anomalies": "ml_clusters"}
+COMPANION = {"ml_anomalies": "ml_clusters"}
 helper_groups = defaultdict(list)
 for key, path in RESPONSE_SHAPES.items():
     helper_groups[COMPANION.get(key, key)].append((key, path))
@@ -679,6 +682,8 @@ shapes
 # - **A matching path is not the whole story.** For `whales`, `payload.data.signal_board.signals`
 #   is a *dict of six boards*, not a list. So `records(payload, "whales")` returns `[]`, and the
 #   whales notebook loops over the boards instead.
+# - **Retired endpoints can linger in the catalogue.** While it still lists the AI committee's
+#   endpoints, `ai_ratings` and `ai_grade_book` read "catalogue only": the helper dropped them.
 # - **Two endpoints have no entry at all.** `/api/v1/me` is one flat object. `/api/v1/summary` is
 #   expected to keep one record per market at `payload.data.markets`. That path is not confirmed
 #   yet (see section 6), so the notebook checks it before using it.

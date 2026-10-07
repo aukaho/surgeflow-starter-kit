@@ -16,11 +16,13 @@ The full key is displayed once. Keep it private.
 
 Current API offer
 
-- 15 authenticated, read-only endpoint families
+- 13 authenticated, read-only endpoint families
 - Four markets: us, cn, jp, hk
 - 2,000 requests per day per key
 - 180 requests per minute per key
-- Market, AI, ML, whale, sector, news, factor, Notes, macro, and bond research
+- Market, ML, whale, sector, news, factor, Notes, macro, and bond research
+- The AI research committee is paused; /api/v1/ai/ratings and
+  /api/v1/ai/grade-book are retired (HTTP 410)
 
 The live catalogue is authoritative:
 https://stock-api-c4qdowjxva-uc.a.run.app/api/v1/catalog
@@ -57,8 +59,6 @@ GET /api/v1/summary
 GET /api/v1/markets/{market}/screen
 GET /api/v1/markets/{market}/realtime
 GET /api/v1/markets/{market}/hotlist
-GET /api/v1/ai/ratings
-GET /api/v1/ai/grade-book
 GET /api/v1/markets/{market}/ml/clusters
 GET /api/v1/markets/{market}/whales
 GET /api/v1/markets/{market}/sector

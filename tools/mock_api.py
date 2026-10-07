@@ -4,7 +4,7 @@ Patches requests.Session.request so notebook code runs unchanged while the
 responses come from tests/fixtures/*.json. Fixture lookup for a request path:
 
     /api/v1/markets/{m}/ml/clusters  -> ml_clusters_{m}.json, else ml_clusters.json
-    /api/v1/ai/grade-book            -> ai_grade_book.json
+    /api/v1/macro/calendar?market=jp -> macro_calendar_jp.json, else macro_calendar.json
     /api/v1/notes/daily              -> notes_daily.json
 
 When only the market-agnostic fixture exists, every "market" field equal to

@@ -3070,7 +3070,7 @@ else:
 #   check that their numbers match the cluster's traits.
 # - Re-run the clusters cell tomorrow and compare `changed_group` with today's:
 #   do the same stocks keep switching?
-# - To compare your own clustering with SurgeFlow's, open notebook 06 (ML lab):
+# - To compare your own clustering with SurgeFlow's, open notebook 05 (ML lab):
 #   it clusters the screen's features with k-means and compares the result
 #   with the labelled stocks using the adjusted Rand index (ARI), but only when
 #   at least `MIN_LABELLED` of them are in its sample. The guard matters: a
