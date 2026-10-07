@@ -1,0 +1,256 @@
+{
+ "ok": true,
+ "schema_version": "surgeflow.public_api.v1",
+ "status": "beta",
+ "base_url": "https://stock-api-c4qdowjxva-uc.a.run.app",
+ "website_proxy_url": "https://surgeflows.capital",
+ "website_proxy_release_note": "Use base_url for external scripts, notebooks, and third-party browser apps. The website_proxy_url is reserved for same-origin SurgeFlow pages and may not send third-party CORS headers.",
+ "authentication": {
+  "recommended": "Authorization: Bearer sf_live_...",
+  "also_supported": [
+   "X-API-Key",
+   "X-SurgeFlow-API-Key",
+   "apiKey query parameter"
+  ],
+  "note": "Use query parameters only for quick tests; headers avoid leaking keys into logs and URLs."
+ },
+ "rate_limit_store": {
+  "mode": "distributed_control_bucket",
+  "fallback": "memory_free_internal_only",
+  "partner_unavailable_behavior": "fail_closed_503",
+  "note": "Free and internal quotas use memory fallback for availability. Partner quotas require the distributed control bucket and fail closed if it is unavailable."
+ },
+ "membership_record": {
+  "status": "enabled",
+  "key_field": "member_id",
+  "storage": "BigQuery api_members ledger plus api_keys.member_id",
+  "self_serve_fields": [
+   "name",
+   "email",
+   "accepted_terms",
+   "optional_attribution"
+  ],
+  "note": "The public beta is free and does not require paid membership setup."
+ },
+ "plans": {
+  "free": {
+   "daily_limit": 2000,
+   "minute_limit": 180,
+   "scopes": [
+    "summary",
+    "screen",
+    "realtime",
+    "hotlist",
+    "ai",
+    "ml",
+    "whales",
+    "news",
+    "notes",
+    "macro",
+    "factors"
+   ],
+   "issuance_state": "enabled"
+  },
+  "partner": {
+   "daily_limit": 100,
+   "minute_limit": 10,
+   "scopes": [
+    "summary"
+   ],
+   "issuance_state": "disabled_requires_separate_billed_project"
+  },
+  "internal": {
+   "daily_limit": 10000,
+   "minute_limit": 300,
+   "scopes": [
+    "summary",
+    "screen",
+    "realtime",
+    "hotlist",
+    "ai",
+    "ml",
+    "whales",
+    "news",
+    "notes",
+    "macro",
+    "factors",
+    "admin"
+   ],
+   "issuance_state": "enabled"
+  }
+ },
+ "open_endpoints": [
+  {
+   "method": "GET",
+   "path": "/api/v1/health",
+   "auth": "none",
+   "description": "Operational health and data-quality disclosures."
+  },
+  {
+   "method": "GET",
+   "path": "/api/v1/catalog",
+   "auth": "none",
+   "description": "Stable endpoint catalogue, plans, limits, and schemas."
+  },
+  {
+   "method": "POST",
+   "path": "/api/v1/keys",
+   "auth": "name_email_terms",
+   "description": "Self-serve free beta API key. Requires email and terms agreement; name optional."
+  }
+ ],
+ "authenticated_endpoints": [
+  {
+   "method": "GET",
+   "path": "/api/v1/me",
+   "scope": "any",
+   "description": "Inspect the active API key — plan, scopes, and rolling usage (used_7d/used_30d) — without exposing its secret."
+  },
+  {
+   "method": "GET",
+   "path": "/api/v1/summary",
+   "scope": "summary",
+   "description": "Four-market market-watch summary, freshness metadata, and FX context."
+  },
+  {
+   "method": "GET",
+   "path": "/api/v1/markets/{market}/screen",
+   "scope": "screen",
+   "description": "Paged institutional market screen for us/cn/jp/hk."
+  },
+  {
+   "method": "GET",
+   "path": "/api/v1/markets/{market}/realtime",
+   "scope": "realtime",
+   "description": "Spreadsheet-safe realtime turnover board."
+  },
+  {
+   "method": "GET",
+   "path": "/api/v1/markets/{market}/hotlist",
+   "scope": "hotlist",
+   "description": "Spreadsheet-safe momentum hotlist."
+  },
+  {
+   "method": "GET",
+   "path": "/api/v1/ai/ratings",
+   "scope": "ai",
+   "description": "AI analyst panel scoreboard for the US hotlist: per-ticker composite scores, per-analyst scores and comments, paper long/short flags, tenure, and stop states. Research documentation, not investment advice."
+  },
+  {
+   "method": "GET",
+   "path": "/api/v1/ai/grade-book",
+   "scope": "ai",
+   "description": "The sole deterministic paper book: strict score >70 LONG and <30 SHORT positions with side-aware entry, stop, take-profit, outcomes, and daily six-area rationale gate decisions. Research documentation, not investment advice."
+  },
+  {
+   "method": "GET",
+   "path": "/api/v1/markets/{market}/ml/clusters",
+   "scope": "ml",
+   "description": "Latest ML clustering run: cluster profiles, sector mix, representative tickers, anomaly watch, and stability diagnostics. Descriptive analytics, not prediction."
+  },
+  {
+   "method": "GET",
+   "path": "/api/v1/markets/{market}/whales",
+   "scope": "whales",
+   "description": "Institutional-holdings signal board: consensus, conviction, crowdedness, position deltas, and network reads from disclosure filings."
+  },
+  {
+   "method": "GET",
+   "path": "/api/v1/markets/{market}/sector",
+   "scope": "screen",
+   "description": "Compact sector snapshot: per-ticker daily change with market-cap-weighted sector and industry means plus whale overlay."
+  },
+  {
+   "method": "GET",
+   "path": "/api/v1/markets/{market}/news",
+   "scope": "news",
+   "description": "Latest scored news articles with sentiment, tickers, and keywords. Query: ticker, sentiment, limit (max 50)."
+  },
+  {
+   "method": "GET",
+   "path": "/api/v1/markets/{market}/factor-portfolios",
+   "scope": "factors",
+   "description": "Canonical ERP-to-LIQ pure-factor portfolios: signed holdings weights, expected-shortfall statistics, aligned correlations, and return series; gate state is disclosed rather than used as a row filter."
+  },
+  {
+   "method": "GET",
+   "path": "/api/v1/notes/daily",
+   "scope": "notes",
+   "description": "The complete daily research notes: per-market sections plus the global note. Query: market (default all), as_of_date."
+  },
+  {
+   "method": "GET",
+   "path": "/api/v1/macro/calendar",
+   "scope": "macro",
+   "description": "Per-market macro release calendar with consensus, actuals, and surprises. Query: market, days (max 60)."
+  },
+  {
+   "method": "GET",
+   "path": "/api/v1/bond/etfs",
+   "scope": "macro",
+   "description": "Bond ETF board: AUM, expense, last close, and 1y/YTD returns for the credit and rates complex."
+  }
+ ],
+ "response_shapes": {
+  "screen": "rows are returned at payload.rows",
+  "realtime": "rows are returned at payload.data.rows",
+  "hotlist": "rows are returned at payload.data.rows",
+  "addin": "rows are returned at payload.rows",
+  "ai_ratings": "the scoreboard is returned at payload.data.names",
+  "ai_grade_book": "positions at payload.data.rows, opener decisions at payload.data.decisions",
+  "ml_clusters": "clusters at payload.data.clusters, anomalies at payload.data.anomaly_watch",
+  "whales": "boards at payload.data.signal_board.signals",
+  "sector": "rows are returned at payload.data.rows",
+  "news": "articles are returned at payload.data.articles",
+  "factor_portfolios": "factors at payload.data.data.factors",
+  "notes": "notes are returned at payload.data.notes",
+  "macro_calendar": "events at payload.data.data.events",
+  "bond_etfs": "ETF rows at payload.data.data.etfs"
+ },
+ "spreadsheet_addin_namespace": {
+  "base_url": "https://stock-api-c4qdowjxva-uc.a.run.app",
+  "authentication": "none",
+  "purpose": "Google Sheets add-on only. It is separate from the key-gated public API.",
+  "endpoints": [
+   {
+    "method": "GET",
+    "path": "/api/addin/realtime",
+    "description": "Spreadsheet-safe realtime turnover board. Query: market, limit."
+   },
+   {
+    "method": "GET",
+    "path": "/api/addin/hotlist",
+    "description": "Spreadsheet-safe momentum hotlist. Query: market."
+   }
+  ],
+  "response_shape": "rows are returned at payload.rows"
+ },
+ "admin_endpoints": [
+  {
+   "method": "POST",
+   "path": "/api/v1/admin/keys",
+   "description": "Generate a new hashed API key. Requires X-SurgeFlow-Admin-Token."
+  },
+  {
+   "method": "GET",
+   "path": "/api/v1/admin/keys",
+   "description": "List key metadata without secrets. Requires X-SurgeFlow-Admin-Token."
+  },
+  {
+   "method": "GET",
+   "path": "/api/v1/admin/members",
+   "description": "List latest self-serve member records. Requires X-SurgeFlow-Admin-Token."
+  },
+  {
+   "method": "POST",
+   "path": "/api/v1/admin/keys/{key_id}/revoke",
+   "description": "Revoke an API key. Requires X-SurgeFlow-Admin-Token."
+  }
+ ],
+ "markets": [
+  "us",
+  "cn",
+  "jp",
+  "hk"
+ ]
+}
