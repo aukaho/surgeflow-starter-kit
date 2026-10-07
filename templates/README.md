@@ -1,6 +1,7 @@
 # Templates
 
-Download the current SurgeFlow Google Sheets starter workbook from the website:
+The Google Sheets starter workbook is hosted on the website and is not stored
+in this repository. Download the current version here:
 
 https://surgeflows.capital/templates/surgeflow-google-sheets-starter.xlsx
 
@@ -15,10 +16,11 @@ The workbook includes:
 - `Surgeflow_US` sample output matching the Google Sheets add-on shape
 - `API Quickstart` endpoint map
 
-The authenticated API, Colab notebook, and included Sheets wrapper source
-support `us`, `cn`, `jp`, `hk`, `tw`, `kr`, `uk`, and `in`. The Marketplace
-listing remains under review and must be synchronized with this source before
-resubmission.
+The authenticated API, the Colab notebooks and the included Sheets wrapper
+source support four markets: `us`, `cn`, `jp` and `hk`. The Google Sheets
+add-on is still under Google Workspace Marketplace review and cannot be
+installed yet. Until then, use the workbook with the Apps Script source in
+[`apps-script/`](../apps-script/README.md).
 
 Create a free beta key:
 

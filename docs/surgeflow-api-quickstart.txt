@@ -17,13 +17,13 @@ The full key is displayed once. Keep it private.
 Current API offer
 
 - 15 authenticated, read-only endpoint families
-- Eight markets: us, cn, jp, hk, tw, kr, uk, in
+- Four markets: us, cn, jp, hk
 - 2,000 requests per day per key
 - 180 requests per minute per key
 - Market, AI, ML, whale, sector, news, factor, Notes, macro, and bond research
 
 The live catalogue is authoritative:
-https://surgeflows.capital/api/v1/catalog
+https://stock-api-c4qdowjxva-uc.a.run.app/api/v1/catalog
 
 Google Colab
 
@@ -31,17 +31,15 @@ Google Colab
    https://colab.research.google.com/github/aukaho/surgeflow-starter-kit/blob/main/notebooks/surgeflow-realtime-hotlist-60s.ipynb
 2. Run the cells from top to bottom.
 3. Paste your sf_live_ key when asked.
-4. Select any of the eight supported markets.
+4. Select any of the four supported markets.
 
 Google Sheets
 
 The included Apps Script wrapper, authenticated API, and Colab notebook support
-us, cn, jp, hk, tw, kr, uk, and in.
+us, cn, jp, and hk.
 
 The Google Sheets add-on has been submitted for Google authentication and
-Workspace Marketplace review. It is not yet publicly installable. Synchronize
-the included source into the linked Apps Script project and re-run the
-eight-market contract test before resubmission.
+Workspace Marketplace review. It is not yet publicly installable.
 
 Status:
 https://surgeflows.capital/membership/google-sheets
@@ -86,12 +84,15 @@ curl -H "Authorization: Bearer ${SURGEFLOW_API_KEY}" \
 curl -H "Authorization: Bearer ${SURGEFLOW_API_KEY}" \
   "https://stock-api-c4qdowjxva-uc.a.run.app/api/v1/markets/us/realtime?limit=25"
 
-Python example:
+Python example (set the SURGEFLOW_API_KEY environment variable first; never
+paste the key into your code):
+
+import os
 
 import requests
 
 base_url = "https://stock-api-c4qdowjxva-uc.a.run.app"
-api_key = "sf_live_..."  # use only in a private notebook or environment variable
+api_key = os.environ["SURGEFLOW_API_KEY"]
 headers = {"Authorization": f"Bearer {api_key}"}
 
 response = requests.get(
@@ -101,12 +102,12 @@ response = requests.get(
 )
 response.raise_for_status()
 rows = response.json()["data"]["rows"]
-print(rows[:5])
+print(rows[:5])  # an empty list is normal: a hotlist often has no names
 
 Data boundary
 
 The endpoint name realtime describes a current-session board. SurgeFlow does
-not claim a live-tick feed across all eight markets. Historical, factor, and
+not claim a live-tick feed across all four markets. Historical, factor, and
 fundamental outputs may be current to the last completed market session.
 Inspect freshness and evidence fields before use.
 

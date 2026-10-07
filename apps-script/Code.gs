@@ -1,5 +1,5 @@
 const SURGEFLOW_API_BASE = 'https://stock-api-c4qdowjxva-uc.a.run.app';
-const MARKETS = ['us', 'cn', 'jp', 'hk', 'uk', 'in'];
+const MARKETS = ['us', 'cn', 'jp', 'hk'];
 
 const HOTLIST_COLS = [
   'hotlist_rank', 'market', 'ticker', 'company_name', 'industry', 'price',
@@ -21,8 +21,6 @@ function onOpen() {
     .addItem('Refresh CN', 'refreshCN')
     .addItem('Refresh JP', 'refreshJP')
     .addItem('Refresh HK', 'refreshHK')
-    .addItem('Refresh UK', 'refreshUK')
-    .addItem('Refresh IN', 'refreshIN')
     .addToUi();
 }
 
@@ -60,8 +58,6 @@ function refreshUS() { return refreshMarket('us'); }
 function refreshCN() { return refreshMarket('cn'); }
 function refreshJP() { return refreshMarket('jp'); }
 function refreshHK() { return refreshMarket('hk'); }
-function refreshUK() { return refreshMarket('uk'); }
-function refreshIN() { return refreshMarket('in'); }
 
 function refreshFromCard(e) {
   var market = e && e.parameters && e.parameters.market ? e.parameters.market : 'us';
@@ -77,7 +73,8 @@ function refreshMarket(market) {
     throw new Error('Unsupported market: ' + market);
   }
 
-  var realtime = fetchJson('/api/addin/realtime?market=' + encodeURIComponent(market) + '&limit=1000');
+  // 100 rows: the documented maximum for the realtime board's limit.
+  var realtime = fetchJson('/api/addin/realtime?market=' + encodeURIComponent(market) + '&limit=100');
   var hotlist = fetchJson('/api/addin/hotlist?market=' + encodeURIComponent(market));
 
   var ss = SpreadsheetApp.getActiveSpreadsheet();
@@ -98,7 +95,11 @@ function refreshMarket(market) {
     realtime_status: realtime.market_status || '',
     hotlist_status: hotlist.market_status || '',
     realtime_quality: realtime.data_quality || '',
-    hotlist_quality: hotlist.data_quality || ''
+    hotlist_quality: hotlist.data_quality || '',
+    realtime_as_of: realtime.as_of_local || realtime.as_of_utc || '',
+    hotlist_as_of: hotlist.as_of_local || hotlist.as_of_utc || '',
+    realtime_stale_reason: realtime.stale_reason || '',
+    hotlist_stale_reason: hotlist.stale_reason || ''
   };
 }
 
@@ -115,11 +116,16 @@ function fetchJson(path) {
   return JSON.parse(response.getContentText());
 }
 
+// Freshness rows written above each table. A closed market returns its last
+// session, so always show when the data is from and why it may be stale or empty.
 function metaRows(payload, label) {
   return [
     ['section', label],
     ['market_status', scalar(payload.market_status)],
-    ['market_quality', scalar(payload.data_quality)]
+    ['data_quality', scalar(payload.data_quality)],
+    ['stale_reason', scalar(payload.stale_reason)],
+    ['as_of_local', scalar(payload.as_of_local)],
+    ['as_of_utc', scalar(payload.as_of_utc)]
   ];
 }
 

@@ -42,6 +42,7 @@
         background: #f3f4f6;
         padding: 10px;
         color: #111827;
+        white-space: pre-line;
       }
     </style>
   </head>
@@ -53,8 +54,6 @@
       <option value="cn">CN</option>
       <option value="jp">JP</option>
       <option value="hk">HK</option>
-      <option value="uk">UK</option>
-      <option value="in">IN</option>
     </select>
     <button id="refresh">Refresh</button>
     <div id="status" class="status">Ready.</div>
@@ -68,10 +67,15 @@
         google.script.run
           .withSuccessHandler((result) => {
             btn.disabled = false;
-            status.textContent =
-              'section | market_status | market_quality\n' +
-              'HOTLIST | ' + result.hotlist_status + ' | ' + result.hotlist_quality + '\n' +
-              'REALTIME TABLE | ' + result.realtime_status + ' | ' + result.realtime_quality;
+            let text =
+              'section | market_status | data_quality | as_of\n' +
+              'HOTLIST | ' + result.hotlist_status + ' | ' + result.hotlist_quality + ' | ' + result.hotlist_as_of + '\n' +
+              'REALTIME TABLE | ' + result.realtime_status + ' | ' + result.realtime_quality + ' | ' + result.realtime_as_of;
+            if (result.hotlist_quality === 'empty') {
+              text += '\nThe hotlist is empty right now (' + (result.hotlist_stale_reason || 'no qualifying names') +
+                '). That is normal, not an error.';
+            }
+            status.textContent = text;
           })
           .withFailureHandler((error) => {
             btn.disabled = false;
