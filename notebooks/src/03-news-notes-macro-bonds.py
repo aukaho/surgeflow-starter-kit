@@ -971,11 +971,16 @@ else:
 # note (FX, bonds, a key event, news and the four markets' leaders) and one
 # note per market. A market note has eight or nine sections, each named by its
 # `tab` and `label`: price momentum, turnover surge, market structure, whales,
-# fundamental valuation, macro risk, the ML market map, the AI team (US only)
-# and news & sentiment. Every section has a `headline`; depending on the tab it
-# adds `lines` (extra sentences), `top_rows` (the stocks behind a candidate
-# headline), `articles` (news samples) or `scores`. Each note also carries
-# `copy_markdown`, a ready-to-paste Markdown version with tables.
+# fundamental valuation, macro risk, the ML market map, the AI Analyst Team
+# (US only) and news & sentiment. Every section has a `headline`; depending on
+# the tab it adds `lines` (extra sentences), `top_rows` (the stocks behind a
+# candidate headline), `articles` (news samples) or `scores`. Each note also
+# carries `copy_markdown`, a ready-to-paste Markdown version with tables.
+#
+# **The AI Analyst Team section reports on SurgeFlow's AI research committee,
+# which is paused.** Its two endpoints (`/api/v1/ai/ratings` and
+# `/api/v1/ai/grade-book`) are retired (HTTP 410) and this kit no longer calls
+# them. Do not read that section as current research.
 #
 # **Member content.** On surgeflows.capital the Daily Notes sit behind the
 # member sign-in. Through the API you need a key with the `notes` scope (free
@@ -1126,10 +1131,13 @@ elif to_render.empty:
                      f"{NOTES_MARKET!r}). Set `RENDER_ALL_NOTES = True` to render the notes that did come back."))
 for note in to_render.itertuples():
     ok = sections.loc[sections["market"] == note.market, "ok"].astype(bool)
+    has_ai = (sections.loc[sections["market"] == note.market, "tab"] == "ai_agents").any()
     display(Markdown(quote_markdown(note.copy_markdown)))
     display(Markdown(f"*{NOTE_NAMES.get(note.market, note.market)} note · **{note.words} words** (tables included) · "
                      f"{int(ok.sum())} of {len(ok)} sections available · generated {note.generated_at:%Y-%m-%d %H:%M} UTC · "
-                     f"[open on the website]({note.website_url})*"))
+                     f"[open on the website]({note.website_url})*"
+                     + (" · *its AI Analyst Team section reports on the AI research committee, which is paused*"
+                        if has_ai else "")))
 if not notes.empty:
     hidden = len(notes) - len(to_render)
     display(Markdown((f"> {hidden} other note(s) not rendered (`RENDER_ALL_NOTES = False`). " if hidden else "> ")
@@ -2243,6 +2251,13 @@ else:
 # `latest_bar_date` (the last daily price) and `treasury_curve_date` (the
 # Treasury curve used for the spread) ourselves.
 #
+# **The two dates can differ.** `treasury_curve_date` can be older than
+# `latest_bar_date` because the data provider publishes Treasury curve values
+# later than it publishes prices. On 7 October 2026, for example, the provider
+# had not yet published curve values after 2 October, so the spreads used the
+# 2 October curve while the price bars were newer. The cell below prints both
+# dates and the gap between them, so you can see which curve the spreads use.
+#
 # One definition is missing. The API does not say whether `return_1y_pct` and
 # `return_ytd_pct` include **distributions** (the interest a bond fund pays
 # out). A *total* return includes them; a *price* return does not. For bond
@@ -2270,6 +2285,16 @@ elif bonds_raw.empty:
 else:
     print(f"Latest price bars: {bonds_raw['latest_bar_date'].min()} to {bonds_raw['latest_bar_date'].max()}; "
           f"Treasury curve date: {', '.join(sorted(set(bonds_raw['treasury_curve_date'].astype(str))))}.")
+    curve_lag = (pd.to_datetime(bonds_raw["latest_bar_date"], errors="coerce")
+                 - pd.to_datetime(bonds_raw["treasury_curve_date"], errors="coerce")).dt.days
+    lagged = curve_lag[curve_lag > 0]
+    if not lagged.empty:
+        span = f"{int(lagged.min())}" if lagged.min() == lagged.max() else f"{int(lagged.min())} to {int(lagged.max())}"
+        print(f"For {len(lagged)} of {int(curve_lag.notna().sum())} funds the Treasury curve date is {span} calendar "
+              "day(s) before the latest price bar. The data provider publishes Treasury curve values later than "
+              "prices, so those spreads use the most recent curve it has published (treasury_curve_date).")
+    elif curve_lag.eq(0).all():
+        print("Every fund's Treasury curve date matches its latest price bar.")
 
 # %% [markdown]
 # **Raw preview.**
@@ -2559,9 +2584,10 @@ else:
 #
 # - `credit_spread_bps` can be negative (for AGG and several investment-grade
 #   funds). The SEC yield and the matched Treasury yield are measured in
-#   different ways and on different dates (`treasury_curve_date`), and AGG holds
-#   Treasuries itself. Read the spread as a rough gauge, not a precise price of
-#   credit risk.
+#   different ways and on different dates (`treasury_curve_date`, which can be
+#   a few days older than `latest_bar_date` because the provider publishes
+#   Treasury curve values later than prices), and AGG holds Treasuries itself.
+#   Read the spread as a rough gauge, not a precise price of credit risk.
 # - The board covers ten US funds only: it describes the US credit and rates
 #   complex, not every bond market.
 # - Fund metadata (AUM, fees, NAV) comes from a quote provider (`*_source`) and

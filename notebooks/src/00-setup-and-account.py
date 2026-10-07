@@ -601,16 +601,22 @@ free_scopes = set(free["scopes"])
 scope_view = endpoints.assign(
     short=endpoints["path"].str.replace("/api/v1/", "", regex=False).str.replace("markets/{market}/", "{m}/", regex=False),
     in_free=endpoints["scope"].isin(free_scopes | {"any"}),
+    retired=endpoints["path"].isin(RETIRED),
 )
 by_scope = (scope_view.groupby("scope", as_index=False)
-            .agg(endpoints=("path", "size"), names=("short", " · ".join), in_free=("in_free", "all"))
+            .agg(endpoints=("path", "size"), names=("short", " · ".join), in_free=("in_free", "all"),
+                 retired=("retired", "all"))
             .sort_values(["endpoints", "scope"], ascending=[False, True]).reset_index(drop=True))
-n_free = int(scope_view["in_free"].sum())
-print(f"Free keys can call {n_free} of {len(endpoints)} authenticated endpoints, spread over {len(by_scope)} scopes. "
-      "/me accepts any valid key (scope “any”).")
-not_free = by_scope.loc[~by_scope["in_free"], "scope"].tolist()
+n_retired = int(scope_view["retired"].sum())
+n_free = int((scope_view["in_free"] & ~scope_view["retired"]).sum())
+print(f"Free keys can call {n_free} of {len(endpoints) - n_retired} current authenticated endpoints, "
+      f"spread over {int((~by_scope['retired']).sum())} scopes. /me accepts any valid key (scope “any”).")
+if n_retired:
+    print(f"Not counted: {n_retired} retired AI endpoints (AI committee paused, HTTP 410; the kit no longer calls them).")
+not_free = by_scope.loc[~by_scope["in_free"] & ~by_scope["retired"], "scope"].tolist()
 print("Scopes not on the free plan:", ", ".join(not_free) if not_free else "none")
-(by_scope.assign(free=by_scope["in_free"].map({True: "✓ free", False: "✕ not on free"}))
+(by_scope.assign(free=[("retired (HTTP 410)" if r else "✓ free" if f else "✕ not on free")
+                       for f, r in zip(by_scope["in_free"], by_scope["retired"])])
  [["scope", "endpoints", "free", "names"]]
  .rename(columns={"names": "endpoint paths ({m} = market)"}))
 
@@ -682,8 +688,9 @@ shapes
 # - **A matching path is not the whole story.** For `whales`, `payload.data.signal_board.signals`
 #   is a *dict of six boards*, not a list. So `records(payload, "whales")` returns `[]`, and the
 #   whales notebook loops over the boards instead.
-# - **Retired endpoints can linger in the catalogue.** While it still lists the AI committee's
-#   endpoints, `ai_ratings` and `ai_grade_book` read "catalogue only": the helper dropped them.
+# - **Retired endpoints can linger in the catalogue.** While it still lists the paused AI
+#   committee's endpoints, `ai_ratings` and `ai_grade_book` read "catalogue only": the helper
+#   dropped them.
 # - **Two endpoints have no entry at all.** `/api/v1/me` is one flat object. `/api/v1/summary` is
 #   expected to keep one record per market at `payload.data.markets`. That path is not confirmed
 #   yet (see section 6), so the notebook checks it before using it.
@@ -727,9 +734,9 @@ except SurgeFlowError as err:
 # **Caveats**
 #
 # - The catalogue is in **beta** (`status`). Read it at the start of a project, not on every run.
-# - Descriptions can run ahead of, or behind, the data. The grade-book description mentions
-#   take-profit, for example, but the live book has a single exit rule (the "Drop Out Zone").
-#   The AI notebook shows this.
+# - Descriptions can run ahead of, or behind, the data. The retired grade book's description still
+#   mentions take-profit, for example, although the paused AI committee's book had a single exit
+#   rule (the "Drop Out Zone") when this kit last read it.
 # - Some parameter limits appear only in descriptions (news `limit` up to 50, macro `days` up to
 #   60) and some not at all (screen `page_size` up to 100). The notebook for each endpoint states them.
 # - The admin endpoints listed in the catalogue need an admin token. They are not for members.
@@ -956,8 +963,14 @@ windows[["window", "used", "capacity", "share", "counted by"]]
 
 # %%
 access = endpoints[["path", "scope"]].copy()
-access["your key"] = ["✓ allowed" if s == "any" or s in key_scopes else "✕ missing scope" for s in access["scope"]]
-print(f"This key can call {access['your key'].str.startswith('✓').sum()} of {len(access)} authenticated endpoints.")
+access["your key"] = ["retired (HTTP 410)" if p in RETIRED
+                      else "✓ allowed" if s == "any" or s in key_scopes else "✕ missing scope"
+                      for p, s in zip(access["path"], access["scope"])]
+n_access_retired = int(access["path"].isin(RETIRED).sum())
+print(f"This key can call {access['your key'].str.startswith('✓').sum()} of {len(access) - n_access_retired} "
+      "current authenticated endpoints.")
+if n_access_retired:
+    print(f"{n_access_retired} retired AI endpoints answer HTTP 410 (AI committee paused) and are not counted.")
 access
 
 # %% [markdown]
@@ -1617,11 +1630,16 @@ for notebook in sorted({nb for nbs in KIT_MAP.values() for nb in nbs}):
     lines.append(f"| [{notebook}]({COLAB.format(notebook)}) | {code_list(teaches)} | {code_list(reuses)} |")
 display(Markdown("\n".join(lines)))
 
-untaught = sorted(listed - set(KIT_MAP))
+retired_listed = sorted(listed & set(RETIRED))
+untaught = sorted(listed - set(KIT_MAP) - set(RETIRED))
 gone = sorted(set(KIT_MAP) - listed)
-print(f"{len(listed) - len(untaught)} of {len(listed)} GET endpoints in the catalogue have a notebook.")
+print(f"{len(listed) - len(untaught) - len(retired_listed)} of {len(listed) - len(retired_listed)} "
+      "current GET endpoints in the catalogue have a notebook.")
 if untaught:
     print("New in the catalogue, not in the kit yet:", ", ".join(untaught))
+if retired_listed:
+    print("Still listed but retired (AI committee paused, HTTP 410; the kit no longer calls them):",
+          ", ".join(retired_listed))
 if gone:
     print("In the kit, but no longer in the catalogue:", ", ".join(gone))
 

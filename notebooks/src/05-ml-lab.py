@@ -1031,9 +1031,17 @@ else:
 # compares SurgeFlow's clusters with ours at the cluster level, by sector mix.
 #
 # **Freshness lives in `data.run`.** `show_freshness` only finds `market`, so
-# we print the run's date, age and `stale` flag ourselves. **Empty is normal**:
-# before a market's first run, `data.available` is `false`. The endpoint is
-# optional for the lab, so it uses `sf_try`.
+# we print the run's date, age and `stale` flag ourselves. `run.stale` and
+# `run.age_days` count **calendar days**, not trading sessions. During an
+# exchange holiday (China's National Day closure, 1-7 October 2026, reopening
+# on 8 October, for example) a correct run can be flagged stale; SurgeFlow
+# calls this a labelling issue on its side, and the data itself is correct.
+# So do not trust the flag alone: compare `run.as_of_date` with the market's
+# last trading session. Here that is the screen's session (`SCREEN_AS_OF`,
+# section 3), at no extra request; health's
+# `markets.<market>.published_session_date` (notebook 02) gives the same check.
+# **Empty is normal**: before a market's first run, `data.available` is
+# `false`. The endpoint is optional for the lab, so it uses `sf_try`.
 
 # %%
 ml_payload = sf_try(f"/api/v1/markets/{MARKET}/ml/clusters")
@@ -1045,9 +1053,22 @@ if ml_payload is not None:
 if ML_OK:
     run, quality = ml["run"], ml["run"]["quality"]
     finished = pd.to_datetime(run["run_finished_at"], utc=True)
+    # The yardstick for the run's date is the market's last session (the screen's), not the calendar-day flag.
+    run_day, last_day = pd.to_datetime(run["as_of_date"], errors="coerce"), pd.to_datetime(SCREEN_AS_OF, errors="coerce")
+    if pd.isna(run_day) or pd.isna(last_day):
+        dated = "Compare `as_of_date` with the market's last trading session before you trust the flag."
+    elif run_day == last_day:
+        dated = ("That is the screen's session, the market's last published one, so the map is as recent as our "
+                 "sample" + ("; the flag reflects the calendar days since then (an exchange holiday, for example), "
+                             "not a missing session." if run["stale"] else "."))
+    elif run_day < last_day:
+        dated = f"The screen already describes a later session ({SCREEN_AS_OF}), so the map is older than our sample."
+    else:
+        dated = f"The screen describes an earlier session ({SCREEN_AS_OF}); check both dates before you compare."
     display(Markdown(
-        f"> Run of **{run['as_of_date']}** ({plural(run['age_days'], 'day')} old, "
-        f"{'**stale**' if run['stale'] else 'current'}), finished {finished:%Y-%m-%d %H:%M} UTC. "
+        f"> Run of **{run['as_of_date']}** ({plural(run['age_days'], 'calendar day')} ago), finished "
+        f"{finished:%Y-%m-%d %H:%M} UTC. SurgeFlow {'flags it **stale**' if run['stale'] else 'does not flag it stale'}; "
+        f"`stale` and `age_days` count calendar days, not trading sessions. {dated} "
         f"k = {quality['k']} clusters over {run['clustered_ticker_count']:,} stocks; silhouette "
         f"{quality['silhouette']:.3f} in the model's own feature space; balance cap {quality['balance_cap']:.0%}."))
 elif ml_payload is not None:
@@ -1174,7 +1195,8 @@ else:
 # - The labelled stocks are not a random sample: representatives are the most
 #   typical members, anomalies the least typical.
 # - The run date can differ from the screen session (see `run.as_of_date` and
-#   `run.stale` above). A stock can change cluster between the two.
+#   the session check above; `run.stale` alone counts calendar days, not
+#   trading sessions). A stock can change cluster between the two.
 # - Cluster IDs are labels. Never use them as numbers or array positions.
 
 # %% [markdown]

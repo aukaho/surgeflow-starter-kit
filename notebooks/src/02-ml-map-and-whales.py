@@ -25,6 +25,9 @@
 # - What silhouette, balance and the effective number of clusters say about a
 #   clustering, and why the listed stocks that switched cluster are not a
 #   random sample of all switchers.
+# - Why the ML run's `stale` flag and `age_days` count calendar days, not
+#   trading sessions, and how to check the run against the market's last
+#   published session instead.
 # - What consensus, conviction, crowdedness, position delta, network
 #   centrality and owner-count change mean for fund holdings, and how to take a
 #   composite score apart.
@@ -42,11 +45,12 @@
 # | GET | `/api/v1/markets/{market}/ml/clusters` | The latest ML clustering run: cluster profiles, sector mix, representative tickers, the anomaly watch list, the stocks that switched cluster, and stability diagnostics |
 # | GET | `/api/v1/markets/{market}/whales` | The institutional-holdings signal board: six top-20 boards (`consensus`, `conviction`, `crowdedness`, `position_delta`, `network`, `ll_predictive`), the signal gate status, the tracked holder roster and, for the US only, filing-speed and shareholder-letter studies |
 # | GET | `/api/v1/markets/{market}/screen` | Used only as a cross-check in section 4.4 (US only): the market caps of the largest companies, to test whether a reported position value is plausible |
+# | GET | `/api/v1/health` | Used only as a cross-check in sections 3 and 5 (open, no key needed): each market's last published session (`markets.<market>.published_session_date`), to date the ML run in trading sessions rather than calendar days |
 #
-# Markets: `us`, `cn`, `jp`, `hk`. The notebook makes 2 requests for your market
-# plus 6 for the four-market comparison in section 5 (8 in total), and for the
-# US 3 more screen pages for the sanity check in section 4.4 (11; the free plan
-# allows 2,000 a day). It runs in about a minute. The whale responses for Japan
+# Markets: `us`, `cn`, `jp`, `hk`. The notebook makes 3 requests (the two
+# endpoints for your market, plus health) plus 6 for the four-market comparison
+# in section 5 (9 in total), and for the US 3 more screen pages for the sanity
+# check in section 4.4 (12; the free plan allows 2,000 a day). It runs in about a minute. The whale responses for Japan
 # (about 5 MB) and Hong Kong (about 3 MB) are large because they list every
 # tracked holder, so the first fetch can take a few seconds.
 #
@@ -131,7 +135,9 @@ print(f"Studying {MARKET_NAMES[MARKET]} ({MARKET}); local currency {CCY}; today 
 # - `below_plot` gives the legend position that sits a fixed number of pixels
 #   under the plot area, so a horizontal legend never covers the x-axis title,
 #   however tall the chart is.
-# - `explain_run` turns the ML run's metadata into one plain sentence.
+# - `session_check` compares an ML run's session date with the market's last
+#   published session ("same", "older" or "newer"), and `explain_run` turns
+#   the run's metadata and that check into a few plain sentences.
 
 # %%
 import json
@@ -292,13 +298,37 @@ def below_plot(height: float, top: float, bottom: float, px: float = 75) -> floa
     return -px / max(height - top - bottom, 60)
 
 
-def explain_run(run: dict, market: str) -> None:
-    """One plain sentence about an ML run's date, age and coverage."""
+def session_check(as_of, last_session):
+    """'same', 'older' or 'newer': a run's session date against the market's last published session (None if unknown)."""
+    run_day, last_day = pd.to_datetime(as_of, errors="coerce"), pd.to_datetime(last_session, errors="coerce")
+    if pd.isna(run_day) or pd.isna(last_day):
+        return None
+    return "same" if run_day == last_day else "older" if run_day < last_day else "newer"
+
+
+def explain_run(run: dict, market: str, last_session=None) -> None:
+    """A few plain sentences about an ML run's date, age and coverage, checked against the last published session."""
     finished = pd.to_datetime(run["run_finished_at"], utc=True)
-    state = "**stale**" if run["stale"] else "current"
+    flag = "flags it **stale**" if run["stale"] else "does not flag it stale"
+    check = session_check(run["as_of_date"], last_session)
+    if check == "same":
+        dated = (f"That is the last session SurgeFlow has published for this market (health "
+                 f"`published_session_date`: {last_session}), so the map is as recent as the market's data"
+                 + ("; the flag reflects the calendar days since then (an exchange holiday, for example), not a "
+                    "missing session." if run["stale"] else "."))
+    elif check == "older":
+        dated = (f"SurgeFlow has published a later session for this market ({last_session}, health "
+                 "`published_session_date`), so this map is older than the market's latest data.")
+    elif check == "newer":
+        dated = (f"Health reports an earlier last session ({last_session}); check health before you rely on "
+                 "either date.")
+    else:
+        dated = (f"Compare `as_of_date` with the market's last trading session (health "
+                 f"`markets.{market}.published_session_date`) before you trust the flag.")
     display(Markdown(
-        f"> The {MARKET_NAMES[market]} ML map is {state}. It describes the session of **{run['as_of_date']}** "
-        f"({plural(run['age_days'], 'day')} old) and finished at {finished:%Y-%m-%d %H:%M} UTC. It clusters "
+        f"> The {MARKET_NAMES[market]} ML map describes the session of **{run['as_of_date']}** "
+        f"({plural(run['age_days'], 'calendar day')} ago) and finished at {finished:%Y-%m-%d %H:%M} UTC. "
+        f"SurgeFlow {flag}; `stale` and `age_days` count calendar days, not trading sessions. {dated} It clusters "
         f"{run['clustered_ticker_count']:,} of the {run['universe_ticker_count']:,} tickers in the universe "
         f"({run['eligible_count']:,} were eligible); on average a stock had {run['avg_coverage_ratio']:.0%} "
         "of the features."))
@@ -329,6 +359,14 @@ def explain_run(run: dict, market: str) -> None:
 #
 # **Freshness lives in `data.run`.** `show_freshness` only finds `market`
 # here, so we print the run's date, age and `stale` flag ourselves.
+# `run.stale` and `run.age_days` count **calendar days**, not trading
+# sessions. During an exchange holiday (China's National Day closure, 1-7
+# October 2026, reopening on 8 October, for example) a correct run can be
+# flagged stale. SurgeFlow calls this a labelling issue on its side; the data
+# itself is correct. So do not trust the flag alone: we also read
+# `/api/v1/health` once and compare `run.as_of_date` with the market's last
+# published session, `markets.<market>.published_session_date`. When the two
+# match, the map covers the market's latest session, whatever the flag says.
 # **Empty is normal:** if a market has no run yet, `data.available` is
 # `false`, and the cells below print a note instead of charts.
 
@@ -338,9 +376,18 @@ show_freshness(ml_payload, "ML clusters:")
 ml = ml_payload["data"]
 ML_OK = bool(ml["available"])
 
+# Each market's last published session: the yardstick for the run's date (the stale flag counts calendar days).
+health_payload = sf_try("/api/v1/health")
+LAST_SESSION = {m: dig(health_payload, "markets", m, "published_session_date") for m in MARKETS}
+if health_payload is not None:
+    show_freshness(health_payload, "Health:")
+    print(f"Health built {pd.to_datetime(health_payload['timestamp'], utc=True):%Y-%m-%d %H:%M} UTC. "
+          "Last published session per market: "
+          + ", ".join(f"{m} {LAST_SESSION[m] or 'n/a'}" for m in MARKETS) + ".")
+
 if ML_OK:
     run, quality, model_notes = ml["run"], ml["run"]["quality"], ml["model_notes"]
-    explain_run(run, MARKET)
+    explain_run(run, MARKET, LAST_SESSION[MARKET])
     print(f"Model {model_notes['cluster_model_version']} ({model_notes['estimator_count']} estimators); "
           f"{model_notes['feature_count'] or 'unreported number of'} features ({model_notes['feature_set_version']}).")
     display(Markdown(f"> *{model_notes['methodology']}*"))
@@ -2840,7 +2887,10 @@ else:
 # The Japanese and Hong Kong whale responses are several megabytes, mostly the
 # holder roster. `market_row` reads only what it needs (run metadata, board
 # dates, roster dates) with vectorised pandas operations and keeps one small
-# row per market, so the large payloads can be dropped right away.
+# row per market, so the large payloads can be dropped right away. It also
+# takes each market's last published session from the health payload of
+# section 3 (no extra request) and records whether the ML run covers it
+# (`ml_vs_last_session`).
 
 # %%
 def newest_run_dates(signals_dict: dict) -> pd.Series:
@@ -2860,7 +2910,9 @@ def market_row(m: str, ml_p: dict, wh_p: dict) -> dict:
     d = ml_p["data"]
     if d["available"]:
         r, q = d["run"], d["run"]["quality"]
-        row.update({"ml_as_of": r["as_of_date"], "ml_age_days": r["age_days"], "ml_stale": r["stale"],
+        row.update({"ml_as_of": r["as_of_date"], "last_session": LAST_SESSION.get(m),
+                    "ml_vs_last_session": session_check(r["as_of_date"], LAST_SESSION.get(m)),
+                    "ml_age_days": r["age_days"], "ml_stale": r["stale"],
                     "stocks_clustered": r["clustered_ticker_count"], "k": q["k"], "silhouette": q["silhouette"],
                     "effective_clusters": q["effective_clusters"],
                     "anomaly_rate": d["anomaly_total"] / max(r["clustered_ticker_count"], 1),
@@ -2907,7 +2959,7 @@ else:
     print("COMPARE_MARKETS is False: skipped.")
 
 # %%
-AGE_PANELS = {"ml_age_days": "ML map: days since<br>the run's session",
+AGE_PANELS = {"ml_age_days": "ML map: calendar days since<br>the run's session",
               "whale_age_days": "Whale boards: days since the board date<br>(us, cn: quarter end · jp, hk: rebuild)",
               "median_report_age_days": "Holder roster: median age of<br>each holder's latest report"}
 AGE_TICKS = {1: "1 d", 7: "1 wk", 30: "1 mo", 90: "3 mo", 365: "1 y", 730: "2 y"}
@@ -2930,7 +2982,11 @@ else:
             x = max(float(value), 0.5)
             fig.add_trace(go.Scatter(x=[0.3, x], y=[name, name], mode="lines", line=dict(color=GRID, width=3),
                                      hoverinfo="skip", showlegend=False), row=1, col=col)
-            label = ("today" if value < 0.5 else f"{value:,.0f} d") + (" (stale)" if stale else "")
+            label = ("today" if value < 0.5 else f"{value:,.0f} d") + (" (flagged stale)" if stale else "")
+            hover = label
+            if field == "ml_age_days":                                   # the check the flag alone does not make
+                hover += (f"<br>run session {compare.loc[m].get('ml_as_of')} · last published session "
+                          f"{compare.loc[m].get('last_session') or 'n/a'}")
             # Label and marker are separate traces, so the legend shows a plain marker without an "Aa" sample.
             fig.add_trace(go.Scatter(
                 x=[x], y=[name], mode="markers+text", text=[label], textposition="middle right",
@@ -2940,7 +2996,7 @@ else:
                 x=[x], y=[name], mode="markers", name=name, legendgroup=m, showlegend=(col == 2),
                 marker=dict(size=14, color=MARKET_COLORS[m], symbol="circle-open" if stale else "circle",
                             line=dict(width=3, color=MARKET_COLORS[m])),
-                customdata=[label], hovertemplate=f"{name}: %{{customdata[0]}}<extra></extra>"), row=1, col=col)
+                customdata=[hover], hovertemplate=f"{name}: %{{customdata[0]}}<extra></extra>"), row=1, col=col)
     fig.update_xaxes(type="log", range=[np.log10(0.3), np.log10(2500)], tickvals=list(AGE_TICKS),
                      ticktext=list(AGE_TICKS.values()), title_text="Age (log scale)")
     for col in (2, 3):
@@ -2967,8 +3023,8 @@ else:
     ma = compare["ml_age_days"] if "ml_age_days" in compare else pd.Series(dtype=float)
     fig.update_layout(
         title=dict(text=headline,
-                   subtitle=dict(text=(f"The ML maps are {span(ma)} days old · " if ma.notna().any() else "")
-                                 + "one log axis for all panels · open circle = ML run marked stale<br>"
+                   subtitle=dict(text=(f"The ML maps are {span(ma)} calendar days old · " if ma.notna().any() else "")
+                                 + "one log axis · open circle = ML run flagged stale (a calendar-day count)<br>"
                                    "Quarterly regimes (us, cn) lag by months; event-driven regimes (jp, hk) are "
                                    "rebuilt daily, but many of their reports are old")),
         height=500, margin=dict(t=200, b=110), legend=dict(orientation="h", x=0, y=-0.26, yanchor="top"))
@@ -2979,9 +3035,16 @@ else:
 # line means older information. All three panels share one logarithmic axis
 # (each tick step is a bigger jump in time), so a day, a month and two years
 # all fit, and the same length means the same age in every panel. The left
-# panel shows the ML map's age; an open circle means SurgeFlow marked that run
-# stale (for example during a market holiday). The middle panel shows the age
-# of the boards' date: the quarter end the holdings refer to in the US and
+# panel shows the ML map's age in calendar days; an open circle means
+# SurgeFlow flagged that run stale. Both the age and the flag count calendar
+# days, not trading sessions, so during an exchange holiday (China's National
+# Day closure in early October, for example) a correct run can be flagged
+# stale; SurgeFlow calls this a labelling issue on its side, and the data
+# itself is correct. So check the table's `ml_vs_last_session` column rather
+# than the flag alone: "same" means the run's `as_of_date` matches the
+# market's last published session (health `published_session_date`, also in
+# the hover), so the map is as recent as that market's data, whatever the
+# flag says. The middle panel shows the age of the boards' date: the quarter end the holdings refer to in the US and
 # China, but only the date of the daily rebuild in Japan and Hong Kong, so
 # "today" there says nothing about the holdings' age. The right panel shows
 # the median age of each tracked holder's latest report: for event-driven
@@ -3062,8 +3125,10 @@ else:
 #
 # - Change `MARKET` to `"cn"` and run again: China's boards can interleave two
 #   computation runs with different quarter labels (section 4.1 keeps the
-#   newest), and around market holidays (Golden Week in early October, for
-#   example) its ML run can be marked stale.
+#   newest), and around market holidays (the National Day closure in early
+#   October, for example) its ML run can be flagged stale although it covers
+#   the last trading session: compare `run.as_of_date` with health's
+#   `published_session_date` (section 3) rather than trusting the flag alone.
 # - Try `"jp"` or `"hk"`: the holder roster grows to thousands of filers and
 #   the disclosure-lag charts change shape completely.
 # - Look up the representative tickers in the screen endpoint (notebook 01) and

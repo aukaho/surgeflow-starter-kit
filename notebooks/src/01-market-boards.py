@@ -31,7 +31,7 @@
 # | GET | `/api/v1/markets/{market}/screen` | The market screen, paged (at most 100 rows a page): one row per stock with about 20 fields (price, daily change, turnover, market cap, trend, valuation and fundamentals) |
 # | GET | `/api/v1/markets/{market}/sector` | The sector snapshot: every stock's one-day change with its sector and industry, plus two market-cap-weighted averages (`sector_mean_1d`, `industry_mean_1d`, as documented in `/api/v1/catalog`), in one unpaged response |
 # | GET | `/api/v1/markets/{market}/realtime` | The current-session turnover board: the most-traded names among those its source feed covers (50 by default; pass `limit=1..100`), with turnover so far, a projection for the full session and the pace versus yesterday |
-# | GET | `/api/v1/markets/{market}/hotlist` | The momentum hotlist: a short, often empty, list of the session's momentum names; its `_usd` amounts are in US dollars |
+# | GET | `/api/v1/markets/{market}/hotlist` | The momentum hotlist: a short list of the session's momentum names (it can come back empty; section 6 shows how to report that); its `_usd` amounts are in US dollars |
 #
 # Markets: `us`, `cn`, `jp`, `hk`. The notebook makes about 9 requests (the
 # free plan allows 2,000 a day and 180 a minute) and runs in under a minute.
@@ -88,8 +88,8 @@ print(f"Studying {MARKET_NAMES[MARKET]} ({MARKET}); local currency {CCY}.")
 #
 # - `pick` keeps exactly the documented columns. If a documented column is
 #   missing, it raises a `KeyError`: that means the API contract changed, and
-#   you want to know. An empty board is normal, so it returns an empty table
-#   with the same columns instead of crashing.
+#   you want to know. A board can come back empty, so it returns an empty
+#   table with the same columns instead of crashing.
 # - `money` turns `19543787185` into `$19.54B`, and `log_ticks` labels a log
 #   axis with round amounts ($1B, $2B, $5B, ...).
 # - `local_time` shows a timestamp on the exchange's own clock, and
@@ -116,7 +116,7 @@ if PLOTLY_VERSION < (5, 23):
 
 
 def pick(raw: pd.DataFrame, columns: list) -> pd.DataFrame:
-    """Keep the documented columns. Empty is normal; a missing column raises KeyError."""
+    """Keep the documented columns. An empty board gives an empty table; a missing column raises KeyError."""
     if raw.empty:
         return pd.DataFrame(columns=columns)
     return raw[columns].copy()
@@ -184,9 +184,12 @@ def explain_board(meta: dict, what: str) -> None:
     elif quality == "stale":
         text = (f"{what} is stale for another reason ({reason}; market status {status}). The snapshot was "
                 f"taken {when}{age} and may lag the live session.")
+    elif quality == "empty" and market_closed(meta):
+        text = (f"{what} is empty ({reason}; market status {status}). That is expected while the market is "
+                "closed: outside a session the board has no rows.")
     elif quality == "empty":
-        text = (f"{what} is empty ({reason}; market status {status}). That is normal: outside a "
-                "session, or when no name qualifies, the board has no rows.")
+        text = (f"{what} is empty right now (data_quality: {quality}, stale_reason: {reason}; market status "
+                f"{status}). Snapshot taken {when}{age}.")
     else:
         text = f"{what} reports data_quality = {quality!r} (market status {status}). Treat the numbers with care."
     display(Markdown(f"> {text}"))
@@ -1316,10 +1319,11 @@ else:
 # `projected_turnover_usd`, `previous_day_turnover_usd`) are in **US dollars**;
 # `price` stays in the local currency, and `turnover_per_second` carries no
 # currency label (on the realtime board, all money is local currency). And
-# **an empty hotlist is normal**: you
-# get `count: 0` with `data_quality: "empty"` and
-# `stale_reason: "no_current_hotlist_members"` when no name qualifies. Expect
-# an empty hotlist often, in any market.
+# **the hotlist can come back empty**: you get `count: 0` with
+# `data_quality: "empty"` and `stale_reason: "no_current_hotlist_members"`.
+# While the market is closed, that is expected. During an open session, report
+# it as the API states it, with those two fields, and do not guess at a reason.
+# The realtime board in section 5 still covers the session.
 
 # %%
 hot_payload = sf_get(f"/api/v1/markets/{MARKET}/hotlist")
@@ -1433,9 +1437,14 @@ HOT_FORMAT = {"projected_turnover_usd": "${:,.0f}", "previous_day_turnover_usd":
               "projected_vs_yesterday": "{:.2f}×", "intraday_return_pct": "{:+.2f}%", "realtime_rank": "{:.0f}"}
 
 if hot.empty:
-    display(Markdown(f"> The {MARKET_NAMES[MARKET]} hotlist is empty (market {hot_status}), so there is "
-                     "nothing to rank and no chart. Empty is a normal state for this board. The realtime board's "
-                     "busiest and fastest names are already charted and listed in section 5."))
+    hot_meta = hot_payload["data"]
+    display(Markdown(f"> The {MARKET_NAMES[MARKET]} hotlist is empty right now (data_quality: "
+                     f"{hot_meta['data_quality']}, stale_reason: {hot_meta['stale_reason']}; market {hot_status}), "
+                     "so there is nothing to rank and no chart. "
+                     + ("That is expected while the market is closed. The realtime board's names from the last "
+                        "session are charted and listed in section 5." if market_closed(hot_meta) else
+                        "The realtime board still covers the session: its busiest and fastest names are charted "
+                        "and listed in section 5.")))
 elif len(hot) == 1:
     one = hot.iloc[0]
     rank_text = (f"realtime board rank {one['realtime_rank']:.0f}" if pd.notna(one["realtime_rank"])
