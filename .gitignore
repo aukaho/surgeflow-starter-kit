@@ -3,3 +3,7 @@ node_modules/
 .env
 .env.*
 !.env.example
+__pycache__/
+.ipynb_checkpoints/
+build/
+tests/fixtures/live/
