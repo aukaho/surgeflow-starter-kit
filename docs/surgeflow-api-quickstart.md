@@ -208,7 +208,7 @@ also the state to read first (`payload.data.status`):
 | `notes/daily` | `payload.data.notes` |
 | `macro/calendar` | `payload.data.data.events` |
 | `bond/etfs` | `payload.data.data.etfs` |
-| `me`, `summary` | Not listed. `me` is a flat object. The summary's per-market rows are at `payload.data.markets` (inferred; not yet confirmed live) |
+| `me`, `summary` | Not listed. `me` is a flat object. The summary's per-market rows are at `payload.data.markets` (checked against a live response) |
 
 **An empty list is normal.** A closed market, a weekend, or a hotlist with no
 qualifying names can return zero rows. Read the freshness fields (`as_of_*`,
@@ -221,9 +221,10 @@ differently, so never mix them:
 
 - Fractions (0.0142 = 1.42%): screen and sector `change_pct`, the sector
   means, `ma*_excess`, `ep`, `bp`, `sp`, `profit_margin`, `revenue_growth`
-  and `dividend_yield`. In the factor portfolios: every `week_return` (a
-  weekly return, 0.0125 = 1.25% for the week), holding `weight` (a book's
-  weights sum to 1) and the `*_weight_share` fields.
+  and `dividend_yield`, and the summary's `avg_change_pct`. In the factor
+  portfolios: every `week_return` (a weekly return, 0.0125 = 1.25% for the
+  week), holding `weight` (a book's weights sum to 1) and the
+  `*_weight_share` fields.
 - Exposures (1.0 = one unit): factor-portfolio `exposures`, `own_exposure`
   and `max_abs_other_style` are loadings on a style, not percents.
 - Percents (1.42 = 1.42%): realtime and hotlist `intraday_return_pct`, and
@@ -237,7 +238,8 @@ differently, so never mix them:
 ### `GET /api/v1/health`
 
 Shows operational health and data-quality disclosures, overall and for each
-market. It takes no parameters. Notebook: 00 Setup and account.
+market. It takes no parameters. Notebook: 00 Setup and account. Used again in
+02 ML market map and whales, to date the ML run in trading sessions.
 
 `health` answers **HTTP 200 even when it reports a problem**. For example, if
 one market is stale (as `cn` is during a holiday), the top level can read
@@ -323,14 +325,16 @@ print(me["usage"]["used_7d"], "requests in 7 days;",
 A four-market market-watch summary with freshness metadata and FX context.
 
 - Scope: `summary`. Query: none.
-- **It can fail.** At the time of writing it answers `HTTP 500 Internal
-  Server Error`, so treat it as optional and keep your code running without
-  it.
-- Records: one row per market at `payload.data.markets`, with FX rates at
-  `payload.data.fx_rates`. This layout has not been confirmed against a
-  working live response; check it when the endpoint answers again. Each
-  market's `total_turnover` is in local currency, so convert it before you
-  compare markets.
+- Records: one row per market at `payload.data.markets`, with FX rates
+  (local units per US dollar) at `payload.data.fx_rates`. This layout has been
+  checked against a live response. Each market row carries `as_of_date`,
+  `surge_count`, `avg_change_pct` (a **fraction**: 0.005 = +0.5%, the plain
+  mean of the day's `change_pct` over the market screen's names) and
+  `total_turnover`. `total_turnover` is in local currency, so convert it
+  before you compare markets.
+- **It can fail.** The summary can answer `HTTP 500 Internal Server Error`
+  with a plain-text body. Treat it as optional and keep your code running
+  without it.
 - Taught in: [00 Setup and account](../notebooks/00-setup-and-account.ipynb).
 
 ```bash
@@ -375,7 +379,9 @@ change, turnover, market cap, trend, valuation and quality fields.
 - **Do not fetch every page.** The US screen holds about 3,300 stocks (33
   pages of 100). Fetch the first few pages of the largest companies.
 - Taught in: [01 Market boards](../notebooks/01-market-boards.ipynb). Used
-  again in [05 ML lab](../notebooks/05-ml-lab.ipynb).
+  again in
+  [02 ML market map and whales](../notebooks/02-ml-map-and-whales.ipynb) (a
+  market-cap cross-check) and [05 ML lab](../notebooks/05-ml-lab.ipynb).
 
 ```bash
 curl -sS -H "Authorization: Bearer ${SURGEFLOW_API_KEY}" \
@@ -472,7 +478,10 @@ sector and industry means and a whale overlay.
   `industry_mean_1d` (cap-weighted means, fractions), `is_microcap`,
   `whale_fund_count`, `whale_trend` and `whale_confidence`. The sector means
   repeat on every row, so de-duplicate by `sector` to get the sector table.
-- Taught in: [01 Market boards](../notebooks/01-market-boards.ipynb).
+- Taught in: [01 Market boards](../notebooks/01-market-boards.ipynb). Used
+  again in
+  [03 News, notes, macro and bonds](../notebooks/03-news-notes-macro-bonds.ipynb)
+  (news joined to the day's price changes).
 
 ```bash
 curl -sS -H "Authorization: Bearer ${SURGEFLOW_API_KEY}" \
@@ -550,15 +559,15 @@ The latest scored news articles, with sentiment, tickers and keywords.
 
 - Scope: `news`. Query: `ticker`, `sentiment` (`positive`, `negative` or
   `neutral`) and `limit` (at most 50).
+- Records: `payload.data.articles`. The article fields used below have been
+  checked against live responses: `published_utc`, `sentiment_score`, and
+  `tickers` and `keywords` as JSON-encoded strings that you decode with
+  `json.loads`. A successful answer has no `data.ok` key.
 - **It can fail inside an HTTP 200.** While the news feed is down, every
-  market answers
+  market can answer
   `{"ok": true, ..., "data": {"ok": false, "error": {"code": "INTERNAL_ERROR", "message": "news feed temporarily unavailable"}}}`.
   Check `payload["data"].get("ok") is False` before you read the articles
   (the `get` helper above raises `SurgeFlowError` for it).
-- Records: `payload.data.articles`. The article fields used below
-  (`published_utc`, `sentiment_score`, and `tickers` and `keywords` as
-  JSON-encoded strings that you decode with `json.loads`) have not been
-  confirmed against a working live response; check them when articles return.
 - Taught in:
   [03 News, notes, macro and bonds](../notebooks/03-news-notes-macro-bonds.ipynb).
 
@@ -662,9 +671,7 @@ Two endpoints serve SurgeFlow's weekly **long-only pure factor portfolios**
 (schema `surgeflow.factor_portfolios.v2`): one book per style (`SIZE`,
 `VALUE`, `MOMENTUM`, `PROFITABILITY`, `INVESTMENT`, `LIQUIDITY`) plus a
 `MARKET` book. Read the small `/meta` answer first, then ask the main endpoint
-for only what you need. Version 2 replaced the earlier list of seven factors
-(ERP to LIQ, at `payload.data.data.factors`), which is gone; code written for
-that shape needs updating.
+for only what you need, and read `payload.data.status` before anything else.
 
 How to read the books (this matters before any number):
 
@@ -675,8 +682,11 @@ How to read the books (this matters before any number):
 - **So raw returns move together.** Every book carries the market once, so the
   raw weekly returns of all seven books rise and fall with the market.
 - **The style is the difference.** A style book's weekly return **minus the
-  `MARKET` book's** return for the same week cancels the market: both have
-  market exposure 1, and they differ by about one unit of the style.
+  `MARKET` book's** return for the same week cancels the market *exposure*:
+  both have market exposure 1, and they differ by about one unit of the
+  style. A style's own returns can still move with the market, so a spread
+  need not be uncorrelated with the `MARKET` book; the second column of the
+  table below measures this (section 4.10 of notebook 04 does it in full).
 - **PCA, two ways.** A PCA on the raw long-only returns is dominated by one
   market component. Run it on the style-minus-`MARKET` series to see the
   styles.
@@ -702,8 +712,14 @@ the books.
 - State: `payload.data.status` is `"available"` or `"empty"` (HTTP 200 either
   way). An empty answer carries `data.reason_code`
   (`no_publication_for_market` for a market without a publication) and
-  `data.message` instead of the fields below. It can still carry
-  `data.market_caveats`, the known data caveats for that market.
+  `data.message`, and none of the publication fields below: no
+  `publications`, `publication`, `models`, `freshness`, `cost_label` or
+  `served_caveats`. A few blocks are still there, with null values where
+  nothing is published: `return_basis` (`state` reads
+  `no_portfolios_published` and `returns_label` is `null`), `degraded_rule`,
+  `labels` (the `status` labels, with a `null` degraded rule) and
+  `market_caveats`, the known data caveats for that market. So test
+  `data.status`, not whether a key is present.
 - Records: `payload.data.publications`, one row per publication, with
   `publication_id`, `first_formation`, `last_formation`,
   `data_through_session` and `published_at`. The publication being served is
@@ -720,6 +736,8 @@ the books.
   here. (The main endpoint's `data.freshness` is the same block without the
   model level.)
 - Taught in: [04 Factor portfolios](../notebooks/04-factor-portfolios.ipynb).
+  Used again in [05 ML lab](../notebooks/05-ml-lab.ipynb) (the cost label and
+  the freshness block).
 
 ```bash
 curl -sS -H "Authorization: Bearer ${SURGEFLOW_API_KEY}" \
@@ -855,6 +873,9 @@ print(pd.DataFrame({
 
 The first column shows the raw long-only books moving with the market; the
 second shows how much of that is left once the `MARKET` book is subtracted.
+The market exposure cancels by construction, but a style's own returns can
+still co-move with the market, so the second column need not be near zero for
+every style or market.
 
 ## Data boundary
 

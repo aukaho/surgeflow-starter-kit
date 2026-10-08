@@ -57,8 +57,8 @@
 # 3. a hidden prompt, where your typing is not shown.
 #
 # It never prints the key. It also defines `sf_get` (a polite GET with retries), `sf_try` (the
-# same, but it prints a short note and returns `None` when an endpoint is unavailable), `records`,
-# `dig`, `show_freshness` and the chart colours used in every notebook of the kit.
+# same, but when a request fails it prints a short note and returns `None`), `records`, `dig`,
+# `show_freshness` and the chart colours used in every notebook of the kit.
 
 # %% [helpers]
 
@@ -543,11 +543,11 @@ scope_matrix.T
 
 # %%
 KIT_MAP = {
-    "/api/v1/health": ["00-setup-and-account"],
+    "/api/v1/health": ["00-setup-and-account", "02-ml-map-and-whales"],
     "/api/v1/catalog": ["00-setup-and-account"],
     "/api/v1/me": ["00-setup-and-account"],
     "/api/v1/summary": ["00-setup-and-account"],
-    "/api/v1/markets/{market}/screen": ["01-market-boards", "05-ml-lab"],
+    "/api/v1/markets/{market}/screen": ["01-market-boards", "02-ml-map-and-whales", "05-ml-lab"],
     "/api/v1/markets/{market}/realtime": ["01-market-boards", "05-ml-lab"],
     "/api/v1/markets/{market}/hotlist": ["01-market-boards"],
     "/api/v1/markets/{market}/sector": ["01-market-boards", "03-news-notes-macro-bonds"],
@@ -558,7 +558,7 @@ KIT_MAP = {
     "/api/v1/macro/calendar": ["03-news-notes-macro-bonds"],
     "/api/v1/bond/etfs": ["03-news-notes-macro-bonds"],
     "/api/v1/markets/{market}/factor-portfolios": ["04-factor-portfolios", "05-ml-lab"],
-    "/api/v1/markets/{market}/factor-portfolios/meta": ["04-factor-portfolios"],
+    "/api/v1/markets/{market}/factor-portfolios/meta": ["04-factor-portfolios", "05-ml-lab"],
 }
 RETIRED = {
     "/api/v1/ai/ratings": "retired: AI committee paused (HTTP 410)",
@@ -721,9 +721,9 @@ shapes
 # - **Retired endpoints drop out.** The paused AI committee's endpoints answer HTTP 410
 #   (`ENDPOINT_RETIRED`), and the helper dropped their shapes. If the catalogue still lists one
 #   when you run this, it reads "catalogue only" in the table.
-# - **Two endpoints have no entry at all.** `/api/v1/me` is one flat object. `/api/v1/summary` is
-#   expected to keep one record per market at `payload.data.markets`. That path is not confirmed
-#   yet (see section 6), so the notebook checks it before using it.
+# - **Two endpoints have no entry at all.** `/api/v1/me` is one flat object. `/api/v1/summary`
+#   keeps one record per market at `payload.data.markets`, a path checked against a live response.
+#   Section 6 still checks it before using it, because the summary can be unavailable now and then.
 
 # %% [markdown]
 # ### 4.6 Markets, and what an error looks like
@@ -764,7 +764,10 @@ except SurgeFlowError as err:
 # `data.status` and show `data.message`.
 #
 # For an optional section, use `sf_try` instead of `sf_get`. It prints a short note and returns
-# `None`, so the rest of the notebook keeps running. Section 6 uses it.
+# `None`, so the rest of the notebook keeps running. The note says which kind of failure it was: a
+# retired endpoint (410), a rejected request (another 4xx, such as a 400 for a bad parameter: fix
+# the call, because retrying will not help) or an endpoint that is unavailable right now (a 5xx, or
+# an error inside a 200: try again later). Section 6 uses it.
 
 # %% [markdown]
 # **Caveats**
@@ -1029,11 +1032,11 @@ access
 # `GET /api/v1/summary` (scope `summary`) is a market-watch overview: one record per market,
 # with its last end-of-day (EOD) session, breadth counts, turnover and FX rates.
 #
-# **This section may be skipped.** When this kit was last checked against the live API, the
-# summary answered `HTTP 500 Internal Server Error`, so its live shape is not confirmed. The
-# fields used below are the ones SurgeFlow's keyless summary page carries. So we call it with
-# `sf_try`, which prints a note and returns `None` when the endpoint is unavailable, and allow a
-# single retry. Every later cell that needs the summary checks `summary_ready` first.
+# **This section can be skipped.** The summary answers normally, and the fields used below have
+# been checked against a live response. It can still fail now and then: an
+# `HTTP 500 Internal Server Error` with a plain-text body can happen. So we call it with `sf_try`,
+# which prints a note and returns `None` when the endpoint is unavailable, and allow a single
+# retry. Every later cell that needs the summary checks `summary_ready` first.
 
 # %%
 summary = sf_try("/api/v1/summary", retries=1)  # optional section: one retry, then move on
@@ -1073,30 +1076,35 @@ else:
     missing_fields = [c for c in SUMMARY_FIELDS if c not in summary_raw.columns]
     if missing_fields:
         summary_ready = False
-        print(f"These expected fields are missing: {missing_fields}. The summary's shape differs from this kit's "
-              "unconfirmed expectation, so its charts are skipped. The preview above shows what arrived.")
+        print(f"These expected fields are missing: {missing_fields}. The summary's shape differs from the one this "
+              "kit was checked against, so its charts are skipped. The preview above shows what arrived.")
 
 # %% [markdown]
 # **Cleaning.**
 #
 # - `total_turnover` is in **local currency**: each exchange trades in its own currency. We write
-#   that down once (`LOCAL_CURRENCY`) and check the turnover itself, with no extra request: each
-#   `market_cap_history` row carries `total_turnover_local` and its `currency`, so we find the row for
-#   the summary's own session (`as_of_date`). If its turnover equals `total_turnover` and its currency
-#   agrees, we convert. If the amounts or the currencies disagree, `total_turnover_usd` is left blank
-#   (NaN) for that market and the cell says so, because a yen/dollar mix-up is a 150x error. With no
-#   row for that date the check cannot run, so the cell uses `LOCAL_CURRENCY` and marks the turnover
-#   "unverified". The FX table gives **local units per USD**, so dividing converts to USD.
-# - `avg_change_pct` is **expected** to be a decimal (0.01 means +1%), like `change_pct` on the
-#   screen. But the realtime board's `intraday_return_pct` is a percent, and the live summary's
-#   units are not confirmed. So the cell checks: a market-wide *average* daily move above 20% is
-#   implausible, so a larger value means the field is probably a percent. Panel 2 is then left blank.
-#   The check only catches a day on which some market's average moved at least 0.2%. Smaller values
-#   pass in either unit, so confirm the unit with `tools/probe_endpoints.py` once the summary is back.
-# - Breadth counts become shares of `institutional_count`. This kit **expects** that to be the
-#   universe that `surge_count` and `above_ma10_count` are counted over, but that is not confirmed
-#   either: a summary record may also carry larger counts (`screen_eligible_tickers`, `ticker_count`).
-#   The cell checks that no count exceeds `institutional_count`. If one does, the shares are left blank.
+#   that down once (`LOCAL_CURRENCY`) and check it with no extra request: every `market_cap_history`
+#   row states its `currency`. If that currency agrees with `LOCAL_CURRENCY`, we convert. If it
+#   disagrees, `total_turnover_usd` is left blank (NaN) for that market and the cell says so,
+#   because a yen/dollar mix-up is a 150x error. With no stated currency the check cannot run, so the
+#   cell uses `LOCAL_CURRENCY` and marks the turnover "unverified". The FX table gives **local units
+#   per USD**, so dividing converts to USD.
+# - The history row for the summary's own session (`as_of_date`) also carries a
+#   `total_turnover_local`. It sums a different set of names (its `covered_tickers`), so it is not
+#   expected to equal `total_turnover`; the cell reports the gap (`gap_vs_history`) as information.
+#   Only a gap of more than 2x, the size of a unit or currency mix-up, blanks the USD turnover.
+# - `avg_change_pct` is a **decimal** (0.01 means +1%), like `change_pct` on the screen. Checked
+#   against a live response, it is the plain mean of the day's `change_pct` over the market screen's
+#   names (`institutional_count` of them), every name counting equally. The realtime board's
+#   `intraday_return_pct`, by contrast, is a percent. So the cell keeps a guard against a unit
+#   change: a market-wide *average* daily move above 20% is implausible, so a larger value means
+#   the field has become a percent, and panel 2 is then left blank. (The guard only catches a day
+#   on which some market's average moved at least 0.2%.)
+# - Breadth counts become shares of `institutional_count`. This kit takes that as the universe that
+#   `surge_count` and `above_ma10_count` are counted over; the summary does not name the
+#   denominator, and a record also carries larger counts (`screen_eligible_tickers`,
+#   `ticker_count`). The cell checks that no count exceeds `institutional_count`. If one does, the
+#   shares are left blank.
 
 # %%
 LOCAL_CURRENCY = {"us": "USD", "cn": "CNY", "jp": "JPY", "hk": "HKD"}
@@ -1109,6 +1117,12 @@ else:
         fx.index = fx.index.astype(str).str.replace("PerUsd", "", regex=False).str.upper()  # 'jpyPerUsd' -> 'JPY'
     fx["USD"] = 1.0
 
+    def history_currencies(record: dict) -> list:
+        """The distinct currencies that the record's market_cap_history rows state."""
+        history = record.get("market_cap_history")
+        rows = history if isinstance(history, list) else []
+        return sorted({str(h["currency"]) for h in rows if isinstance(h, dict) and h.get("currency")})
+
     def same_session_row(record: dict):
         """The market_cap_history row dated as_of_date (the summary's own session), or None."""
         as_of = pd.to_datetime(record.get("as_of_date"), errors="coerce")
@@ -1118,48 +1132,56 @@ else:
         rows = [h for h in history if isinstance(h, dict) and pd.to_datetime(h.get("date"), errors="coerce") == as_of]
         return rows[-1] if rows else None
 
+    MIXUP_RATIO = 2.0  # amounts this far apart point to a unit or currency mix-up, not to a different set of names
+
     mk = summary_raw.loc[:, SUMMARY_FIELDS].copy()
     for col in ["institutional_count", "surge_count", "above_ma10_count", "avg_change_pct", "total_turnover"]:
         mk[col] = pd.to_numeric(mk[col], errors="coerce")
 
-    # Currency check on the turnover itself: the history row for the same session states its currency.
-    session_rows = [same_session_row(r) for r in summary_markets]  # same order as summary_raw and mk
-    mk["reported_currency"] = [r.get("currency") if r else None for r in session_rows]
+    # Currency check: the market_cap_history rows state the currency of this market's amounts.
+    currencies = [history_currencies(r) for r in summary_markets]  # same order as summary_raw and mk
+    mk["reported_currency"] = [c[0] if len(c) == 1 else None for c in currencies]
+    expected_currency = mk["market"].map(LOCAL_CURRENCY)
+    # The same session's total_turnover_local sums a different set of names, so it is compared, not required to match.
+    session_rows = [same_session_row(r) for r in summary_markets]
     history_turnover = pd.to_numeric(pd.Series([r.get("total_turnover_local") if r else None for r in session_rows],
                                                index=mk.index), errors="coerce")
-    expected_currency = mk["market"].map(LOCAL_CURRENCY)
-    amounts_match = np.isclose(mk["total_turnover"], history_turnover, rtol=1e-6)  # NaN on either side -> False
-    has_row = np.array([r is not None for r in session_rows])
+    ratio = mk["total_turnover"] / history_turnover.where(history_turnover > 0)  # NaN without that session's row
+    mk["gap_vs_history"] = ratio - 1
     mk["turnover_check"] = np.select(
         [mk["total_turnover"].isna(),
-         ~has_row,
-         ~amounts_match,
+         np.array([len(c) > 1 for c in currencies], dtype=bool),
          mk["reported_currency"].isna(),
-         mk["reported_currency"] != expected_currency],
+         mk["reported_currency"] != expected_currency,
+         (ratio > MIXUP_RATIO) | (ratio < 1 / MIXUP_RATIO)],
         ["n/a: total_turnover is missing",
-         "unverified: no market_cap_history row for as_of_date",
-         "✕ total_turnover differs from that session's total_turnover_local",
-         "unverified: that session's row states no currency",
-         "✕ currency differs from LOCAL_CURRENCY"],
-        default="✓ matches that session's row and currency")
+         "✕ market_cap_history states more than one currency",
+         "unverified: market_cap_history states no currency",
+         "✕ currency differs from LOCAL_CURRENCY",
+         f"✕ more than {MIXUP_RATIO:g}x away from that session's total_turnover_local"],
+        default="✓ currency matches LOCAL_CURRENCY")
     mk["currency"] = mk["reported_currency"].fillna(expected_currency)
     failed_currency = mk["turnover_check"].str.startswith("✕")
     for row in mk[failed_currency].itertuples():
-        print(f"WARNING: {row.market}: {row.turnover_check} (row currency: {text_or(row.reported_currency)}, "
+        print(f"WARNING: {row.market}: {row.turnover_check} (history currency: {text_or(row.reported_currency)}, "
               f"expected {LOCAL_CURRENCY.get(row.market)}). Its USD turnover is left blank rather than converted "
-              "with a currency that may be wrong.")
+              "with a currency or unit that may be wrong.")
     unverified = mk.loc[mk["turnover_check"].str.startswith("unverified"), "market"].tolist()
     if unverified:
         print(f"Turnover currency unverified for {', '.join(unverified)}: converted with LOCAL_CURRENCY, unchecked.")
+    compared = mk.dropna(subset=["gap_vs_history"])
+    if not compared.empty:
+        print("total_turnover against the same session's total_turnover_local (a different set of names, so a gap is "
+              "normal): " + ", ".join(f"{r.market} {r.gap_vs_history:+.1%}" for r in compared.itertuples()))
 
-    # Plausibility checks for the unconfirmed units and denominator. A failed check blanks that
-    # measure (NaN) and says so, rather than charting numbers that may be 100x off.
+    # Plausibility checks: a guard against a unit change, and the denominator the summary does not name.
+    # A failed check blanks that measure (NaN) and says so, rather than charting numbers that may be 100x off.
     biggest_avg = mk["avg_change_pct"].abs().max()
     units_ok = pd.isna(biggest_avg) or biggest_avg <= 0.2
     if not units_ok:
         print(f"WARNING: avg_change_pct reaches {biggest_avg:,.2f}. Read as a decimal, that is a {biggest_avg:.0%} "
-              "average daily move, which is implausible: the field is probably a percent. Panel 2 is left blank. "
-              "Check the units before you use this field.")
+              "average daily move, which is implausible: the field has probably become a percent. Panel 2 is left "
+              "blank. Check the units before you use this field.")
         mk["avg_change_pct"] = np.nan
     over = mk[(mk["surge_count"] > mk["institutional_count"]) | (mk["above_ma10_count"] > mk["institutional_count"])]
     denominator_ok = over.empty
@@ -1168,14 +1190,14 @@ else:
               f"{', '.join(over['market'])}, so institutional_count is not their denominator. The breadth shares "
               "are left blank.")
     if units_ok and denominator_ok and not failed_currency.any():
-        print("Checks passed: no turnover failed its currency check, avg_change_pct looks like a decimal, "
+        print("Checks passed: no turnover failed its currency or size check, avg_change_pct looks like a decimal, "
               "and no breadth count exceeds institutional_count.")
     mk["as_of_date"] = pd.to_datetime(mk["as_of_date"], errors="coerce")
     mk = market_order(mk.drop_duplicates(subset="market", keep="first"))
 
     mk["market_name"] = mk["market"].map(MARKET_NAMES)
     mk["fx_per_usd"] = mk["currency"].map(fx)
-    # A failed currency check blanks that market's USD turnover (panel 4 and the FX chart skip it).
+    # A failed currency or size check blanks that market's USD turnover (panel 4 and the FX chart skip it).
     mk["total_turnover_usd"] = (mk["total_turnover"] / mk["fx_per_usd"]).where(~mk["turnover_check"].str.startswith("✕"))
     universe = mk["institutional_count"].where(mk["institutional_count"] > 0)  # 0 names -> NaN, not a division error
     if not denominator_ok:
@@ -1192,8 +1214,8 @@ else:
     loading = mk.loc[~complete, "market_name"].tolist()
     print("Every session is fully loaded." if not loading else f"Session still loading for: {', '.join(loading)}")
     display(mk[["market_name", "as_of_date", "days_old", "eod_session_complete", "currency", "turnover_check",
-                "fx_per_usd", "total_turnover", "total_turnover_usd", "avg_change_pct", "surge_share",
-                "above_ma10_share"]])
+                "gap_vs_history", "fx_per_usd", "total_turnover", "total_turnover_usd", "avg_change_pct",
+                "surge_share", "above_ma10_share"]])
 
 # %% [markdown]
 # **Chart: four markets at a glance.** Four small panels share one row per market. Read the
@@ -1231,7 +1253,7 @@ else:
 
     panels = [
         ("days_old", "Data age<br><sup>days since the last EOD session</sup>"),
-        ("avg_change_pct", "Average 1-day change<br><sup>% as reported, base unconfirmed</sup>"),
+        ("avg_change_pct", "Average 1-day change<br><sup>%, every name counting equally</sup>"),
         ("surge_share", surge_title),
         ("total_turnover_usd", "Total turnover<br><sup>USD, log scale</sup>"),
     ]
@@ -1248,7 +1270,7 @@ else:
     hover = {
         "days_old": "Last EOD session %{customdata}<br>%{x} days before the summary build",
         "avg_change_pct": ("Average 1-day change: %{x:+.2%} (avg_change_pct as reported)"
-                           "<br>Which names it averages, and how they are weighted, is unconfirmed"),
+                           "<br>The plain mean of the day's change_pct, every name counting equally"),
         "surge_share": surge_hover,
         "total_turnover_usd": "Turnover: %{customdata} (converted at the summary FX rate)",
     }
@@ -1299,15 +1321,13 @@ else:
 # - **Data age first.** One day is normal: the summary is built after the session ends. A
 #   larger number means a holiday, a weekend or a stale feed. Read that market's other panels
 #   as of its own date, not as of today.
-# - **Average 1-day change** is `avg_change_pct` as reported. This kit expects it to be a plain
-#   mean of one-day changes, with every name counting equally, so it can differ from a cap-weighted
-#   index. Which names it averages over (its base) and the equal weighting are, like the decimal
-#   unit, unconfirmed until the live summary is back, hence "base unconfirmed" on the panel. A blank
-#   panel means the units check above failed.
+# - **Average 1-day change** is `avg_change_pct` as reported: the plain mean of the one-day
+#   changes of the market screen's names, with every name counting equally, so it can differ from a
+#   cap-weighted index. A blank panel means the units guard above failed.
 # - **Turnover above its 10-day average** is a breadth measure: `surge_count` divided by
 #   `institutional_count`, the share of names trading more than usual. That denominator is the
-#   kit's unconfirmed expectation, and it is **not** "all screened names": a summary record can
-#   also carry a larger `screen_eligible_tickers` (1,220 against 1,000 in this kit's sample). The
+#   kit's reading, because the summary does not name it, and it is **not** the larger
+#   `screen_eligible_tickers` that a record also carries (1,220 against 1,000 in this kit's sample). The
 #   panel's title comes from `surge_definition`. If the summary reports a definition other than
 #   `turnover_today_gt_turnover_ma10`, the panel shows that raw string instead of the friendly words.
 #   If the counts cover the **whole** universe rather than a sample, there is no sampling error to
@@ -1486,7 +1506,7 @@ else:
 #
 # ### 7.3 Market-cap index over the last sessions
 #
-# Each summary record is expected to carry `market_cap_history`: the total market cap of the
+# Each summary record carries `market_cap_history`: the total market cap of the
 # covered names for recent sessions, in local currency. Shares are held constant, so it moves
 # with prices. We index every market to **100 on a common start date**. That removes both the
 # currency and the size of each market, so all four fit on one axis without a second y-axis.
@@ -1644,7 +1664,7 @@ else:
 # ## 8. Which notebook teaches which endpoint
 #
 # The map below joins the catalogue to `KIT_MAP`. Each notebook opens in Colab. The original
-# one-cell quick-start, `surgeflow-realtime-hotlist-60s`, also shows `me`, `realtime` and `hotlist`.
+# 60-second quick-start, `surgeflow-realtime-hotlist-60s`, also shows `me`, `realtime` and `hotlist`.
 
 # %%
 COLAB = "https://colab.research.google.com/github/aukaho/surgeflow-starter-kit/blob/main/notebooks/{}.ipynb"
@@ -1684,8 +1704,8 @@ if gone:
 #
 # - Open `01-market-boards` next. Each notebook starts with the same Connect cell.
 # - Re-run this notebook whenever numbers look odd: health and your key's counters explain most surprises.
-# - If section 6 was skipped, try it again later. When the summary is back, explore the parts this
-#   notebook did not use: `factor_leaders`, `factor_premiums` and `macro_cycle`.
+# - If section 6 was skipped, try it again later. The summary also carries parts this notebook did
+#   not use: `factor_leaders`, `factor_premiums` and `macro_cycle`.
 #
 # Requests used by this notebook:
 

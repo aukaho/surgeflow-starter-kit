@@ -77,7 +77,10 @@ def main() -> int:
         for page in (1, 2, 3):
             name = f"screen_{m}" + ("" if page == 1 else f".page{page}")
             jobs.append((name, f"/api/v1/markets/{m}/screen", {"page": page, "page_size": 100, "sort": "market_cap_usd"}))
-    # Factor portfolios (v2): five years of weekly returns and 25 holdings per book, as the notebooks ask.
+    # Factor portfolios (v2): five years of weekly returns and 25 holdings per book, with the measurement twins
+    # (the default). No notebook asks for exactly this: it is a superset of the main requests of 04 (weeks=156,
+    # holdings=25, measurement on) and 05 (weeks=260, holdings=0, measurement off), so one snapshot serves both
+    # offline (the mock ignores query parameters).
     jobs = [(n, p, {"weeks": 260, "holdings": 25} if n.startswith("factor_portfolios_") and "meta" not in n else q)
             for n, p, q in jobs]
     failures = 0

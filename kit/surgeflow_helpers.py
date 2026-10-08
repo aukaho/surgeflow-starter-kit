@@ -103,13 +103,16 @@ def sf_get(path: str, retries: int = 3, **params) -> dict:
 
 
 def sf_try(path: str, **params) -> dict | None:
-    """Like sf_get, but a temporarily unavailable endpoint prints a note and returns None."""
+    """Like sf_get, but a failed request prints a note saying what kind of failure it was and returns None."""
     try:
         return sf_get(path, **params)
     except SurgeFlowError as exc:
         if exc.status == 410:  # retired endpoint: retrying will not help
             display(Markdown(f"**{path} has been retired** ({exc}). Skipping this section."))
-        else:
+        elif 400 <= exc.status < 500 and exc.status != 429:  # the request itself was refused: fix it, do not wait
+            display(Markdown(f"**{path} rejected the request** ({exc}). Check the parameters (and the key's "
+                             "scopes); retrying the same request will not help. Skipping this section."))
+        else:  # 5xx, 429 after the retries, or an error reported inside a 200: temporary
             display(Markdown(f"**{path} is unavailable right now** ({exc}). Skipping this section - try again later."))
         return None
 

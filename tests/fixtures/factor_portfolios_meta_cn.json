@@ -14,25 +14,25 @@
    "portfolios": {
     "state": "published",
     "first_formation": "2019-01-07",
-    "last_formation": "2026-09-28",
+    "last_formation": "2026-09-14",
     "n_publications": 1,
     "latest": {
-     "publication_id": "3m_cn_A_20260928_a01",
+     "publication_id": "fixture_cn_A_20260914_01",
      "phase": "A",
      "kinds": [
       "holdings",
       "returns",
       "universe"
      ],
-     "published_at": "2026-10-06T22:05:51Z",
+     "published_at": "2026-09-23T03:36:09Z",
      "first_formation": "2019-01-07",
-     "last_formation": "2026-09-28",
-     "data_through_session": "2026-09-30",
+     "last_formation": "2026-09-14",
+     "data_through_session": "2026-09-21",
      "code_commit": "e17af18460e03ac3c60debd5066d9f47b3a6a5e2",
      "image_digest": "sha256:d1deebb83cf0d4fcd4911b9484d6859157e8228a29c162f8143fd3f6b75e43ea",
-     "engine_run_id": "fixture_s6w_cn_20260928_01",
-     "s3_run_id": "fixture_s3m_cn_20260928_01",
-     "s3b_run_id": "fixture_s3b_cn_20260928_01",
+     "engine_run_id": "fixture_s6w_cn_20260914_01",
+     "s3_run_id": "fixture_s3m_cn_20260914_01",
+     "s3b_run_id": "fixture_s3b_cn_20260914_01",
      "attempt": 1,
      "checks_sha256": "1b71606aa10ac9d4796a032a45c0ae1f399b77eabf4b60ea04deb1910cd094cb"
     },
@@ -52,22 +52,22 @@
   },
   "publications": [
    {
-    "publication_id": "3m_cn_A_20260928_a01",
+    "publication_id": "fixture_cn_A_20260914_01",
     "phase": "A",
     "kinds": [
      "holdings",
      "returns",
      "universe"
     ],
-    "published_at": "2026-10-06T22:05:51Z",
+    "published_at": "2026-09-23T03:36:09Z",
     "first_formation": "2019-01-07",
-    "last_formation": "2026-09-28",
-    "data_through_session": "2026-09-30",
+    "last_formation": "2026-09-14",
+    "data_through_session": "2026-09-21",
     "code_commit": "e17af18460e03ac3c60debd5066d9f47b3a6a5e2",
     "image_digest": "sha256:d1deebb83cf0d4fcd4911b9484d6859157e8228a29c162f8143fd3f6b75e43ea",
-    "engine_run_id": "fixture_s6w_cn_20260928_01",
-    "s3_run_id": "fixture_s3m_cn_20260928_01",
-    "s3b_run_id": "fixture_s3b_cn_20260928_01",
+    "engine_run_id": "fixture_s6w_cn_20260914_01",
+    "s3_run_id": "fixture_s3m_cn_20260914_01",
+    "s3b_run_id": "fixture_s3b_cn_20260914_01",
     "attempt": 1,
     "checks_sha256": "1b71606aa10ac9d4796a032a45c0ae1f399b77eabf4b60ea04deb1910cd094cb"
    }
@@ -75,8 +75,8 @@
   "n_publications": 1,
   "universe": {
    "rule": "complete_pit_v1",
-   "computed_as_of": "2026-09-30",
-   "as_of_date": "2026-09-24",
+   "computed_as_of": "2026-09-21",
+   "as_of_date": "2026-09-11",
    "n_in_universe": 1150,
    "n_evaluated": 1340,
    "measured_state": "measured"
@@ -99,7 +99,7 @@
   },
   "admission": null,
   "filter_admitted": null,
-  "data_through_session": "2026-09-30",
+  "data_through_session": "2026-09-21",
   "served_tables": [
    "pure_factor_portfolios_weekly_v1",
    "pure_factor_portfolio_returns_weekly_v1",
@@ -110,11 +110,11 @@
   ],
   "freshness": {
    "portfolios": {
-    "latest_formation_date": "2026-09-28",
-    "latest_week_start": "2026-09-28",
+    "latest_formation_date": "2026-09-14",
+    "latest_week_start": "2026-09-14",
     "current_week_start": "2026-10-05",
-    "weeks_behind": 1,
-    "state": "current"
+    "weeks_behind": 3,
+    "state": "behind"
    },
    "pick": null,
    "product": null
@@ -150,7 +150,7 @@
   "served_caveats": {
    "state": "declared",
    "ruling": "fixture ruling 7",
-   "publication_id": "3m_cn_A_20260928_a01",
+   "publication_id": "fixture_cn_A_20260914_01",
    "label": "Caveats for every served history in this market:",
    "items": [
     {
@@ -203,7 +203,7 @@
    "twin_returns_label": "Weekly long-short return of the measurement portfolio (total return, dividend-adjusted), gross of costs.",
    "publications": [
     {
-     "publication_id": "3m_cn_A_20260928_a01",
+     "publication_id": "fixture_cn_A_20260914_01",
      "state": "declared",
      "basis": "total_return_dividend_adjusted",
      "sources": {
@@ -229,7 +229,7 @@
    "threshold": 0.05,
    "publications": [
     {
-     "publication_id": "3m_cn_A_20260928_a01",
+     "publication_id": "fixture_cn_A_20260914_01",
      "state": "declared",
      "rule": "max_session_carried_share_plus_max_session_invalid_share_plus_max_session_unwitnessed_exit_share_gt_0.05",
      "sources": {
@@ -265,22 +265,22 @@
    "universe": "Tickers with a complete point-in-time history: continuous prices and the core fundamentals on every fiscal year, every row dated (fixture wording)."
   },
   "publication": {
-   "publication_id": "3m_cn_A_20260928_a01",
+   "publication_id": "fixture_cn_A_20260914_01",
    "phase": "A",
    "kinds": [
     "holdings",
     "returns",
     "universe"
    ],
-   "published_at": "2026-10-06T22:05:51Z",
+   "published_at": "2026-09-23T03:36:09Z",
    "first_formation": "2019-01-07",
-   "last_formation": "2026-09-28",
-   "data_through_session": "2026-09-30",
+   "last_formation": "2026-09-14",
+   "data_through_session": "2026-09-21",
    "code_commit": "e17af18460e03ac3c60debd5066d9f47b3a6a5e2",
    "image_digest": "sha256:d1deebb83cf0d4fcd4911b9484d6859157e8228a29c162f8143fd3f6b75e43ea",
-   "engine_run_id": "fixture_s6w_cn_20260928_01",
-   "s3_run_id": "fixture_s3m_cn_20260928_01",
-   "s3b_run_id": "fixture_s3b_cn_20260928_01",
+   "engine_run_id": "fixture_s6w_cn_20260914_01",
+   "s3_run_id": "fixture_s3m_cn_20260914_01",
+   "s3b_run_id": "fixture_s3b_cn_20260914_01",
    "attempt": 1,
    "checks_sha256": "1b71606aa10ac9d4796a032a45c0ae1f399b77eabf4b60ea04deb1910cd094cb"
   },

@@ -1739,8 +1739,9 @@ def news_payload(W: dict) -> dict:
 
 # ---------------------------------------------------------------------------- factor portfolios (v2)
 # GET /api/v1/markets/{m}/factor-portfolios (surgeflow.factor_portfolios.v2) and .../factor-portfolios/meta
-# (surgeflow.factor_portfolios_meta.v2). Key paths, nesting, types, enums and null patterns follow the live v2
-# responses of 2026-10-07; every number, id and free-text sentence is synthetic or a paraphrased placeholder.
+# (surgeflow.factor_portfolios_meta.v2). Key paths, nesting, types, enums and the kinds of null pattern follow the
+# live v2 responses of 2026-10-07; every number, date, id, status count and free-text sentence is synthetic or a
+# paraphrased placeholder (the publication clock, the ids and the status mix are the fixture's own).
 # Weekly long-only books: exposure 1 to the own style, 0 to the other styles, market exposure 1 by construction.
 FP_FACTORS = ["MARKET", "SIZE", "VALUE", "MOMENTUM", "PROFITABILITY", "INVESTMENT", "LIQUIDITY"]
 FP_STYLES = ["size", "value", "momentum", "profitability", "investment", "liquidity"]  # exposure keys after "market"
@@ -1758,12 +1759,12 @@ FP_RULE = "max_session_carried_share_plus_max_session_invalid_share_plus_max_ses
 FP_BASIS_LABEL = {"total_return_dividend_adjusted": "total return, dividend-adjusted",
                   "price_return_split_adjusted": "price return, split-adjusted"}
 FP_STYLE_CORR = np.array([  # weekly pure-style spreads (size, value, momentum, profitability, investment, liquidity)
-    [1.00, 0.00, 0.05, -0.10, 0.10, 0.70],  # generic rounded blocks: size-liquidity, value-profitability-investment,
-    [0.00, 1.00, -0.40, 0.60, 0.50, -0.10],  # momentum against value; positive definite (smallest eigenvalue ~0.26)
-    [0.05, -0.40, 1.00, -0.20, -0.25, 0.05],
-    [-0.10, 0.60, -0.20, 1.00, 0.30, -0.10],
-    [0.10, 0.50, -0.25, 0.30, 1.00, 0.05],
-    [0.70, -0.10, 0.05, -0.10, 0.05, 1.00],
+    [1.00, -0.30, 0.20, -0.20, -0.10, 0.70],  # generic rounded blocks: size-liquidity; value-profitability-investment
+    [-0.30, 1.00, -0.45, 0.65, 0.50, -0.30],  # with momentum against it; the two blocks mildly opposed. Positive
+    [0.20, -0.45, 1.00, -0.25, -0.30, 0.20],  # definite (smallest eigenvalue ~0.29); first component ~44 % of six
+    [-0.20, 0.65, -0.25, 1.00, 0.35, -0.20],
+    [-0.10, 0.50, -0.30, 0.35, 1.00, -0.10],
+    [0.70, -0.30, 0.20, -0.20, -0.10, 1.00],
 ])
 FP_STYLE_VOL = np.array([0.0120, 0.0065, 0.0095, 0.0050, 0.0045, 0.0115])  # weekly
 FP_STYLE_MEAN = np.array([0.0002, 0.0003, 0.0006, 0.0004, 0.0002, 0.0003])
@@ -1772,21 +1773,32 @@ FP_BOOK_NOISE = (0.0008, 0.0005)  # weekly idiosyncratic noise of the MARKET boo
 # is about twice as volatile as its long-only spread and correlates with it at about 0.7.
 FP_TWIN_SCALE = {"s3b_ff_2x3_ew": (1.7, 1.4), "s3b_ff_2x3_rp126": (1.5, 1.2)}  # twin -> (k, c)
 FP_TWIN_MKT_BETA = np.array([0.0, -0.15, 0.0, -0.20, 0.0, 0.0])  # a small market loading on two legs
-FP_TWIN_NEVER = {"us": ("SIZE", "LIQUIDITY")}  # twin legs whose 2x3 cells never fill in the served window (as live)
-FP_CFG = {  # publication clock (the user-visible freshness follows from it and the fixture clock), basis, scale;
-    # surv: survivorship points a year, any negative float (synthetic, deliberately unrelated to live estimates)
-    "us": dict(basis="total_return_dividend_adjusted", first="2015-01-05", through="2026-09-29",
-               published="2026-10-06T21:42:17Z", mkt_vol=0.022, mkt_mean=0.0016, exits=0.28, surv=-0.6,
+# Twin legs whose 2x3 cells rarely fill: the leg forms only in this many weeks of the older half of the served window
+# and is s3b_cell_below_min otherwise (a fixture choice; the counts are not taken from any live response).
+FP_TWIN_RARE = {"us": {"SIZE": 7, "LIQUIDITY": 3}}
+FP_CFG = {  # the fixture's own publication clock: through = the data-through session, from which the latest served
+    # week follows; with the fixture wall clock (NOW) it sets the freshness block. The dates, the publication ids and
+    # the resulting weeks_behind are fixture choices (one market current, two behind by different amounts), not the
+    # live values. basis: the declared return basis; exits: the share of formed rows holding an unwitnessed exit;
+    # surv: survivorship points a year, any negative float (synthetic, deliberately unrelated to live estimates);
+    # style_beta: per style book (size, value, momentum, profitability, investment, liquidity), the extra realised
+    #   beta to the market move. The exposure is 1 by construction, but a style's own returns can co-move with the
+    #   market, so book - MARKET keeps part of the market move. Generic rounded values.
+    "us": dict(basis="total_return_dividend_adjusted", first="2015-01-05", through="2026-09-15",
+               published="2026-09-17T20:14:52Z", mkt_vol=0.022, mkt_mean=0.0016, exits=0.20, surv=-0.6,
                cache=("stale_revalidating", 412.7), construction="dual_exact_nearest_ew_l2_turnover",
-               market_construction="normalised_objective_weight_reprojected"),
-    "cn": dict(basis="total_return_dividend_adjusted", first="2019-01-07", through="2026-09-30",
-               published="2026-10-06T22:05:51Z", mkt_vol=0.027, mkt_mean=0.0008, exits=0.0, surv=-3.2,
+               market_construction="normalised_objective_weight_reprojected",
+               style_beta=(0.10, -0.05, 0.15, 0.05, 0.10, 0.10)),
+    "cn": dict(basis="total_return_dividend_adjusted", first="2019-01-07", through="2026-09-21",
+               published="2026-09-23T03:36:09Z", mkt_vol=0.027, mkt_mean=0.0008, exits=0.0, surv=-3.2,
                cache=("fresh", 188.2), construction="dual_exact_nearest_ew_l2_turnover",
-               market_construction="normalised_objective_weight"),
-    "jp": dict(basis="price_return_split_adjusted", first="2017-01-09", through="2026-09-28",
-               published="2026-10-06T22:31:06Z", mkt_vol=0.021, mkt_mean=0.0013, exits=0.03, surv=-1.7,
+               market_construction="normalised_objective_weight",
+               style_beta=(0.10, -0.05, 0.05, -0.05, 0.00, 0.10)),
+    "jp": dict(basis="price_return_split_adjusted", first="2017-01-09", through="2026-10-05",
+               published="2026-10-06T09:05:44Z", mkt_vol=0.021, mkt_mean=0.0013, exits=0.05, surv=-1.7,
                cache=("fresh", 205.9), construction="lsq_linear_nearest_ew_l2_turnover",
-               market_construction="normalised_objective_weight"),
+               market_construction="normalised_objective_weight",
+               style_beta=(0.10, 0.05, 0.10, 0.05, 0.05, 0.05)),
 }
 FP_EMPTY_MESSAGE = "No publication exists for this market yet (fixture placeholder)."  # live wording is not copied
 # Weekday market closures inside the served window (public exchange calendars, simplified). HOLIDAYS above
@@ -1922,7 +1934,7 @@ def fp_clock(m: str) -> dict:
 def fp_publication(m: str, clock: dict) -> dict:
     last = clock["latest"]["formation_date"]
     stamp_ = last.strftime("%Y%m%d")
-    return {"publication_id": f"3m_{m}_A_{stamp_}_a01", "phase": "A", "kinds": ["holdings", "returns", "universe"],
+    return {"publication_id": f"fixture_{m}_A_{stamp_}_01", "phase": "A", "kinds": ["holdings", "returns", "universe"],
             "published_at": FP_CFG[m]["published"], "first_formation": clock["first"].isoformat(),
             "last_formation": last.isoformat(), "data_through_session": clock["through"].isoformat(),
             "code_commit": hexid("fp-commit", m, n=40), "image_digest": "sha256:" + hexid("fp-image", m, n=64),
@@ -1947,27 +1959,31 @@ def fp_status_plan(m: str, T: int, rng) -> np.ndarray:
         ok = [t for t in (range(4, T - 4) if weeks is None else weeks) if st[t, j[f]] == "ok"]
         st[rng.choice(ok, size=n, replace=False), j[f]] = "degraded"
 
-    if m == "us":  # as live: LIQUIDITY is never formed, SIZE only in about a quarter of the weeks
+    if m == "us":  # two books that are rarely feasible (a fixture choice): SIZE and LIQUIDITY
         gap = int(0.6 * T)  # a week whose return inputs were incomplete
         st[gap, :] = "unavailable"
         st[:, j["LIQUIDITY"]] = "no_holdings"
         st[:, j["SIZE"]] = "no_holdings"
-        start = int(0.66 * T) + int(rng.integers(0, 3))
-        stretch = np.arange(start, start + 24)  # SIZE meets its bands for about half a year ...
+        start = int(0.62 * T) + int(rng.integers(0, 3))
+        stretch = np.arange(start, start + 26)  # SIZE meets its bands for about half a year ...
         st[stretch, j["SIZE"]] = "ok"
-        st[rng.choice(stretch[1:-1], size=3, replace=False), j["SIZE"]] = "no_holdings"  # ... with a few misses
-        st[rng.choice(np.arange(8, gap - 4), size=2, replace=False), j["SIZE"]] = "ok"  # isolated earlier weeks
-        st[T - 2:, j["SIZE"]] = "ok"  # the current SIZE book is formed; LIQUIDITY stays infeasible
-        degrade("SIZE", 7, stretch)  # a block of degraded SIZE weeks (live us: degraded rows on SIZE only)
-        for f in ("MARKET", "VALUE", "MOMENTUM"):  # added to exercise the path on long-lived books (not live)
+        st[rng.choice(stretch[1:-1], size=3, replace=False), j["SIZE"]] = "no_holdings"  # ... with three misses
+        st[rng.choice(np.arange(8, gap - 4), size=6, replace=False), j["SIZE"]] = "ok"  # isolated earlier weeks
+        st[rng.choice(np.arange(6, gap - 6), size=4, replace=False), j["LIQUIDITY"]] = "ok"  # LIQUIDITY: a few weeks
+        assert stretch[-1] < T - 2
+        # the current SIZE book is formed right after a no_holdings week, so it has no previous book to trade from
+        # (turnover_one_way: null); the current LIQUIDITY book is infeasible
+        st[T - 2, j["SIZE"]], st[T - 1, j["SIZE"]] = "no_holdings", "ok"
+        degrade("SIZE", 5, stretch)  # a few degraded SIZE weeks inside the stretch
+        for f in ("MARKET", "VALUE", "MOMENTUM", "LIQUIDITY"):  # one degraded row each, to exercise the path
             degrade(f, 1)
     elif m == "cn":
         st[pick(1, 20), :] = "unavailable"  # a whole-market data gap inside a trading week
         st[pick(2, 4, 40), :] = "no_holdings"
         st[pick(2), j["LIQUIDITY"]] = "no_holdings"
-        for f in ("SIZE", "LIQUIDITY"):  # live cn has no degraded rows: added to exercise the path
+        for f in ("SIZE", "LIQUIDITY"):  # one degraded row each, to exercise the path
             degrade(f, 1)
-    else:  # jp: every week formed, as live; a few degraded weeks added to exercise the path (live jp has none)
+    else:  # jp: every week formed; a few degraded weeks to exercise the path
         for f, n in (("SIZE", 2), ("LIQUIDITY", 1)):
             degrade(f, n)
     return st
@@ -1975,7 +1991,8 @@ def fp_status_plan(m: str, T: int, rng) -> np.ndarray:
 
 def fp_shares(status: str, rng, exits: float) -> tuple:
     """(carried, invalid, exit) largest weight shares for one served row, consistent with its status. exits is the
-    share of rows holding an unwitnessed exit (live: us books ~28 %, jp books ~3 %, cn none, twins ~20 %)."""
+    share of formed rows holding an unwitnessed exit (FP_CFG exits; twins 0.15; cn none, so cn rows never carry
+    exit_label)."""
     if status == "no_holdings":
         return None, None, None
     if status == "unavailable":
@@ -2024,9 +2041,11 @@ def fp_row(week: dict, ret, status: str, shares: tuple, basis: str, *, return_st
 def fp_returns(m: str, T: int) -> tuple[np.ndarray, dict]:
     """Weekly book returns (T, 7) and measurement-twin returns {twin: (T, 7)}.
 
-    Every long-only book holds market exposure 1, so each book = market + its own style spread + small noise:
-    raw returns co-move (PCA on them is dominated by one market component) while book minus MARKET isolates the
-    style spread (about one unit of the own style)."""
+    Every long-only book holds market exposure 1, so each style book = market + its own style spread + small noise:
+    raw returns co-move (PCA on them is dominated by one market component), and book minus MARKET cancels the
+    market exposure, leaving about one unit of the own style. A style's own returns can still co-move with the
+    market (cfg style_beta: realised beta 1 + style_beta), so book minus MARKET keeps part of the market move; the
+    measurement twins are long-short and are left without it (only two legs carry a small FP_TWIN_MKT_BETA)."""
     cfg = FP_CFG[m]
     rng = rng_for("fp_returns", m)
     regime = np.zeros(T)
@@ -2038,7 +2057,8 @@ def fp_returns(m: str, T: int) -> tuple[np.ndarray, dict]:
     styles = FP_STYLE_MEAN + (t5(T, 6) @ np.linalg.cholesky(FP_STYLE_CORR).T) * FP_STYLE_VOL * vol[:, None] ** 0.5
     books = np.empty((T, 7))
     books[:, 0] = mkt + FP_BOOK_NOISE[0] * rng.standard_normal(T)
-    books[:, 1:] = mkt[:, None] + styles + FP_BOOK_NOISE[1] * rng.standard_normal((T, 6))
+    co_move = np.outer(mkt - cfg["mkt_mean"], cfg["style_beta"])  # demeaned: the spreads' means stay as designed
+    books[:, 1:] = mkt[:, None] + co_move + styles + FP_BOOK_NOISE[1] * rng.standard_normal((T, 6))
     twins = {}
     for name, (k, c) in FP_TWIN_SCALE.items():
         tw = np.empty((T, 7))
@@ -2126,7 +2146,8 @@ def fp_books(W: dict, X: np.ndarray, cfg: dict) -> dict:
     return out
 
 
-def fp_portfolio(W: dict, f: str, book, X: np.ndarray, row: dict, basis: str, rng) -> dict:
+def fp_portfolio(W: dict, f: str, book, X: np.ndarray, row: dict, basis: str, rng, formed_before: bool) -> dict:
+    """formed_before: the book also held names the week before (its previous row is not no_holdings)."""
     head = {"factor": f}
     tail = {"return_basis": basis, "return_basis_label": FP_BASIS_LABEL[basis],
             "carried_weight_share": row["carried_weight_share"], "invalid_weight_share": row["invalid_weight_share"],
@@ -2141,6 +2162,9 @@ def fp_portfolio(W: dict, f: str, book, X: np.ndarray, row: dict, basis: str, rn
                 "n_holdings": 0, "universe_n": W["N"], "formation_panel": None, **tail,
                 "reason_code": "infeasible_no_holdings", "holdings": []}
     w, construction = book
+    turnover = None if f == "MARKET" else round(float(rng.uniform(0.012, 0.16)), 6)  # drawn either way: stable rng
+    if not formed_before:  # no previous book to trade from: null (the fixture's current us SIZE book)
+        turnover = None
     held = np.where(w > 1e-12)[0]
     expo = {"market": float(w.sum()), **{s: float(w @ X[:, k]) for k, s in enumerate(FP_STYLES)}}
     own_key = "market" if f == "MARKET" else f.lower()
@@ -2152,7 +2176,7 @@ def fp_portfolio(W: dict, f: str, book, X: np.ndarray, row: dict, basis: str, rn
     return {**head, "status": "available", "state": "ok", "construction": construction,
             "infeasible_constraint": None, "week_return": row["week_return"], "return_status": "ok",
             "return_state": "realised", "week_status": row["status"],
-            "turnover_one_way": None if f == "MARKET" else round(float(rng.uniform(0.012, 0.16)), 6),
+            "turnover_one_way": turnover,
             "n_holdings": int(len(held)), "universe_n": W["N"], "formation_panel": ["entry_session"], **tail,
             "exposures": expo, "own_exposure": expo[own_key], "max_abs_other_style": max(others),
             "exposures_published": dict(expo), "readback_published": True,
@@ -2237,7 +2261,7 @@ def fp_payload(W: dict) -> dict:
     for j, f in enumerate(FP_FACTORS):
         latest = returns[f][-1]
         portfolios.append(fp_portfolio(W, f, None if latest["status"] == "no_holdings" else books[f], X, latest,
-                                       basis, prng))
+                                       basis, prng, formed_before=returns[f][-2]["status"] != "no_holdings"))
     latest = clock["latest"]
     gaps = clock["gaps"]
     n_cal = T + len(gaps)
@@ -2279,20 +2303,24 @@ def fp_payload(W: dict) -> dict:
         twins = {}
         trng = rng_for("fp_twin_rows", m)
         gap_t = [t for t in range(T) if (plan[t] == "unavailable").any()]
-        never = FP_TWIN_NEVER.get(m, ())
+        # rare legs: the 2x3 cells fill only in a few older weeks (the same weeks for both twins)
+        crng = rng_for("fp_twin_cells", m)
+        older = [t for t in range(4, T // 2) if t not in gap_t]
+        formed = {f: set(crng.choice(older, size=n, replace=False).tolist())
+                  for f, n in FP_TWIN_RARE.get(m, {}).items()}
         for name in FP_TWINS:
             series = {}
             for j, f in enumerate(FP_FACTORS):
                 rows = []
                 for t, week in enumerate(weeks):
-                    if f in never:  # a 2x3 cell had too few names to form: every served week, as live us shows
+                    if f in formed and t not in formed[f]:  # a 2x3 cell had too few names to form this week
                         rows.append(fp_row(week, None, "unavailable", (None, None, None), basis,
                                            return_status="s3b_cell_below_min", state="insufficient", end_null=True))
                     elif t in gap_t:  # the return inputs were incomplete for every other series that week
                         rows.append(fp_row(week, None, "unavailable", fp_shares("unavailable", trng, 1.0), basis,
                                            return_status="s3b_low_session_coverage", state="degraded"))
                     else:
-                        rows.append(fp_row(week, twins_r[name][t, j], "ok", fp_shares("ok", trng, 0.2), basis))
+                        rows.append(fp_row(week, twins_r[name][t, j], "ok", fp_shares("ok", trng, 0.15), basis))
                 series[f] = rows
             twins[name] = {"label": twin_meta[name], "role": "measurement_twin", "basis": "investable_at_entry",
                            "basis_label": FP_TIMING, "return_basis": basis, "return_basis_label": common["basis_label"],

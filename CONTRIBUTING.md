@@ -57,6 +57,7 @@ a notebook; change `kit/surgeflow_helpers.py` and rebuild all notebooks.
 | Name | Use |
 |---|---|
 | `sf_get(path, **params)` | GET an endpoint; spaced ~0.4 s apart, retries 429/5xx, raises `SurgeFlowError` |
+| `sf_try(path, **params)` | like `sf_get`, but on a `SurgeFlowError` it shows a short note and returns `None`. The note names the kind of failure: retired (410), rejected (any other 4xx, such as a 400 `INVALID_FACTOR`: fix the parameters) or unavailable right now (5xx, 429, or an error nested inside a 200: try again later). Use it for optional sections, such as a 503 from the factor portfolios |
 | `records(payload, shape)` / `to_frame(payload, shape)` | main record list / DataFrame using `RESPONSE_SHAPES` |
 | `dig(obj, *keys, default=None)` | safe nested lookup |
 | `show_freshness(payload, label)` | prints as-of, market status, data quality - call it after every fetch |

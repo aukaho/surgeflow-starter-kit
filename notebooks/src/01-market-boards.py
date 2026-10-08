@@ -1347,14 +1347,19 @@ hot_raw.head() if not hot_raw.empty else None
 #
 # - The hotlist sends `market` in upper case (`"US"`). We lower it to match
 #   every other endpoint.
-# - `factor_style` packs seven labels into one string, in the order ERP
-#   (market), SMB (size), HML (value), WML (momentum), RMW (profitability),
-#   CMA (investment) and LIQ (liquidity). We split it into seven columns. A
-#   different number of parts would mean the contract changed, so we raise.
+# - `factor_style` packs seven labels into one string, one per style, in the
+#   order market, size, value, momentum, profitability (quality), investment
+#   and liquidity. We split it into seven columns named after the same seven
+#   styles that notebook 04 uses: `MARKET`, `SIZE`, `VALUE`, `MOMENTUM`,
+#   `PROFITABILITY`, `INVESTMENT` and `LIQUIDITY`. The names are the only link:
+#   `factor_style` is a per-stock text label on the hotlist, separate from the
+#   factor-portfolio endpoint, and it says nothing about whether a stock is in
+#   one of notebook 04's books. A different number of parts would mean the
+#   contract changed, so we raise.
 # - We join the realtime board on `ticker` to see each name's realtime rank.
 #   A missing rank (`NaN`) just means the name is not among the busiest names
 #   that the realtime board returned.
-# - The size label (SMB) is a factor **lean**, not a size fact, so we check it
+# - The size label (`SIZE`) is a factor **lean**, not a size fact, so we check it
 #   against the market cap and print a note when a large company is labelled
 #   "Small Cap".
 
@@ -1364,7 +1369,7 @@ HOT_COLS = ["hotlist_rank", "market", "ticker", "company_name", "industry", "fac
             "projected_vs_yesterday", "previous_day_turnover_usd"]
 HOT_NUM = ["hotlist_rank", "price", "intraday_return_pct", "turnover_per_second", "market_cap_usd",
            "projected_turnover_usd", "projected_vs_yesterday", "previous_day_turnover_usd"]
-FACTORS = ["ERP", "SMB", "HML", "WML", "RMW", "CMA", "LIQ"]
+FACTORS = ["MARKET", "SIZE", "VALUE", "MOMENTUM", "PROFITABILITY", "INVESTMENT", "LIQUIDITY"]  # factor_style order
 
 hot = pick(hot_raw, HOT_COLS)
 hot["ticker"] = hot["ticker"].astype("string").str.strip().replace("", pd.NA)   # text that keeps <NA>
@@ -1389,7 +1394,7 @@ else:
           f"on the realtime board; {hot['realtime_rank'].isna().sum()} are not.")
     display(hot[["hotlist_rank", "ticker"] + FACTORS].head(10).style.hide(axis="index"))
 
-    big_small = hot[(hot["SMB"] == "Small Cap") & (hot["market_cap_usd"] > 10e9)]
+    big_small = hot[(hot["SIZE"] == "Small Cap") & (hot["market_cap_usd"] > 10e9)]
     if not big_small.empty:
         biggest = big_small.loc[big_small["market_cap_usd"].idxmax()]
         print(f"Note: {len(big_small)} of {len(hot)} hotlist names are labelled 'Small Cap' with a market cap above "

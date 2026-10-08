@@ -110,7 +110,7 @@ whales file is under 150 KB.
 SURGEFLOW_API_KEY=sf_live_... python tools/probe_endpoints.py
 ```
 
-The probe uses about 55 requests. It saves every response to
+The probe makes about 50 requests (51). It saves every response to
 `tests/fixtures/live/` and prints, per endpoint, the key paths found live but
 not in the fixture (`+`) and the reverse (`-`), using `paths()`, which samples
 the first five items of each list. To check without calling the API, compare
@@ -124,20 +124,25 @@ Residual difference after this regeneration (refreshed live snapshot of
 
 | File | `paths()` (first 5 items) | All items, dynamic keys collapsed | Why |
 |---|---|---|---|
-| `factor_portfolios_{cn,jp}.json` | +359 / 0 | +359 (cn), +373 (jp) / 0 | `data.measurement_twins` is omitted in cn and jp (size budget). |
-| `factor_portfolios_us.json` | about +8 / −3 | 0 / −1 | `exit_label` is optional (rows with an unwitnessed exit), so the first-five sample differs; the fixture also has it on LIQUIDITY rows, which live never forms. |
+| `factor_portfolios_{cn,jp}.json` | +359 / 0 (cn), +359 / −1 (jp) | +359 (cn), +373 (jp) / 0 | `data.measurement_twins` is omitted in cn and jp (size budget). jp's −1 is the optional `exit_label` (see the us row). |
+| `factor_portfolios_us.json` | +10 / −1 | +3 / −1 | Every path in the difference is `exit_label`, which is optional: only rows with an unwitnessed exit carry it, so which series show it depends on the sample and on the fixture's synthetic exits. |
 | `ml_clusters_{m}.json` | 3–9 / 4–8 | 0 / 0 | `sector_mix` and `top_features` keys are data, not schema. Every fixture key belongs to the live vocabulary. |
-| `hotlist_cn.json` | 0 / −13 | 0 / −14 | Live CN was empty; the fixture has 20 rows with the live US row shape. |
+| `hotlist_cn.json` | 0 / −13 | 0 / −13 | Live CN was empty; the fixture has 20 rows with the live US row shape. |
 | `realtime_cn.json` | 0 / −10 | 0 / −10 | The refreshed live CN board was empty (Golden Week); the fixture keeps the closed-session rows. |
 | `ai_*.json` (live only) | | | Retired endpoints (HTTP 410); no fixture. |
-| every other file, including both `meta` files per market | 0 / 0 | 0 / 0 | |
+| every other file, including the `meta` file of each market | 0 / 0 | 0 / 0 | |
 
-JSON types match on shared factor-portfolio and `ml/clusters` paths, except
-us LIQUIDITY rows, which live serves only as `no_holdings` (all nulls). A few
-older files differ only in null patterns that follow the later clock (for
-example `realtime_{jp,hk}` `stale_reason` is a string once those markets
-closed). The type comparison treats the three screen pages of a market as one
-table, because rare nulls land on different pages.
+JSON types match on shared factor-portfolio and `ml/clusters` paths. The
+factor-portfolio null patterns match in cn and jp. In us they differ where the
+fixture deliberately follows its own status mix rather than the live one: the
+us LIQUIDITY book and the twins' SIZE and LIQUIDITY legs are formed in a few
+fixture weeks (so their `week_return` and weight-share fields are sometimes
+non-null), and `data.portfolios[].exit_state` is `exit_unwitnessed` on the
+current us VALUE book, to exercise that path. A few older files differ only in
+null patterns that follow the later clock (for example `realtime_{jp,hk}`
+`stale_reason` is a string once those markets closed).
+The type comparison treats the three screen pages of a market as one table,
+because rare nulls land on different pages.
 
 ## Fixture clock
 
@@ -150,7 +155,14 @@ York, Golden Week in China, the afternoon session in Tokyo and Hong Kong.
 | Realtime | CLOSED, `stale` / `market_closed`, as of 2026-10-06 20:00 UTC | CLOSED, `stale` / `market_closed`, as of 2026-09-30 06:59 UTC | **OPEN**, `ok`, 15,967 s of 19,800 elapsed | **OPEN**, `ok`, 10,567 s of 19,800 elapsed |
 | Hotlist | CLOSED, `stale`, 20 rows | CLOSED, `stale`, 20 rows | OPEN, **`empty`** / `no_current_hotlist_members`, 0 rows | OPEN, **`empty`**, 0 rows |
 | ML run `as_of_date` / `age_days` / `stale` | 2026-10-05 / 2 / false | 2026-09-30 / 7 / **true** | 2026-10-06 / 1 / false | 2026-10-06 / 1 / false |
-| Factor portfolios (v2) | `available`, freshness `behind` / 2 weeks; current LIQUIDITY book infeasible | `available`, freshness `current` / 1 week | `available`, freshness `behind` / 2 weeks | **`empty`** (`no_publication_for_market`) |
+| Factor portfolios (v2) | `available`, freshness `behind` / 4 weeks; current LIQUIDITY book infeasible | `available`, freshness `behind` / 3 weeks | `available`, freshness `current` / 1 week | **`empty`** (`no_publication_for_market`) |
+
+The factor portfolios run on their own publication clock (`FP_CFG` in the
+generator): each market's data-through session, latest formation,
+`publication_id` (`fixture_{m}_A_{yyyymmdd}_01`) and therefore `weeks_behind`
+are fixture choices, picked to cover one `current` and two `behind` markets.
+They are not the live values. Only `current_week_start` follows from the wall
+clock above (the Monday of its week).
 
 The AI research committee is paused and its two endpoints are retired (HTTP
 410), so there are no AI fixtures.
@@ -189,16 +201,37 @@ Structure built in, so the tutorials find something:
 - **Factor portfolios.** 104 weeks per published market. Each long-only
   book's weekly return = a common market return + its own style spread +
   small noise, with fat tails and volatility clustering. Raw returns of the
-  seven books correlate at about 0.94–0.99 with MARKET, and PCA on them gives
-  PC1 ≈ 94–96 % of the variance. Book − MARKET isolates the style spread
-  (weekly volatility about 0.4–1.0 %, modest cross-correlations, max |ρ|
-  about 0.4); PCA on those six series gives PC1 ≈ 26–30 %. The us twins are
-  long-short, so they correlate with book − MARKET (about 0.6–0.9), not with
-  the market. Holdings come from the shared universe. Style exposures are
-  normal scores of size (small = positive), book/price, 12-1 momentum,
-  margin, conservative investment and low turnover. Each style book is the
-  nearest-to-equal-weight long-only book (weights ≤ 5 %) with exposure
-  exactly 1 to its own style and 0 to the others.
+  books correlate at about 0.93–0.99 with MARKET, and PCA on them gives
+  PC1 ≈ 95 % of the variance. Book − MARKET cancels the market *exposure*
+  and keeps about one unit of the style (weekly volatility about
+  0.5–1.0 %, SIZE and LIQUIDITY about 1.0–1.2 %), but not all of the market
+  *move*: a style's own returns can co-move with the market, as live
+  spreads do, so each style book carries a small generic realised beta of
+  1 + `style_beta` (0 to ±0.15 per book, with a different mix per
+  market; `FP_CFG`). The spreads therefore correlate with the MARKET book
+  at about −0.46 to +0.41: |ρ| ≈ 0.2–0.46 on 14 of the 16 spreads with at
+  least 26 clean weeks, near 0 on us PROFITABILITY and cn INVESTMENT. The
+  spreads share generic, rounded structure: SIZE with LIQUIDITY (ρ ≈ 0.7),
+  VALUE with PROFITABILITY and INVESTMENT, MOMENTUM against VALUE, the two
+  blocks mildly opposed; max |ρ| about 0.7. Standardised PCA on the six
+  spreads gives PC1 ≈ 42 % (cn) and 38 % (jp), against about 25 % for the
+  95th percentile of shuffled noise. us has only four spreads with
+  enough weeks (SIZE and LIQUIDITY are rarely formed in the us fixture):
+  PC1 ≈ 53 % against about 34 %. The spreads' PC1 score still correlates with the
+  MARKET book's return: |ρ| ≈ 0.4 in cn (whose market co-movement lines up
+  with the SIZE/LIQUIDITY-against-VALUE/PROFITABILITY block), about 0.2 in
+  us and under 0.1 in jp. So the spread PCA can partly pick up the market,
+  and an offline run exercises that case. The us twins are long-short and
+  carry no `style_beta` (live twins barely co-move with the market). Each
+  style leg is about twice as volatile as its book − MARKET (weekly about
+  0.8–1.9 %), correlates with it at about 0.6–0.85 (slope of book − MARKET
+  on the twin about 0.3–0.45), and VALUE and PROFITABILITY carry a small
+  negative market loading (about −0.2 to −0.3). Holdings come from the
+  shared universe. Style exposures are normal scores of size (small =
+  positive), book/price, 12-1 momentum, margin, conservative investment and
+  low turnover. Each style book is the nearest-to-equal-weight long-only
+  book (weights ≤ 5 %) with exposure exactly 1 to its own style and 0 to the
+  others.
 - **Identities that hold** (most also hold live):
   - Sector rows are the screen universe: same `change_pct`, and `name` equals
     the screen's `company_name`.
@@ -223,9 +256,16 @@ Structure built in, so the tutorials find something:
   - jp and hk hotlists are empty.
   - hk factor portfolios and their `meta` answer the empty state
     (`status: "empty"`, `reason_code: "no_publication_for_market"`).
-  - The us LIQUIDITY book is infeasible this week (`status: "infeasible"`,
-    no exposures, `holdings: []`); some weekly rows are `no_holdings` or
-    `unavailable`, with `week_return: null`.
+  - The us LIQUIDITY book is rarely formed: `no_holdings` in all but four
+    served weeks, and the current book is infeasible (`status:
+    "infeasible"`, no exposures, `holdings: []`). The us SIZE book is formed
+    in 30 of the 104 weeks; the current one right after a `no_holdings`
+    week, so its `turnover_one_way` is `null`. The us twins' SIZE and
+    LIQUIDITY legs are `s3b_cell_below_min` with `week_return: null` except
+    in a few older weeks (seven and three). Other books have a few
+    `no_holdings` or `unavailable` rows, also with `week_return: null`.
+    (The null patterns follow the live shapes; the counts are the
+    fixture's own.)
   - cn `anomaly_watch[].coverage_ratio` is `null` and cn
     `model_notes.feature_count` is `null`.
   - One us `changed_group[].from_cluster_name` is `null`: its
@@ -268,7 +308,7 @@ Envelope keys differ by endpoint (all live unless marked):
 | Field | Type | Notes | Source |
 |---|---|---|---|
 | `plan` | str | `free` | live |
-| `scopes` | list[str] | 11 scopes: `ai, factors, hotlist, macro, ml, news, notes, realtime, screen, summary, whales` | live |
+| `scopes` | list[str] | 10 scopes: `factors, hotlist, macro, ml, news, notes, realtime, screen, summary, whales` (the retired `ai` scope is gone) | live |
 | `rate_limit` | dict[str, str] | Response headers **as strings**: `X-RateLimit-Limit` (`"180"`/min), `X-RateLimit-Remaining`, `X-RateLimit-Daily-Limit` (`"2000"`), `X-RateLimit-Daily-Remaining`, `X-SurgeFlow-RateLimit-Store`. Cast with `int()` | live |
 | `usage` | dict | `used_7d`, `used_30d` (int), `last_used_at` (UTC), `first_value_reached`, `repeat_value_reached` (bool), `value_days_30d` (int), `note` (str) | live |
 | `key_created_at` | str UTC | | live |
@@ -435,8 +475,7 @@ boards** (top 20 each). Iterate over `payload["data"]["signal_board"]["signals"]
 ### `GET /api/v1/markets/{market}/factor-portfolios` → `factor_portfolios_{m}.json`
 
 Schema `surgeflow.factor_portfolios.v2` (source `/api/{market}/three-model/portfolios`).
-It replaced the v1 release and its seven blocked `erp … liq` factors, which are
-gone. Shape from the refreshed live snapshot (`weeks=260, holdings=25`,
+Shape from the refreshed live snapshot (`weeks=260, holdings=25`,
 measurement on); every value in the fixtures is synthetic.
 
 **What the books are.** Seven **weekly, long-only** books, one per factor:
@@ -444,8 +483,15 @@ measurement on); every value in the fixtures is synthetic.
 has exposure ≈ 1 to its own style and ≈ 0 to the other styles; market exposure
 is 1 by construction (`labels.product`). So the raw weekly returns of all seven
 books move together with the market, and a style shows up as **book − MARKET**.
-In the fixtures PCA on the raw returns gives PC1 ≈ 94–96 % of the variance;
-PCA on the six style-minus-MARKET series gives PC1 ≈ 26–30 %.
+That difference cancels the market *exposure*, not necessarily all of the
+market *move*: a style's own returns can co-move with the market, so a spread
+can still rise and fall with it (live spreads do; the fixtures build this in
+with a small per-market `style_beta`). In the fixtures PCA on the raw returns
+gives PC1 ≈ 95 % of the variance; standardised PCA on the six
+style-minus-MARKET series gives PC1 ≈ 42 % (cn) and 38 % (jp)
+(shuffled-noise line about 25 %), and on us's four usable spreads about 53 %
+(noise about 34 %). The spreads' PC1 score correlates with the MARKET book's
+return at |ρ| ≈ 0.4 in cn, about 0.2 in us and under 0.1 in jp.
 
 **Query** (live; **ignored offline**, so the fixture answers every query the
 same way): `factor` (one of the seven), `formation_date` (YYYY-MM-DD), `weeks`
@@ -457,9 +503,10 @@ true: adds `data.measurement_twins`). Scope `factors`.
 - `data.status` is `available` or `empty`. **Empty is HTTP 200 with
   `ok: true`**, plus `data.reason_code` and `data.message`. Show the message;
   it is not an error. `reason_code` values: `no_publication_for_market`
-  (hk; `factor_portfolios_hk.json` has the live empty-state keys and the
-  public message) and `formation_date_not_published` (a `formation_date`
-  without a publication; same keys, no fixture).
+  (hk; `factor_portfolios_hk.json` has the live empty-state keys, and its
+  `message` is a placeholder: the live wording is not copied) and
+  `formation_date_not_published` (a `formation_date` without a publication;
+  same keys, no fixture).
 - HTTP 400 `INVALID_FACTOR` (`error.factors` lists the valid names),
   `INVALID_DATE`, `INVALID_MARKET`; HTTP 503 when the data cannot be read
   (`sf_get` raises `SurgeFlowError`, `sf_try` returns `None`). The mock serves
@@ -469,17 +516,30 @@ true: adds `data.measurement_twins`). Scope `factors`.
 years) and 25 holdings per book; hk is `empty`. Only us carries
 `data.measurement_twins`; cn and jp omit the key (size budget; the shape a
 `measurement=false` answer is expected to have — inferred). The four files are
-one-line JSON, 3.6 MB together (budget 4 MB). Built in, as live shows it:
+one-line JSON, 3.5 MB together (budget 4 MB). The status mix, the publication
+clock and the identifiers are the fixture's own (`fp_status_plan` and
+`FP_CFG` in the generator), chosen to exercise each path, not copied from a
+live response. Built in:
 
-- us: one week with incomplete return data (`unavailable` books; SIZE and
-  LIQUIDITY `no_holdings`), an eight-week SIZE `no_holdings` stretch, eight
-  degraded rows, and **an infeasible current LIQUIDITY book** (`no_holdings`
-  in the last three weeks; live us LIQUIDITY is never formed);
-  `exit_unwitnessed` on about 28 % of rows.
-- cn: one `unavailable` week across all books, two `no_holdings` weeks, two
-  degraded rows, one calendar gap week; no exits (as live).
-- jp: every week formed, three degraded rows, a few `exit_unwitnessed` rows;
-  the latest `formation_date` is later than its `week_start` (holidays).
+- us: two books that are **rarely feasible**. LIQUIDITY is formed in only
+  four weeks (one of them degraded), so its current book is infeasible. SIZE
+  is formed in 30 weeks: mostly one half-year stretch with three misses, plus
+  six isolated earlier weeks, with five degraded weeks. The current SIZE book
+  is formed right after a `no_holdings` week, so its `turnover_one_way` is
+  null. There is one week with incomplete return data (`unavailable` for the
+  five other books). The twins' SIZE and LIQUIDITY legs are
+  `s3b_cell_below_min` except in seven and three older weeks. About 22 % of
+  formed book rows carry `exit_unwitnessed`. One degraded row each on MARKET,
+  VALUE and MOMENTUM, so us has **nine degraded rows** in nine weeks (meta
+  `checks_degraded_weeks`: 9), and an `exit_unwitnessed` state on the
+  current VALUE book. The latest `formation_date` (a Tuesday) is later than
+  its `week_start` (a Monday holiday).
+- cn: one `unavailable` week across all books, two `no_holdings` weeks
+  across all books plus two more for LIQUIDITY, one calendar gap week; no
+  exits, so no cn row carries `exit_label`. One degraded row each on SIZE
+  and LIQUIDITY.
+- jp: every week formed and a few `exit_unwitnessed` rows; three degraded
+  rows (SIZE 2, LIQUIDITY 1).
 
 | Field | Type | Notes | Source |
 |---|---|---|---|
@@ -503,8 +563,8 @@ one-line JSON, 3.6 MB together (budget 4 MB). Built in, as live shows it:
 | `data.return_basis` | dict | `basis, label, returns_label, twin_returns_label, source (rows), n_rows, declared, ruling, rule`. **The basis differs by market**: us and cn `total_return_dividend_adjusted` ("total return, dividend-adjusted"), jp `price_return_split_adjusted` ("price return, split-adjusted"). Quote `returns_label`; never hard-code the basis | live |
 | `data.degraded_rule` | dict | `rule, rule_ruling, text, label, terms [carried, invalid, unwitnessed_exit], threshold (0.05), source, n_rows, n_rows_carrying, stated_values[], per_series{pure_long_only, s3b_ff_2x3_ew, s3b_ff_2x3_rp126}, declared, declaration_state, ruling, mechanism, shares_note` | live |
 | `data.labels` | dict | `product, returns, cost, candidates, holdout, timing, status{ok, degraded, unavailable, no_holdings, shares_not_recorded, return_not_yet_realised}, degraded_rule, degraded_rule_label, open_week`. Fixture wording is a placeholder except `candidates` ("Model candidates, not recommendations; no accuracy or performance claim is made.") | live |
-| `data.freshness` | dict | `latest_formation_date, latest_week_start, current_week_start, weeks_behind` (int), `state`. Publications are weekly; the API reports how many weeks the latest formation is behind the current week, with a state (one week behind counts as `current`). Display both as served. Fixture: us `behind` / 2, cn `current` / 1, jp `behind` / 2, as live | live |
-| `data.measurement_twins` | dict | **us fixture only.** `s3b_ff_2x3_ew`, `s3b_ff_2x3_rp126` → `label, role (measurement_twin), basis, basis_label, return_basis, return_basis_label, returns_label, degraded_rule, degraded_rule_label, returns{FACTOR: rows}`. Fama-French 2x3 **long-short** weekly returns: no market exposure, so they track book − MARKET; the MARKET twin is a market excess return | live |
+| `data.freshness` | dict | `latest_formation_date, latest_week_start, current_week_start, weeks_behind` (int), `state`. Publications are weekly; the API reports how many weeks the latest formation is behind the current week, with a state (one week behind counts as `current`). Display both as served. Fixture (its own clock): us `behind` / 4, cn `behind` / 3, jp `current` / 1 | live |
+| `data.measurement_twins` | dict | **us fixture only.** `s3b_ff_2x3_ew`, `s3b_ff_2x3_rp126` → `label, role (measurement_twin), basis, basis_label, return_basis, return_basis_label, returns_label, degraded_rule, degraded_rule_label, returns{FACTOR: rows}`. Fama-French 2x3 **long-short** weekly returns with little market exposure, so the style legs track book − MARKET, at about twice its volatility (fixture: weekly 0.8–1.9 %, ρ about 0.6–0.85); the MARKET twin is a market excess return. us SIZE and LIQUIDITY legs: `s3b_cell_below_min` with `week_return: null` and `week_end_session: null`, except in a few older fixture weeks | live |
 | `data.cache` | dict | `state` (`fresh` / `stale_revalidating`), `age_seconds` | live |
 
 `data.portfolios[]`:
@@ -517,12 +577,12 @@ one-line JSON, 3.6 MB together (budget 4 MB). Built in, as live shows it:
 | `infeasible_constraint` | str? | e.g. `other_exposure:SIZE` | live |
 | `week_return` | float? | **Fraction**; equals the last row of `returns[factor]` | live |
 | `return_status`, `return_state`, `week_status` | str | `ok`, `realised`, the row status; infeasible: `no_holdings` (all three) | live |
-| `turnover_one_way` | float? | Null for MARKET | live |
+| `turnover_one_way` | float? | Null for MARKET, for an infeasible book, and for a book not formed the previous week (its previous row is `no_holdings`; fixture: the current us SIZE book). Do not cast it to float unguarded | live |
 | `n_holdings`, `universe_n` | int | Names held / universe size | live |
 | `formation_panel` | list[str]? | Null when infeasible | live |
 | `return_basis`, `return_basis_label` | str | | live |
 | `carried_weight_share`, `invalid_weight_share`, `exit_weight_share` | float? | Fractions (largest share over the holding sessions); null without holdings | live |
-| `exit_state` | str? | `exit_unwitnessed` or null | live |
+| `exit_state` | str? | `exit_unwitnessed` or null. The us fixture sets it on the current VALUE book to exercise the path | live |
 | `degraded_rule`, `degraded_rule_label`, `degraded_rule_source` | str | `degraded_rule_source`: `publication_declaration` | live |
 | `carried_weight_share_max`, `invalid_weight_share_max`, `exit_unwitnessed_weight_share_max` | null | | live |
 | `exposures`, `exposures_published` | dict[str, float] | `market, size, value, momentum, profitability, investment, liquidity`. `market` = sum of weights = 1 | live |
@@ -543,7 +603,7 @@ Weekly rows (`data.returns[F][]` and `data.measurement_twins[T].returns[F][]`):
 | `week_return` | float? | **Fraction**; null unless `status` is `ok` or `degraded` | live |
 | `status` | str | `ok`, `degraded` (shown, excluded from inference), `unavailable`, `no_holdings`; the vocabulary also has `shares_not_recorded`, `return_not_yet_realised` | live |
 | `state` | str | `ok`; `infeasible` (no_holdings); twins: `insufficient`, `degraded` | live |
-| `return_status` | str | `ok`, `no_holdings`, `return_unavailable_low_coverage` (us), `return_unavailable_whole_market_gap` (cn); twins: `s3b_cell_below_min`, `s3b_low_session_coverage` | live |
+| `return_status` | str | `ok`, `no_holdings`, `return_unavailable_low_coverage` (us), `return_unavailable_whole_market_gap` (cn); twins: `s3b_cell_below_min` (us, jp), `s3b_low_session_coverage` (us), `s3b_no_formation_universe` and `s3b_whole_panel_gap_day` (cn, live only: cn and jp fixtures omit the twins) | live |
 | `status_label` | str | = `labels.status[status]` | live |
 | `in_inference` | bool | True only for `ok` | live |
 | `carried_weight_share`, `invalid_weight_share`, `exit_weight_share`, `exit_state` | float?, str? | As in the portfolio record. Degraded = the three shares add up to more than 5 % | live |
@@ -563,7 +623,7 @@ us, cn and jp are `available`; hk is `empty` with its market caveats.
 | Field | Type | Notes | Source |
 |---|---|---|---|
 | `data.market`, `contract`, `status` | str | `available` / `empty` | live |
-| `data.reason_code`, `message` | str? | Null when available; hk: `no_publication_for_market` and the public message | live |
+| `data.reason_code`, `message` | str? | Null when available; hk: `no_publication_for_market` and a placeholder message (the live wording is not copied) | live |
 | `data.models` | dict | `portfolios{state (published), first_formation, last_formation, n_publications, latest{...publication}, holdout_start, holdout_rule, open_week, formation_panel}`, `pick{state: not_published}`, `product{state: not_published}` | live |
 | `data.publications[]`, `n_publications`, `publication` | list, int, dict | Publication records (keys as `data.publication` above) | live |
 | `data.universe` | dict | `rule, computed_as_of, as_of_date, n_in_universe, n_evaluated, measured_state` | live |
@@ -576,7 +636,7 @@ us, cn and jp are `available`; hk is `empty` with its market caveats.
 | `data.served_tables` | list[str] | | live |
 | `data.freshness` | dict | `portfolios{latest_formation_date, latest_week_start, current_week_start, weeks_behind, state}` (the same block as the portfolios payload), `pick: null`, `product: null` | live |
 | `data.formation_panel`, `measurement`, `survivorship`, `served_caveats` | | As in the portfolios payload | live |
-| `data.market_caveats` | dict? | Null for us, cn, jp; hk: `{ruling, label, items[str]}` (fixture items are placeholders) | live |
+| `data.market_caveats` | dict? | Null for us, cn, jp; hk: `{ruling, label, items[str]}`. Only the shape is kept: the fixture `ruling`, `label` and six `items` are generic placeholders unrelated to the live list | live |
 | `data.contract_revision` | str | | live |
 | `data.return_basis` | dict | `state (declared), basis, label, returns_label, twin_returns_label, publications[{publication_id, state, basis, sources{...}}], ruling, rule`. hk: `state: no_portfolios_published`, nulls, `publications: []` | live |
 | `data.degraded_rule` | dict | `state, rule, rule_ruling, text, label, terms, threshold, publications[{publication_id, state, rule, sources{...}, checks_degraded_weeks}], ruling, mechanism, shares_note, declaration_keys[]`. hk: nulls | live |
