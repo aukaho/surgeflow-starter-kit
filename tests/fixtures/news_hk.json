@@ -4,7 +4,6 @@
  "source": "/api/news/feed",
  "market": "hk",
  "data": {
-  "ok": true,
   "market": "hk",
   "count": 40,
   "total_matching": 6800,

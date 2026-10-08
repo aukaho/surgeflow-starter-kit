@@ -41,7 +41,6 @@
     "screen",
     "realtime",
     "hotlist",
-    "ai",
     "ml",
     "whales",
     "news",
@@ -67,7 +66,6 @@
     "screen",
     "realtime",
     "hotlist",
-    "ai",
     "ml",
     "whales",
     "news",
@@ -132,18 +130,6 @@
   },
   {
    "method": "GET",
-   "path": "/api/v1/ai/ratings",
-   "scope": "ai",
-   "description": "AI analyst panel scoreboard for the US hotlist: per-ticker composite scores, per-analyst scores and comments, paper long/short flags, tenure, and stop states. Research documentation, not investment advice."
-  },
-  {
-   "method": "GET",
-   "path": "/api/v1/ai/grade-book",
-   "scope": "ai",
-   "description": "The sole deterministic paper book: strict score >70 LONG and <30 SHORT positions with side-aware entry, stop, take-profit, outcomes, and daily six-area rationale gate decisions. Research documentation, not investment advice."
-  },
-  {
-   "method": "GET",
    "path": "/api/v1/markets/{market}/ml/clusters",
    "scope": "ml",
    "description": "Latest ML clustering run: cluster profiles, sector mix, representative tickers, anomaly watch, and stability diagnostics. Descriptive analytics, not prediction."
@@ -170,7 +156,13 @@
    "method": "GET",
    "path": "/api/v1/markets/{market}/factor-portfolios",
    "scope": "factors",
-   "description": "Canonical ERP-to-LIQ pure-factor portfolios: signed holdings weights, expected-shortfall statistics, aligned correlations, and return series; gate state is disclosed rather than used as a row filter."
+   "description": "Weekly long-only pure factor portfolios (three-model, model A): publication, weekly series, per-factor exposures and realised weekly returns, holdings on request, labels, caveats, degraded rule and return basis. A market without a publication answers its empty state. Query: factor, formation_date (YYYY-MM-DD), weeks (max 1000), holdings (0-5000), measurement."
+  },
+  {
+   "method": "GET",
+   "path": "/api/v1/markets/{market}/factor-portfolios/meta",
+   "scope": "factors",
+   "description": "Publication metadata for the pure factor portfolios: publications, per-model state and window, universe, hold-out, cost basis, caveats and return basis."
   },
   {
    "method": "GET",
@@ -196,13 +188,12 @@
   "realtime": "rows are returned at payload.data.rows",
   "hotlist": "rows are returned at payload.data.rows",
   "addin": "rows are returned at payload.rows",
-  "ai_ratings": "the scoreboard is returned at payload.data.names",
-  "ai_grade_book": "positions at payload.data.rows, opener decisions at payload.data.decisions",
   "ml_clusters": "clusters at payload.data.clusters, anomalies at payload.data.anomaly_watch",
   "whales": "boards at payload.data.signal_board.signals",
   "sector": "rows are returned at payload.data.rows",
   "news": "articles are returned at payload.data.articles",
-  "factor_portfolios": "factors at payload.data.data.factors",
+  "factor_portfolios": "state at payload.data.status; per-factor portfolios at payload.data.portfolios",
+  "factor_portfolios_meta": "state at payload.data.status; publications at payload.data.publications",
   "notes": "notes are returned at payload.data.notes",
   "macro_calendar": "events at payload.data.data.events",
   "bond_etfs": "ETF rows at payload.data.data.etfs"

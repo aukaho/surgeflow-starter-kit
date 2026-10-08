@@ -2253,10 +2253,10 @@ else:
 #
 # **The two dates can differ.** `treasury_curve_date` can be older than
 # `latest_bar_date` because the data provider publishes Treasury curve values
-# later than it publishes prices. On 7 October 2026, for example, the provider
-# had not yet published curve values after 2 October, so the spreads used the
-# 2 October curve while the price bars were newer. The cell below prints both
-# dates and the gap between them, so you can see which curve the spreads use.
+# later than it publishes prices. When that happens, the spreads use the most
+# recent curve the provider has published while the price bars are newer. The
+# cell below prints both dates and the gap between them, so you can see which
+# curve the spreads use.
 #
 # One definition is missing. The API does not say whether `return_1y_pct` and
 # `return_ytd_pct` include **distributions** (the interest a bond fund pays

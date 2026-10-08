@@ -5,7 +5,7 @@
 Saves each live response to tests/fixtures/live/ (git-ignored, never
 committed) and prints, per endpoint, the key paths that exist live but not
 in the mock fixture (+) and the reverse (-). Use it to correct fixtures and
-notebook column names after the API changes. Uses about 50 requests.
+notebook column names after the API changes. Uses about 55 requests.
 """
 from __future__ import annotations
 
@@ -41,6 +41,7 @@ PER_MARKET = {
     "sector": "sector",
     "news": "news",
     "factor_portfolios": "factor-portfolios",
+    "factor_portfolios_meta": "factor-portfolios/meta",
 }
 
 
@@ -76,6 +77,9 @@ def main() -> int:
         for page in (1, 2, 3):
             name = f"screen_{m}" + ("" if page == 1 else f".page{page}")
             jobs.append((name, f"/api/v1/markets/{m}/screen", {"page": page, "page_size": 100, "sort": "market_cap_usd"}))
+    # Factor portfolios (v2): five years of weekly returns and 25 holdings per book, as the notebooks ask.
+    jobs = [(n, p, {"weeks": 260, "holdings": 25} if n.startswith("factor_portfolios_") and "meta" not in n else q)
+            for n, p, q in jobs]
     failures = 0
     for name, path, params in jobs:
         time.sleep(0.5)

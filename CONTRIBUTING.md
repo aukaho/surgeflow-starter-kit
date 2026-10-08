@@ -1,8 +1,10 @@
 # Contributing to the SurgeFlow Starter Kit
 
-The notebooks teach every authenticated SurgeFlow API v1 endpoint (13 since
-the paused AI committee's two endpoints were retired), then go further:
-cleaning the data, visualising it, and applying basic machine learning. These rules keep the series consistent.
+The notebooks teach every authenticated SurgeFlow API v1 endpoint (14: the
+paused AI committee's two endpoints are retired, and the factor portfolios
+have a `/meta` route beside the main one), then go further: cleaning the data,
+visualising it, and applying basic machine learning. These rules keep the
+series consistent.
 
 ## Layout
 
@@ -91,7 +93,13 @@ The Plotly template `plotly_white+surgeflow` is the default.
 ## Data rules
 
 - **Empty is normal.** A closed market, weekend or new day can return zero
-  rows. Check for it and print a friendly sentence instead of crashing.
+  rows. Check for it and print a friendly sentence instead of crashing. The
+  factor portfolios say so in `data.status`: `"empty"` (HTTP 200) comes with a
+  `reason_code` and a `message`. Show the message; it is not an error.
+- **Factor-portfolio freshness is its own block**: `data.freshness`, per
+  model under `/meta` (`data.freshness.portfolios`). Print its `state` and
+  `weeks_behind` exactly as the API reports them, read at run time: no
+  hard-coded date, and no explanation of the number.
 - **A missing field is a contract change.** Let it raise. Do not silently
   skip columns that the documented shape promises.
 - Show cleaning explicitly; never hide it in a helper:
@@ -103,7 +111,10 @@ The Plotly template `plotly_white+surgeflow` is the default.
   - z-scores before distance-based ML;
   - an explicit, counted NaN policy.
 - Budget: under about 3 minutes and 80 requests per notebook (free tier:
-  2,000/day, 180/min). Print `api_calls_used()` at the end.
+  2,000/day, 180/min). Print `api_calls_used()` at the end. Ask for only what
+  a section needs: a factor-portfolio answer with many `weeks`, `holdings` and
+  the measurement twins runs to megabytes, so use `holdings=0` and
+  `measurement=false` when only the return series are needed.
 - Never print, log or save the API key.
 
 ## Chart rules (from the SurgeFlow chart theme)

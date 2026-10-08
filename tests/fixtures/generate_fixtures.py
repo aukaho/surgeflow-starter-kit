@@ -13,8 +13,13 @@ and account fields are fake. tests/fixtures/README.md documents each field and
 how sure we are of it. catalog.json and health.json are real responses and are
 never touched.
 
-Two endpoints errored live on 2026-10-07 (news: an upstream error inside a 200;
-summary: HTTP 500), so their payloads keep an INFERRED shape.
+news and summary errored in the first snapshot (news: an upstream error inside a 200;
+summary: HTTP 500), so their shapes were first INFERRED. The refreshed snapshot (about
+23:10 UTC the same day) answered both, and the fixtures now match those bodies.
+
+Factor portfolios are the v2 weekly long-only books (surgeflow.factor_portfolios.v2,
+plus .../factor-portfolios/meta): us, cn and jp are published, hk answers the empty
+state. The factor files are written compactly (one line) to stay under 4 MB together.
 
 Design:
 - One ticker universe per market (real tickers for the largest names, then
@@ -35,11 +40,13 @@ import argparse
 import hashlib
 import json
 import math
+import re
 import sys
 import zlib
 from collections import Counter
 from datetime import date, datetime, timedelta, timezone
 from pathlib import Path
+from statistics import NormalDist
 
 import numpy as np
 
@@ -1066,6 +1073,7 @@ ML_FEATURES = {
     "leverage_debt_to_mcap": (0, 0, 0, 0, 0, 0, 0, 1.0), "val_ep_z": (0, 0, 0.5, 0.8, 0, 0, 0, 0),
     "val_bp_z": (0, 0, 0, 0.9, 0, 0, 0, 0), "val_cfop_z": (0, 0, 0.4, 0.7, 0, 0, 0, 0),
     "log_market_cap": (0, 0, 0, 0, 0, 0, 1.0, 0), "turnover_to_mcap": (0, 0.2, 0, 0, 0, 0.9, 0, 0),
+    "log_turnover": (0, 0.2, 0, 0, 0, 0.8, 0.5, 0),
     "pa_mfe_21d": (0.6, 0.3, 0, 0, 0, 0.5, 0, 0), "pa_mae_21d": (0.5, -0.6, 0, 0, 0, 0, 0, 0),
     "pa_edge_21d": (0.8, 0, 0, 0, 0, 0.2, 0, 0), "pa_mfe_52w": (0.7, 0.4, 0, 0, 0, 0, 0, 0),
     "pa_mae_52w": (0.4, -0.7, 0, 0, 0, 0, 0, 0), "pa_edge_52w": (0.8, 0, 0, 0, 0, 0, 0, 0),
@@ -1084,6 +1092,7 @@ PHRASES = {
     ("downside_vol_63", 1): "high downside vol", ("pa_mfe_21d", 1): "wide upside excursions (21d)",
     ("pa_edge_21d", 1): "favorable excursion edge", ("ret_252d", 1): "strong 1y momentum",
     ("pa_sir_recovered", 1): "attention spent", ("pa_sir_infectious", -1): "attention quiet",
+    ("pa_sir_infectious", 1): "attention flaring", ("log_turnover", 1): "heavily traded",
     ("val_ep_z", -1): "expensive (low E/P)", ("val_ep_z", 1): "cheap (high E/P)",
     ("val_cfop_z", -1): "low cash yield", ("val_cfop_z", 1): "high cash yield",
     ("val_bp_z", 1): "cheap (high B/P)", ("val_bp_z", -1): "rich (low B/P)",
@@ -1092,6 +1101,8 @@ PHRASES = {
     ("log_market_cap", 1): "large cap", ("ret_63d", 1): "rising (3m)", ("ret_63d", -1): "falling (3m)",
     ("rolling_sharpe_63", -1): "poor risk-adj return",
 }
+ML_RETIRED = {"us"}  # markets whose changed_group still names a cluster id that no longer exists (null name)
+ML_RETIRED_ROWS = 1  # live us: one such row among the 40
 ML_GUARDRAILS = [
     "Macro inputs enter only as per-ticker sensitivities, never as same-day macro levels.",
     "Each valuation ratio is used once, so the same signal is not counted twice.",
@@ -1168,8 +1179,18 @@ def ml_state(W: dict) -> dict:
     second = np.argsort(d, axis=1)[:, 1]
     changed = (rng.random(N) < 0.55 * (1 - confidence) + 0.05) & eligible
     prior = np.where(changed, second, labels)
+    retired = None
+    if m in ML_RETIRED:  # the smallest group dissolved since the previous run: its members moved to their next-nearest
+        sizes = np.bincount(labels[eligible], minlength=len(arch_centroids))
+        retired = int(np.argmin(sizes))
+        moved = labels == retired
+        d_alt = d.copy()
+        d_alt[:, retired] = np.inf
+        labels = np.where(moved, np.argmin(d_alt, axis=1), labels)
+        prior = np.where(moved, retired, prior)
+        changed = changed | (moved & eligible)
     return dict(Z=Z, labels=labels, eligible=eligible, coverage=coverage, confidence=confidence, prior=prior,
-                changed=changed, outliers=set(int(i) for i in outliers))
+                changed=changed, outliers=set(int(i) for i in outliers), retired=retired)
 
 
 def ml_payload(W: dict) -> dict:
@@ -1178,12 +1199,14 @@ def ml_payload(W: dict) -> dict:
     st = W["ML"]
     Z, labels, el = st["Z"], st["labels"], st["eligible"]
     idx = np.where(el)[0]
-    k = len(cfg["archetypes"])
+    retired_g = st["retired"]
     sizes = Counter(labels[idx].tolist())
-    order = sorted(range(k), key=lambda g: -sizes[g])
+    order = sorted((g for g in range(len(cfg["archetypes"])) if g != retired_g), key=lambda g: -sizes[g])
+    k = len(order)
     cid = {g: cfg["cluster_ids"][r] for r, g in enumerate(order)}  # ids follow size order, not contiguous
+    retired = None if retired_g is None else cfg["cluster_ids"][k]  # the dissolved group's id, now unused
     in_screen = set(W["by_cap"][:SCREEN_PAGES * PAGE_SIZE].tolist())
-    cent = {g: Z[idx][labels[idx] == g].mean(0) for g in range(k)}
+    cent = {g: Z[idx][labels[idx] == g].mean(0) for g in order}
     dist = np.array([np.sqrt(((Z[i] - cent[labels[i]]) ** 2).sum()) for i in range(N)])
     # PCA reconstruction error (6 components) on the eligible rows
     Ze = Z[idx] - Z[idx].mean(0)
@@ -1233,12 +1256,13 @@ def ml_payload(W: dict) -> dict:
     # switchers since the previous run
     ch = [i for i in idx if st["changed"][i]]
     ch = sorted(ch, key=lambda i: (-st["confidence"][i], W["tickers"][i]))
-    ch = [i for i in ch if i in in_screen][:20] + [i for i in ch if i not in in_screen][:20]
-    retired = max(cfg["cluster_ids"]) + 1 if m == "hk" else None  # live HK: a prior cluster id that no longer exists
+    gone_rows = [i for i in ch if st["prior"][i] == retired_g][:ML_RETIRED_ROWS] if retired is not None else []
+    ch = [i for i in ch if st["prior"][i] != retired_g]
+    ch = [i for i in ch if i in in_screen][:20] + [i for i in ch if i not in in_screen][:20 - len(gone_rows)] + gone_rows
     changed_group = []
-    for n_, i in enumerate(sorted(ch, key=lambda i: -st["confidence"][i])):
+    for i in sorted(ch, key=lambda i: -st["confidence"][i]):
         from_g = int(st["prior"][i])
-        gone = retired is not None and n_ % 2 == 0
+        gone = from_g == retired_g
         changed_group.append({
             "ticker": W["tickers"][i], "from_cluster_id": retired if gone else cid[from_g],
             "from_cluster_name": None if gone else names[from_g], "to_cluster_id": cid[labels[i]],
@@ -1594,10 +1618,12 @@ def whales_payload(W: dict, gate_total: int) -> dict:
             "data": data}
 
 
-# ---------------------------------------------------------------------------- news (INFERRED shape)
-# Live on 2026-10-07 every market answered {"ok": true, "data": {"ok": false, "error": {...}}}, so the success
-# shape below is inferred: the envelope follows the error response, the article keys match the articles that
-# live notes/daily embeds, and data.coverage / data.methodology follow the keyless /api/news/feed twin.
+# ---------------------------------------------------------------------------- news
+# In the first snapshot of 2026-10-07 every market answered {"ok": true, "data": {"ok": false, "error": {...}}},
+# so the success shape was first inferred (envelope from the error response, article keys from the articles that
+# live notes/daily embeds, data.coverage / data.methodology from the keyless /api/news/feed twin). The refreshed
+# snapshot of the same day answered for every market and confirmed the key paths and JSON types; values stay
+# synthetic.
 NEWS_SOURCES = {  # (provider, source_family, publisher, article_type, weight)
     "us": [("benzinga", "vendor_news", "Benzinga", "news", 0.4), ("polygon", "polygon_news", "GlobeNewswire Inc.", "news", 0.3),
            ("fmp", "fmp_stock_news", "Financial Modeling Prep", "stock", 0.3)],
@@ -1697,7 +1723,7 @@ def news_payload(W: dict) -> dict:
     articles = W["NEWS"]
     latest = articles[0]["published_utc"][:10]
     data = {
-        "ok": True, "market": m, "count": len(articles), "total_matching": meta["total"], "offset": 0,
+        "market": m, "count": len(articles), "total_matching": meta["total"], "offset": 0,
         "coverage": {"total_articles": meta["total"], "scored_pct": meta["scored"], "disclosures": meta["disclosures"],
                      "media": meta["total"] - meta["disclosures"], "languages": meta["languages"], "latest_date": latest,
                      "scope": "full_market_corpus", "sentiment_latest_date": latest},
@@ -1711,196 +1737,657 @@ def news_payload(W: dict) -> dict:
             "data": data}
 
 
-# ---------------------------------------------------------------------------- factor portfolios
-# (factor_id, factor_label, factor_name_published, side_displayed, semantic_label, evidence_status) - live values
-FACTORS = [
-    ("erp", "Market", "ERP", "market excess return", "Market", "official_index_and_governed_risk_free"),
-    ("smb", "Size", "SMB_FF3", "long-short pure factor", "Size", "governed_pit"),
-    ("hml", "Value", "HML", "long-short pure factor", "Value", "governed_pit"),
-    ("wml", "Momentum", "WML", "long-short pure factor", "Momentum", "governed_market_data"),
-    ("rmw", "Profitability", "RMW", "long-short pure factor", "Profitability", "governed_pit"),
-    ("cma", "Investment", "CMA", "long-short pure factor", "Investment", "governed_pit_assets"),
-    ("liq", "Liquidity", "LIQ", "long-short pure factor", "Liquidity", "governed_turnover_history"),
-]
-# Live on 2026-10-07 every factor in every market was "blocked" (no returns, no holdings). The fixture publishes
-# most factors so the notebooks have return series to analyse, and keeps HK fully blocked like live.
-FP_BLOCKED = {"us": {"liq"}, "cn": {"cma", "liq"}, "jp": {"liq"}, "hk": {f[0] for f in FACTORS}}
-GATE_REASON = {
-    "base": "correlation_triangle_not_tested; stock_residual_diagnostics_not_tested",
-    "weak": "correlation_triangle_not_tested; stock_residual_diagnostics_not_tested; premium_not_significant_5pct; "
-            "spanning_alpha_not_significant_5pct; factor_redundant_5pct",
-    "short": "factor_sample_below_252; premium_hac_not_tested; spanning_not_tested; correlation_triangle_not_tested; "
-             "stock_residual_diagnostics_not_tested",
-}
-FACTOR_GATE = {"erp": "base", "smb": "base", "hml": "weak", "wml": "base", "rmw": "weak", "cma": "short", "liq": "short"}
-FP_CORR = np.array([  # modest cross-factor correlations (erp, smb, hml, wml, rmw, cma, liq)
-    [1.00, 0.20, -0.05, -0.10, -0.15, -0.20, 0.15],
-    [0.20, 1.00, 0.15, -0.10, -0.25, 0.05, 0.35],
-    [-0.05, 0.15, 1.00, -0.35, -0.10, 0.40, 0.10],
-    [-0.10, -0.10, -0.35, 1.00, 0.15, -0.10, -0.05],
-    [-0.15, -0.25, -0.10, 0.15, 1.00, 0.05, -0.15],
-    [-0.20, 0.05, 0.40, -0.10, 0.05, 1.00, 0.05],
-    [0.15, 0.35, 0.10, -0.05, -0.15, 0.05, 1.00],
+# ---------------------------------------------------------------------------- factor portfolios (v2)
+# GET /api/v1/markets/{m}/factor-portfolios (surgeflow.factor_portfolios.v2) and .../factor-portfolios/meta
+# (surgeflow.factor_portfolios_meta.v2). Key paths, nesting, types, enums and null patterns follow the live v2
+# responses of 2026-10-07; every number, id and free-text sentence is synthetic or a paraphrased placeholder.
+# Weekly long-only books: exposure 1 to the own style, 0 to the other styles, market exposure 1 by construction.
+FP_FACTORS = ["MARKET", "SIZE", "VALUE", "MOMENTUM", "PROFITABILITY", "INVESTMENT", "LIQUIDITY"]
+FP_STYLES = ["size", "value", "momentum", "profitability", "investment", "liquidity"]  # exposure keys after "market"
+FP_TWINS = ("s3b_ff_2x3_ew", "s3b_ff_2x3_rp126")
+FP_SERIES = ("pure_long_only",) + FP_TWINS
+FP_NOTE = "Automated research documentation, not investment advice or a solicitation."  # live v2 wording
+FP_CONTRACT = "three_model_served_schema_v1"
+FP_REVISION = "fixture_contract_rev2"
+FP_WEEKS = 104  # served weeks per fixture: two years keeps the four files under 4 MB (live serves `weeks`,
+                #   default 52, up to 1000; the mock ignores the query, so a notebook asking for 156 gets 104)
+FP_TWIN_MARKETS = ("us",)  # size budget: cn/jp omit data.measurement_twins, as a measurement=false answer would
+FP_SHOWN = 25  # holdings per book (holdings=25), largest weights first; holdings_truncated is then true
+FP_CAP = 0.05  # per-name weight bound of the style books
+FP_RULE = "max_session_carried_share_plus_max_session_invalid_share_plus_max_session_unwitnessed_exit_share_gt_0.05"
+FP_BASIS_LABEL = {"total_return_dividend_adjusted": "total return, dividend-adjusted",
+                  "price_return_split_adjusted": "price return, split-adjusted"}
+FP_STYLE_CORR = np.array([  # weekly pure-style spreads (size, value, momentum, profitability, investment, liquidity)
+    [1.00, 0.00, 0.05, -0.10, 0.10, 0.70],  # generic rounded blocks: size-liquidity, value-profitability-investment,
+    [0.00, 1.00, -0.40, 0.60, 0.50, -0.10],  # momentum against value; positive definite (smallest eigenvalue ~0.26)
+    [0.05, -0.40, 1.00, -0.20, -0.25, 0.05],
+    [-0.10, 0.60, -0.20, 1.00, 0.30, -0.10],
+    [0.10, 0.50, -0.25, 0.30, 1.00, 0.05],
+    [0.70, -0.10, 0.05, -0.10, 0.05, 1.00],
 ])
-FP_VOL = np.array([0.0105, 0.0050, 0.0048, 0.0068, 0.0038, 0.0034, 0.0042])
-FP_MEAN = np.array([0.00040, 0.00002, 0.00008, 0.00030, 0.00018, 0.00006, 0.00010])
-NULL_STATS = {"n_obs": 0, "vol_annual": None, "sharpe": None, "max_dd": None, "var_95_252d": None,
-              "es_95_252d": None, "mean_annual": None}
+FP_STYLE_VOL = np.array([0.0120, 0.0065, 0.0095, 0.0050, 0.0045, 0.0115])  # weekly
+FP_STYLE_MEAN = np.array([0.0002, 0.0003, 0.0006, 0.0004, 0.0002, 0.0003])
+FP_BOOK_NOISE = (0.0008, 0.0005)  # weekly idiosyncratic noise of the MARKET book and of each style book
+# Measurement twins (long-short): leg = k x style spread + beta x market move + c x style vol x noise, so a twin leg
+# is about twice as volatile as its long-only spread and correlates with it at about 0.7.
+FP_TWIN_SCALE = {"s3b_ff_2x3_ew": (1.7, 1.4), "s3b_ff_2x3_rp126": (1.5, 1.2)}  # twin -> (k, c)
+FP_TWIN_MKT_BETA = np.array([0.0, -0.15, 0.0, -0.20, 0.0, 0.0])  # a small market loading on two legs
+FP_TWIN_NEVER = {"us": ("SIZE", "LIQUIDITY")}  # twin legs whose 2x3 cells never fill in the served window (as live)
+FP_CFG = {  # publication clock (the user-visible freshness follows from it and the fixture clock), basis, scale;
+    # surv: survivorship points a year, any negative float (synthetic, deliberately unrelated to live estimates)
+    "us": dict(basis="total_return_dividend_adjusted", first="2015-01-05", through="2026-09-29",
+               published="2026-10-06T21:42:17Z", mkt_vol=0.022, mkt_mean=0.0016, exits=0.28, surv=-0.6,
+               cache=("stale_revalidating", 412.7), construction="dual_exact_nearest_ew_l2_turnover",
+               market_construction="normalised_objective_weight_reprojected"),
+    "cn": dict(basis="total_return_dividend_adjusted", first="2019-01-07", through="2026-09-30",
+               published="2026-10-06T22:05:51Z", mkt_vol=0.027, mkt_mean=0.0008, exits=0.0, surv=-3.2,
+               cache=("fresh", 188.2), construction="dual_exact_nearest_ew_l2_turnover",
+               market_construction="normalised_objective_weight"),
+    "jp": dict(basis="price_return_split_adjusted", first="2017-01-09", through="2026-09-28",
+               published="2026-10-06T22:31:06Z", mkt_vol=0.021, mkt_mean=0.0013, exits=0.03, surv=-1.7,
+               cache=("fresh", 205.9), construction="lsq_linear_nearest_ew_l2_turnover",
+               market_construction="normalised_objective_weight"),
+}
+FP_EMPTY_MESSAGE = "No publication exists for this market yet (fixture placeholder)."  # live wording is not copied
+# Weekday market closures inside the served window (public exchange calendars, simplified). HOLIDAYS above
+# covers the fixture's last weeks; a week with no trading day is a calendar gap (live CN shows such gaps).
+FP_HOLIDAYS = {
+    "us": {date(2023, 11, 23), date(2023, 12, 25), date(2024, 1, 1), date(2024, 1, 15), date(2024, 2, 19),
+           date(2024, 3, 29), date(2024, 5, 27), date(2024, 6, 19), date(2024, 7, 4), date(2024, 9, 2),
+           date(2024, 11, 28), date(2024, 12, 25), date(2025, 1, 1), date(2025, 1, 20), date(2025, 2, 17),
+           date(2025, 4, 18), date(2025, 5, 26), date(2025, 6, 19), date(2025, 7, 4), date(2025, 9, 1),
+           date(2025, 11, 27), date(2025, 12, 25), date(2026, 1, 1), date(2026, 1, 19), date(2026, 2, 16),
+           date(2026, 4, 3), date(2026, 5, 25), date(2026, 6, 19)},
+    "cn": ({date(2024, 1, 1), date(2024, 2, 9), date(2024, 4, 4), date(2024, 4, 5), date(2024, 5, 1),
+            date(2024, 5, 2), date(2024, 5, 3), date(2024, 6, 10), date(2024, 9, 16), date(2024, 9, 17),
+            date(2025, 1, 1), date(2025, 4, 4), date(2025, 5, 1), date(2025, 5, 2), date(2025, 5, 5),
+            date(2025, 6, 2), date(2026, 1, 1), date(2026, 1, 2), date(2026, 4, 6), date(2026, 5, 1),
+            date(2026, 5, 4), date(2026, 5, 5), date(2026, 6, 19), date(2026, 9, 25)}
+           | {date(2024, 2, 12) + timedelta(d) for d in range(5)}  # Spring Festival: a whole-week gap
+           | {date(2024, 10, 1) + timedelta(d) for d in range(7)}
+           | {date(2025, 1, 28) + timedelta(d) for d in range(8)}
+           | {date(2025, 10, 1) + timedelta(d) for d in range(8)}
+           | {date(2026, 2, 16) + timedelta(d) for d in range(5)}),  # Spring Festival: a whole-week gap
+    "jp": {date(2023, 11, 3), date(2023, 11, 23), date(2024, 1, 1), date(2024, 1, 2), date(2024, 1, 3),
+           date(2024, 1, 8), date(2024, 2, 12), date(2024, 2, 23), date(2024, 3, 20), date(2024, 4, 29),
+           date(2024, 5, 3), date(2024, 5, 6), date(2024, 7, 15), date(2024, 8, 12), date(2024, 9, 16),
+           date(2024, 9, 23), date(2024, 10, 14), date(2024, 11, 4), date(2024, 12, 31), date(2025, 1, 1),
+           date(2025, 1, 2), date(2025, 1, 3), date(2025, 1, 13), date(2025, 2, 11), date(2025, 2, 24),
+           date(2025, 3, 20), date(2025, 4, 29), date(2025, 5, 5), date(2025, 5, 6), date(2025, 7, 21),
+           date(2025, 8, 11), date(2025, 9, 15), date(2025, 9, 23), date(2025, 10, 13), date(2025, 11, 3),
+           date(2025, 11, 24), date(2025, 12, 31), date(2026, 1, 1), date(2026, 1, 2), date(2026, 1, 12),
+           date(2026, 2, 11), date(2026, 2, 23), date(2026, 3, 20), date(2026, 4, 29), date(2026, 5, 4),
+           date(2026, 5, 5), date(2026, 5, 6)},
+}
+# Placeholder wording. Live labels say the same things in other words; notebooks quote them at run time.
+FP_OPEN_WEEK = ("Next week's candidates, formed at the entry close: not held yet, so there is no return (return not "
+                "yet realised).")
+FP_TIMING = ("Measured after the fact on the names that were investable at the entry close, with characteristics known "
+             "at that close; not a record of executed trades.")
+FP_STATUS_LABELS = {  # short placeholders: they repeat on every served row
+    "ok": "Realised: the carried + invalid + unwitnessed-exit shares are at most 5 %.",
+    "degraded": "Degraded: the carried + invalid + unwitnessed-exit shares exceed 5 %; excluded from inference.",
+    "unavailable": "No return: too little return data this week to measure it.",
+    "no_holdings": "No holdings: no book could be formed this week; the failed constraint is named.",
+    "shares_not_recorded": "The run did not record the weight shares; the week is not classified.",
+    "return_not_yet_realised": FP_OPEN_WEEK,
+}
+FP_LABELS = {
+    "product": "Long-only pure factor portfolios, rebalanced weekly: exposure 1 to the book's own style and 0 to the "
+               "other styles (market exposure 1 by construction).",
+    "cost": "Gross of costs: transaction costs, spreads and taxes are not deducted; no cost model is applied yet.",
+    "candidates": "Model candidates, not recommendations; no accuracy or performance claim is made.",
+    "holdout": "Weeks formed on or after the hold-out start were not used to fit the models; earlier weeks are "
+               "in-sample.",
+    "universe": "Tickers with a complete point-in-time history: continuous prices and the core fundamentals on every "
+                "fiscal year, every row dated (fixture wording).",
+}
+FP_DEGRADED_TEXT = ("carried + invalid + unwitnessed-exit weight shares, each the largest over the holding sessions, "
+                    "above 5 %")
+FP_DEGRADED_LABEL = "Degraded when the largest carried + invalid + unwitnessed-exit shares exceed 5 %."
+FP_EXIT_LABEL = "A holding exited with no recorded terminal return; it counts at 0 (exit_unwitnessed)."
+FP_BASIS_RULE = ("Every served row names its return basis, which must match the basis its publication declares; "
+                 "otherwise the returns are withheld (fixture wording).")
+FP_DEGRADED_MECHANISM = ("One degraded rule per served history, taken from the rows or from their publication's "
+                         "declaration; if they disagree the portfolios are withheld (fixture wording).")
+FP_SHARES_NOTE = ("The three *_weight_share fields hold the largest share over the holding sessions; the *_max "
+                  "fields are null unless a row carries them (fixture wording).")
+FP_DECLARATION_KEYS = ["receipt_json.degraded_rule_declared", "checks_json.R_weight_shares_status.predicate",
+                       "caveats_json.items.degraded_rule"]
+FP_SERVED_TABLES = ["pure_factor_portfolios_weekly_v1", "pure_factor_portfolio_returns_weekly_v1",
+                    "factor_pick_weekly_v1", "three_model_product_weekly_v1", "three_model_meta_v1",
+                    "three_model_universe_v1"]
+FP_HOLDOUT_RULE = ("model A: no fitted parameter (parameters preregistered); model B/C hold-out recorded from their "
+                   "artefacts (fixture placeholder)")
+FP_STATE_LABEL = "Stated: measured, or true by construction."
+FP_CAVEATS = {  # key -> placeholder text ({...} filled per market)
+    "formation_timing": "Formation on the entry session: books are formed at the close of the session before the "
+                        "holding week, on the population and characteristics known at that close (fixture "
+                        "placeholder).",
+    "measurement_costs_price": "Retrospective measurement, gross of costs, {basis}: no trade was executed and no "
+                               "transaction cost, spread or tax is deducted (fixture placeholder).",
+    "vintage": "Some sector labels and fundamentals are current-vintage for older formations, so they are not all "
+               "dated on or before the entry close (fixture placeholder).",
+    "survivorship": "The survivorship estimate of {surv:+.1f} points a year is a universe equal-weight lower bound "
+                    "(fixture placeholder).",
+    "coverage_threshold": "A session is fitted only when its regression covers enough of the eligible market cap; "
+                          "weeks below the threshold are served as unavailable (fixture placeholder).",
+    "liquidity_concentration": "Some style books cannot meet every exposure band in some weeks; those weeks are "
+                               "served as no_holdings with the failed constraint named (fixture placeholder).",
+}
 
 
-def series_stats(r: np.ndarray) -> dict:
-    wealth = np.cumprod(1 + r)
-    dd = wealth / np.maximum.accumulate(wealth) - 1
-    q = np.quantile(r, 0.05)
-    vol = float(r.std(ddof=1) * math.sqrt(252))
-    mean = float(r.mean() * 252)
-    return {"n_obs": int(len(r)), "vol_annual": round(vol, 4), "sharpe": round(mean / vol, 4) if vol else None,
-            "max_dd": round(float(dd.min()), 4), "var_95_252d": round(float(-q), 4),
-            "es_95_252d": round(float(-r[r <= q].mean()), 4), "mean_annual": round(mean, 4)}
+def fp_closed(m: str, day: date) -> bool:
+    return day.weekday() >= 5 or day in HOLIDAYS[m] or day in FP_HOLIDAYS.get(m, ())
+
+
+def fp_week_days(m: str, monday: date) -> list[date]:
+    return [monday + timedelta(d) for d in range(5) if not fp_closed(m, monday + timedelta(d))]
+
+
+def fp_prev_session(m: str, day: date) -> date:
+    cur = day - timedelta(1)
+    while fp_closed(m, cur):
+        cur -= timedelta(1)
+    return cur
+
+
+def fp_clock(m: str) -> dict:
+    """Served weeks (oldest first), calendar gaps and freshness, from the publication's data-through session."""
+    through = date.fromisoformat(FP_CFG[m]["through"])
+    monday = through - timedelta(through.weekday())
+    while not fp_week_days(m, monday) or fp_week_days(m, monday)[-1] > through:  # latest week fully realised
+        monday -= timedelta(7)
+    weeks, gaps, cur = [], [], monday
+    while len(weeks) < FP_WEEKS:
+        days = fp_week_days(m, cur)
+        if days:
+            weeks.append({"week_start": cur, "formation_date": days[0], "week_end_session": days[-1]})
+        else:
+            gaps.append(cur)
+        cur -= timedelta(7)
+    weeks.reverse()
+    current = TODAY - timedelta(TODAY.weekday())
+    behind = (current - monday).days // 7
+    first = date.fromisoformat(FP_CFG[m]["first"])
+    n_cal = (monday - first).days // 7 + 1
+    # cn also closes whole weeks before the served window (about 1.5 a year: Spring Festival, Golden Week)
+    n_weeks = n_cal - (len(gaps) + round(1.5 * (weeks[0]["week_start"] - first).days / 365.25) if m == "cn" else 0)
+    return {"weeks": weeks, "gaps": sorted(gaps), "latest": weeks[-1],
+            "entry": fp_prev_session(m, weeks[-1]["formation_date"]), "current": current, "behind": behind,
+            "state": "current" if behind <= 1 else "behind",  # the API counts one week behind as current
+            "n_weeks": n_weeks, "first": first, "through": through}
+
+
+def fp_publication(m: str, clock: dict) -> dict:
+    last = clock["latest"]["formation_date"]
+    stamp_ = last.strftime("%Y%m%d")
+    return {"publication_id": f"3m_{m}_A_{stamp_}_a01", "phase": "A", "kinds": ["holdings", "returns", "universe"],
+            "published_at": FP_CFG[m]["published"], "first_formation": clock["first"].isoformat(),
+            "last_formation": last.isoformat(), "data_through_session": clock["through"].isoformat(),
+            "code_commit": hexid("fp-commit", m, n=40), "image_digest": "sha256:" + hexid("fp-image", m, n=64),
+            "engine_run_id": f"fixture_s6w_{m}_{stamp_}_01", "s3_run_id": f"fixture_s3m_{m}_{stamp_}_01",
+            "s3b_run_id": f"fixture_s3b_{m}_{stamp_}_01", "attempt": 1, "checks_sha256": hexid("fp-checks", m, n=64)}
+
+
+def fp_freshness(clock: dict) -> dict:
+    return {"latest_formation_date": clock["latest"]["formation_date"].isoformat(),
+            "latest_week_start": clock["latest"]["week_start"].isoformat(),
+            "current_week_start": clock["current"].isoformat(), "weeks_behind": clock["behind"],
+            "state": clock["state"]}
+
+
+def fp_status_plan(m: str, T: int, rng) -> np.ndarray:
+    """(T, 7) status codes for the long-only books: ok / degraded / unavailable / no_holdings."""
+    st = np.full((T, 7), "ok", dtype=object)
+    j = {f: k for k, f in enumerate(FP_FACTORS)}
+    pick = lambda n, lo=4, hi=None: rng.choice(np.arange(lo, (hi or T) - 4), size=n, replace=False)  # noqa: E731
+
+    def degrade(f: str, n: int, weeks=None) -> None:  # n weeks of book f that are "ok" now become "degraded"
+        ok = [t for t in (range(4, T - 4) if weeks is None else weeks) if st[t, j[f]] == "ok"]
+        st[rng.choice(ok, size=n, replace=False), j[f]] = "degraded"
+
+    if m == "us":  # as live: LIQUIDITY is never formed, SIZE only in about a quarter of the weeks
+        gap = int(0.6 * T)  # a week whose return inputs were incomplete
+        st[gap, :] = "unavailable"
+        st[:, j["LIQUIDITY"]] = "no_holdings"
+        st[:, j["SIZE"]] = "no_holdings"
+        start = int(0.66 * T) + int(rng.integers(0, 3))
+        stretch = np.arange(start, start + 24)  # SIZE meets its bands for about half a year ...
+        st[stretch, j["SIZE"]] = "ok"
+        st[rng.choice(stretch[1:-1], size=3, replace=False), j["SIZE"]] = "no_holdings"  # ... with a few misses
+        st[rng.choice(np.arange(8, gap - 4), size=2, replace=False), j["SIZE"]] = "ok"  # isolated earlier weeks
+        st[T - 2:, j["SIZE"]] = "ok"  # the current SIZE book is formed; LIQUIDITY stays infeasible
+        degrade("SIZE", 7, stretch)  # a block of degraded SIZE weeks (live us: degraded rows on SIZE only)
+        for f in ("MARKET", "VALUE", "MOMENTUM"):  # added to exercise the path on long-lived books (not live)
+            degrade(f, 1)
+    elif m == "cn":
+        st[pick(1, 20), :] = "unavailable"  # a whole-market data gap inside a trading week
+        st[pick(2, 4, 40), :] = "no_holdings"
+        st[pick(2), j["LIQUIDITY"]] = "no_holdings"
+        for f in ("SIZE", "LIQUIDITY"):  # live cn has no degraded rows: added to exercise the path
+            degrade(f, 1)
+    else:  # jp: every week formed, as live; a few degraded weeks added to exercise the path (live jp has none)
+        for f, n in (("SIZE", 2), ("LIQUIDITY", 1)):
+            degrade(f, n)
+    return st
+
+
+def fp_shares(status: str, rng, exits: float) -> tuple:
+    """(carried, invalid, exit) largest weight shares for one served row, consistent with its status. exits is the
+    share of rows holding an unwitnessed exit (live: us books ~28 %, jp books ~3 %, cn none, twins ~20 %)."""
+    if status == "no_holdings":
+        return None, None, None
+    if status == "unavailable":
+        return float(rng.uniform(0.78, 0.999)), 0.0, float(rng.exponential(0.0008)) if exits else 0.0
+    if status == "degraded":
+        carried = float(rng.uniform(0.02, 0.07))
+        ex = float(rng.uniform(0.0, 0.04)) if exits else 0.0
+        inv = float(rng.exponential(0.002)) if rng.random() < 0.3 else 0.0
+        if carried + ex + inv <= 0.05:
+            carried = 0.051 - ex - inv + float(rng.uniform(0, 0.01))
+        return carried, inv, ex
+    carried = float(rng.exponential(0.0015)) if rng.random() < 0.3 else 0.0
+    inv = float(rng.exponential(0.0003)) if rng.random() < 0.1 else 0.0
+    ex = float(rng.exponential(0.0015)) if rng.random() < exits else 0.0
+    total = carried + inv + ex
+    if total > 0.045:  # stay clearly on the ok side of the 5 % rule
+        carried, inv, ex = (x * 0.045 / total for x in (carried, inv, ex))
+    return carried, inv, ex
+
+
+def fp_row(week: dict, ret, status: str, shares: tuple, basis: str, *, return_status=None, state=None,
+           end_null: bool = False) -> dict:
+    carried, inv, ex = shares
+    exit_state = "exit_unwitnessed" if ex else None
+    row = {
+        "week_start": week["week_start"].isoformat(), "formation_date": week["formation_date"].isoformat(),
+        "week_end_session": None if end_null else week["week_end_session"].isoformat(),
+        "week_return": None if ret is None else round(float(ret), 6),
+        "return_status": return_status or ("no_holdings" if status == "no_holdings" else "ok"),
+        "state": state or ("infeasible" if status == "no_holdings" else "ok"), "status": status,
+        "status_label": FP_STATUS_LABELS[status], "in_inference": status == "ok",
+        "carried_weight_share": None if carried is None else round(carried, 6),
+        "invalid_weight_share": None if inv is None else round(inv, 6),
+        "exit_weight_share": None if ex is None else round(ex, 6), "exit_state": exit_state,
+        "degraded_rule": FP_RULE, "degraded_rule_label": FP_DEGRADED_LABEL,
+        "degraded_rule_source": "publication_declaration", "carried_weight_share_max": None,
+        "invalid_weight_share_max": None, "exit_unwitnessed_weight_share_max": None,
+        "measurement_basis": "investable_at_entry", "return_basis": basis, "return_basis_label": FP_BASIS_LABEL[basis],
+        "in_holdout": None,
+    }
+    if exit_state:
+        row["exit_label"] = FP_EXIT_LABEL  # live: present only on rows with an unwitnessed exit
+    return row
+
+
+def fp_returns(m: str, T: int) -> tuple[np.ndarray, dict]:
+    """Weekly book returns (T, 7) and measurement-twin returns {twin: (T, 7)}.
+
+    Every long-only book holds market exposure 1, so each book = market + its own style spread + small noise:
+    raw returns co-move (PCA on them is dominated by one market component) while book minus MARKET isolates the
+    style spread (about one unit of the own style)."""
+    cfg = FP_CFG[m]
+    rng = rng_for("fp_returns", m)
+    regime = np.zeros(T)
+    for t in range(1, T):  # slow volatility regime -> clustering and fat tails
+        regime[t] = 0.9 * regime[t - 1] + 0.10 * rng.standard_normal()
+    vol = np.exp(regime) / math.sqrt(np.mean(np.exp(2 * regime)))  # root-mean-square multiplier 1
+    t5 = lambda *shape: np.clip(rng.standard_t(5, shape) / math.sqrt(5 / 3), -4, 4)  # noqa: E731  fat tails, capped
+    mkt = cfg["mkt_mean"] + cfg["mkt_vol"] * vol * t5(T)
+    styles = FP_STYLE_MEAN + (t5(T, 6) @ np.linalg.cholesky(FP_STYLE_CORR).T) * FP_STYLE_VOL * vol[:, None] ** 0.5
+    books = np.empty((T, 7))
+    books[:, 0] = mkt + FP_BOOK_NOISE[0] * rng.standard_normal(T)
+    books[:, 1:] = mkt[:, None] + styles + FP_BOOK_NOISE[1] * rng.standard_normal((T, 6))
+    twins = {}
+    for name, (k, c) in FP_TWIN_SCALE.items():
+        tw = np.empty((T, 7))
+        tw[:, 0] = mkt - 0.0007 + 0.0025 * rng.standard_normal(T)  # market excess return
+        # long-short: about k units of the style, little market exposure (two legs carry a small loading)
+        tw[:, 1:] = (k * styles + np.outer(mkt - cfg["mkt_mean"], FP_TWIN_MKT_BETA)
+                     + c * FP_STYLE_VOL * rng.standard_normal((T, 6)))
+        twins[name] = tw
+    return books, twins
+
+
+def fp_characteristics(W: dict) -> np.ndarray:
+    """(N, 6) style exposures per ticker: rank-based normal scores, mean 0 and sd 1 over the universe (positive
+    size = small, investment = conservative, liquidity = less traded). Missing inputs sit at the median."""
+    F = W["F"]
+    raw = [-W["log_cap"], F["bp"], F["ret_252d"] - F["ret_20d"], F["profit_margin"], -F["revenue_growth"],
+           -np.log(F["turnover_ratio"])]
+    nd = NormalDist()
+    cols = []
+    for x in raw:
+        x = np.asarray(x, float)
+        x = np.where(np.isfinite(x), x, np.nanmedian(x))
+        order = np.argsort(x, kind="stable")
+        ranks = np.empty(len(x))
+        ranks[order] = np.arange(len(x))
+        _, inv = np.unique(x, return_inverse=True)
+        ranks = (np.bincount(inv, weights=ranks) / np.bincount(inv))[inv]  # ties share their mean rank
+        z = np.array([nd.inv_cdf((r + 0.5) / len(x)) for r in ranks])
+        cols.append((z - z.mean()) / z.std())
+    return np.column_stack(cols)
+
+
+def fp_solve(X: np.ndarray, cand: np.ndarray, target: np.ndarray, cap: float) -> np.ndarray:
+    """Nearest-equal-weight long-only book on cand: sum 1, X'w = target, 0 <= w <= cap (Dykstra projections)."""
+    A = np.vstack([np.ones(len(cand)), X[cand].T])
+    b = np.concatenate([[1.0], target])
+    G = np.linalg.inv(A @ A.T)
+
+    def affine(v):
+        return v - A.T @ (G @ (A @ v - b))
+
+    x = np.full(len(cand), 1.0 / len(cand))
+    p, q = np.zeros_like(x), np.zeros_like(x)
+    for _ in range(20000):
+        y = np.clip(x + p, 0.0, cap)
+        p = x + p - y
+        x_new = affine(y + q)
+        q = y + q - x_new
+        done = np.abs(x_new - x).max() < 1e-13
+        x = x_new
+        if done:
+            break
+    if x.min() < -1e-7 or x.max() > cap + 1e-7:
+        raise RuntimeError("factor book did not converge")
+    for _ in range(50):  # polish: tiny bound violations -> exact zeros, constraints re-met on the support
+        x = np.clip(x, 0.0, cap)
+        on = (x > 1e-12) & (x < cap)
+        r = b - A @ x
+        if np.abs(r).max() < 1e-13:
+            break
+        Af = A[:, on]
+        x[on] += Af.T @ np.linalg.solve(Af @ Af.T, r)
+    w = np.zeros(len(X))
+    w[cand] = np.clip(x, 0.0, cap)
+    return w
+
+
+def fp_books(W: dict, X: np.ndarray, cfg: dict) -> dict:
+    """Latest-formation weights per feasible book: {factor: (weights, construction)}."""
+    N = W["N"]
+    rng = rng_for("fp_books", W["m"])
+    out = {}
+    if W["m"] == "us":  # MARKET: near equal weight, re-projected to exactly zero style exposure
+        w = fp_solve(X, np.where(rng.random(N) < 0.93)[0], np.zeros(6), 1.0)
+    else:  # MARKET: a lightly perturbed equal weight; style exposures stay close to, not exactly, zero
+        w = np.exp(0.15 * rng.standard_normal(N))
+        w /= w.sum()
+    out["MARKET"] = (w, cfg["market_construction"])
+    for k, f in enumerate(FP_FACTORS[1:]):
+        target = np.zeros(6)
+        target[k] = 1.0
+        share = {"SIZE": 0.24, "LIQUIDITY": 0.22}.get(f, 0.5)  # candidates: the top share by the own style
+        cand = np.argsort(-X[:, k], kind="stable")[: int(share * N)]
+        out[f] = (fp_solve(X, cand, target, FP_CAP), cfg["construction"])
+    return out
+
+
+def fp_portfolio(W: dict, f: str, book, X: np.ndarray, row: dict, basis: str, rng) -> dict:
+    head = {"factor": f}
+    tail = {"return_basis": basis, "return_basis_label": FP_BASIS_LABEL[basis],
+            "carried_weight_share": row["carried_weight_share"], "invalid_weight_share": row["invalid_weight_share"],
+            "exit_weight_share": row["exit_weight_share"], "exit_state": row["exit_state"], "degraded_rule": FP_RULE,
+            "degraded_rule_label": FP_DEGRADED_LABEL, "degraded_rule_source": "publication_declaration",
+            "carried_weight_share_max": None, "invalid_weight_share_max": None,
+            "exit_unwitnessed_weight_share_max": None}
+    if book is None:  # the live shape of an infeasible book: no exposures, checks or weights
+        return {**head, "status": "infeasible", "state": "infeasible", "construction": None,
+                "infeasible_constraint": "other_exposure:SIZE", "week_return": None, "return_status": "no_holdings",
+                "return_state": "no_holdings", "week_status": "no_holdings", "turnover_one_way": None,
+                "n_holdings": 0, "universe_n": W["N"], "formation_panel": None, **tail,
+                "reason_code": "infeasible_no_holdings", "holdings": []}
+    w, construction = book
+    held = np.where(w > 1e-12)[0]
+    expo = {"market": float(w.sum()), **{s: float(w @ X[:, k]) for k, s in enumerate(FP_STYLES)}}
+    own_key = "market" if f == "MARKET" else f.lower()
+    others = [abs(v) for s, v in expo.items() if s not in ("market", own_key)]
+    order = held[np.argsort(-w[held], kind="stable")]
+    holdings = [{"ticker": W["tickers"][i], "sector": W["sectors"][i], "weight": round(float(w[i]), 8),
+                 "exposures": {s: round(float(X[i, k]), 6) for k, s in enumerate(FP_STYLES)}}
+                for i in order[:FP_SHOWN]]
+    return {**head, "status": "available", "state": "ok", "construction": construction,
+            "infeasible_constraint": None, "week_return": row["week_return"], "return_status": "ok",
+            "return_state": "realised", "week_status": row["status"],
+            "turnover_one_way": None if f == "MARKET" else round(float(rng.uniform(0.012, 0.16)), 6),
+            "n_holdings": int(len(held)), "universe_n": W["N"], "formation_panel": ["entry_session"], **tail,
+            "exposures": expo, "own_exposure": expo[own_key], "max_abs_other_style": max(others),
+            "exposures_published": dict(expo), "readback_published": True,
+            "checks": {"sum_ok": abs(expo["market"] - 1) < 1e-6, "own_ok": abs(expo[own_key] - 1) <= 0.02,
+                       "others_ok": max(others) <= 0.02,
+                       "bounds_ok": bool((w >= 0).all() and (f == "MARKET" or (w <= FP_CAP + 1e-9).all())),
+                       "matches_published": True},
+            "sum_weight": float(w.sum()), "holdings": holdings, "holdings_truncated": len(held) > FP_SHOWN}
+
+
+def fp_common(m: str, pub: dict, n_weeks: int) -> dict:
+    """Blocks shared by the portfolios payload and its meta twin."""
+    cfg = FP_CFG[m]
+    basis, blabel = cfg["basis"], FP_BASIS_LABEL[cfg["basis"]]
+    returns_label = (f"Weekly realised return of the long-only book ({blabel}), held buy-and-hold through the week, "
+                     f"gross of costs.")
+    twin_label = f"Weekly long-short return of the measurement portfolio ({blabel}), gross of costs."
+    surv = cfg["surv"]
+    items = []
+    for key, text in FP_CAVEATS.items():
+        item = {"key": key, "state": "stated", "state_label": FP_STATE_LABEL,
+                "text": text.format(basis=blabel, surv=surv)}
+        if key == "survivorship":
+            item.update({"points_per_year": surv, "bound": "lower"})
+        items.append(item)
+    return {
+        "basis": basis, "basis_label": blabel, "returns_label": returns_label, "twin_label": twin_label,
+        "measurement": {s: {"basis": "investable_at_entry", "label": FP_TIMING} for s in FP_SERIES},
+        "survivorship": {
+            "state": "estimated",
+            "label": "Survivorship: only names whose data survived can enter the history, and exits without "
+                     "surviving data are missed; a first-order estimate (fixture wording).",
+            "note": f"a universe equal-weight lower bound: the survivor-only universe overstates returns by about "
+                    f"{abs(surv):.1f} points a year (fixture placeholder)",
+            "source": f"fixtures/{m}/survivorship_estimate.json (synthetic)", "points_per_year": surv,
+            "bound": "lower",
+            "estimate_label": f"Survivorship effect estimate: about {surv:+.1f} points a year for an equal-weight "
+                              f"universe; a lower bound, not per factor.",
+        },
+        "served_caveats": {"state": "declared", "ruling": "fixture ruling 7", "publication_id": pub["publication_id"],
+                           "label": "Caveats for every served history in this market:", "items": items,
+                           "n_to_be_measured": 0},
+        "n_rows": n_weeks * 7 * len(FP_SERIES),
+    }
 
 
 def fp_payload(W: dict) -> dict:
-    m, cfg, F, N = W["m"], W["cfg"], W["F"], W["N"]
-    rng = rng_for("factors", m)
-    days = trading_days(m, date.fromisoformat(cfg["eod"]), 252)
-    chol = np.linalg.cholesky(FP_CORR)
-    regime = np.zeros(252)
-    for t in range(1, 252):  # slow volatility regime -> fat tails and clustering
-        regime[t] = 0.94 * regime[t - 1] + 0.12 * rng.standard_normal()
-    shocks = rng.standard_t(5, (252, 7)) / math.sqrt(5 / 3) @ chol.T
-    scale = {"us": 1.0, "cn": 1.15, "jp": 1.05, "hk": 1.25}[m]
-    R = FP_MEAN + shocks * FP_VOL * scale * np.exp(regime)[:, None]
-    blocked = FP_BLOCKED[m]
-    cap = F["market_cap"]
-    signals = {"smb": (W["log_cap"], "low"), "hml": (F["bp"], "high"), "wml": (F["ret_252d"] - F["ret_20d"], "high"),
-               "rmw": (F["profit_margin"], "high"), "cma": (F["revenue_growth"], "low"),
-               "liq": (-np.log(F["turnover_ratio"]), "high")}
-    factors, ready_ids, ready_R = [], [], []
-    for j, (fid, label, published, side, semantic, evidence) in enumerate(FACTORS):
-        ready = fid not in blocked
-        rec = {"factor_id": fid, "factor_label": label, "factor_name_published": published, "side_displayed": side,
-               "effective_sign": 1, "semantic_label": semantic, "publish_state": "published" if ready else "blocked",
-               "evidence_status": evidence, "gate_reason": None if ready else GATE_REASON[FACTOR_GATE[fid]],
-               "agreement_score": round(float(rng.uniform(0.62, 0.93)), 3) if ready else None,
-               "is_risk_ready": ready, "risk_ready_reason": None if ready else "factor_withheld"}
-        if not ready:
-            rec.update({"n_holdings_active_leg": 0, "holdings_as_of": None, "holdings_weighting": None,
-                        "holdings_preview_count": 0, "holdings_complete": True, "benchmark_id": None,
-                        "benchmark_name": None, "constituent_source": None, "return_construction": None,
-                        "stats": dict(NULL_STATS),
-                        "holdings_metrics": {"ep_mcap_weighted": None, "dy_mcap_weighted": None, "tot_market_cap": 0.0,
-                                             "n_constituents_total": 0, "n_constituents_with_mcap": 0,
-                                             "n_constituents_with_ep": None, "n_constituents_with_dy": None},
-                        "top_holdings": [], "return_series": [], "distribution_series": []})
-            factors.append(rec)
-            continue
-        r = R[:, j]
-        ready_ids.append(fid)
-        ready_R.append(r)
-        if fid == "erp":
-            idx = np.argsort(-cap)[: N // 2]
-            w = cap[idx] / cap[idx].sum()
-            holdings = [{"leg": "index", "ticker": W["tickers"][i], "name": W["names"][i], "sector": W["sectors"][i],
-                         "market_cap": money(cap[i]), "latest_price": float(F["price"][i]), "weight": round(float(w[k]), 6),
-                         "leg_weight": round(float(w[k]), 6), "signal_value": None, "weight_source": "index_float_cap"}
-                        for k, i in enumerate(idx[:16])]
-            members, n_leg = idx, len(idx)
-            extra = {"benchmark_id": cfg["benchmark"][0], "benchmark_name": cfg["benchmark"][1],
-                     "constituent_source": "official_index_constituents",
-                     "return_construction": "index_total_return_minus_risk_free", "holdings_weighting": "index_weight"}
-        else:
-            sigv, long_side = signals[fid]
-            ok = np.where(np.isfinite(sigv))[0]
-            n_leg = max(10, int(round(len(ok) * 0.2)))
-            ranked = ok[np.argsort(sigv[ok])]
-            low, high = ranked[:n_leg], ranked[::-1][:n_leg]
-            long_leg, short_leg = (low, high) if long_side == "low" else (high, low)
-            holdings = []
-            for leg, legidx, sgn in (("long", long_leg, 1), ("short", short_leg, -1)):
-                for i in legidx[:8]:
-                    holdings.append({"leg": leg, "ticker": W["tickers"][i], "name": W["names"][i],
-                                     "sector": W["sectors"][i], "market_cap": money(cap[i]),
-                                     "latest_price": float(F["price"][i]), "weight": round(sgn * 0.5 / n_leg, 6),
-                                     "leg_weight": round(1 / n_leg, 6), "signal_value": num(sigv[i]),
-                                     "weight_source": "equal_weight_leg"})
-            members = np.concatenate([long_leg, short_leg])
-            extra = {"benchmark_id": None, "benchmark_name": None, "constituent_source": "governed_pit_universe",
-                     "return_construction": "long_short_equal_weight_legs", "holdings_weighting": "equal_weight_legs"}
-        epv, dyv, capm = F["ep"][members], F["dividend_yield"][members], cap[members]
-        ok_ep, ok_dy = np.isfinite(epv), np.isfinite(dyv)
-        rec.update({
-            "n_holdings_active_leg": int(n_leg), "holdings_as_of": cfg["eod"],
-            "holdings_weighting": extra.pop("holdings_weighting"), "holdings_preview_count": len(holdings),
-            "holdings_complete": len(holdings) >= len(members), **extra, "stats": series_stats(r),
-            "holdings_metrics": {
-                "ep_mcap_weighted": round(float(np.sum(epv[ok_ep] * capm[ok_ep]) / np.sum(capm[ok_ep])), 4),
-                "dy_mcap_weighted": round(float(np.sum(dyv[ok_dy] * capm[ok_dy]) / np.sum(capm[ok_dy])), 4)
-                if ok_dy.any() else None,
-                "tot_market_cap": money(capm.sum()), "n_constituents_total": int(len(members)),
-                "n_constituents_with_mcap": int(len(members)), "n_constituents_with_ep": int(ok_ep.sum()),
-                "n_constituents_with_dy": int(ok_dy.sum())},
-            "top_holdings": holdings,
-            "return_series": [{"date": d.isoformat(), "ret": round(float(x), 5)} for d, x in zip(days, r)],
-            "distribution_series": [],
-        })
-        factors.append(rec)
-    if ready_R:
-        RR = np.column_stack(ready_R)
-        agg = RR.mean(axis=1)
-        corr = np.corrcoef(RR.T)
-        aggregate = {"equal_weight_stats": series_stats(agg),
-                     "factor_correlation": {"factor_ids": ready_ids,
-                                            "values": [[round(float(v), 4) for v in row] for row in corr]}
-                     if len(ready_ids) >= 2 else None,
-                     "n_aligned_dates": 252, "correlation_start": days[0].isoformat(),
-                     "correlation_as_of": days[-1].isoformat(),
-                     "return_series": [{"date": d.isoformat(), "ret": round(float(x), 5)} for d, x in zip(days, agg)]}
-    else:  # the live state on 2026-10-07
-        aggregate = {"equal_weight_stats": dict(NULL_STATS), "factor_correlation": None, "n_aligned_dates": 0,
-                     "correlation_start": None, "correlation_as_of": None, "return_series": []}
-    hold_total = sum(len(f["top_holdings"]) for f in factors)
+    m = W["m"]
+    if m not in FP_CFG:  # hk: no publication yet -> the live empty state (HTTP 200, ok: true)
+        return {"ok": True, "schema_version": "surgeflow.factor_portfolios.v2",
+                "source": "/api/{market}/three-model/portfolios", "market": m, "note": FP_NOTE,
+                "data": {"market": m, "contract": FP_CONTRACT, "status": "empty",
+                         "reason_code": "no_publication_for_market", "message": FP_EMPTY_MESSAGE,
+                         "cache": {"state": "stale_revalidating", "age_seconds": 61.8}}}
+    cfg = FP_CFG[m]
+    clock = fp_clock(m)
+    pub = fp_publication(m, clock)
+    common = fp_common(m, pub, clock["n_weeks"])
+    basis = cfg["basis"]
+    weeks, T = clock["weeks"], len(clock["weeks"])
+    rng = rng_for("fp_rows", m)
+    books_r, twins_r = fp_returns(m, T)
+    plan = fp_status_plan(m, T, rng_for("fp_plan", m))
+    unavailable_code = {"us": "return_unavailable_low_coverage", "cn": "return_unavailable_whole_market_gap"}
+    returns, counts = {}, {}
+    for j, f in enumerate(FP_FACTORS):
+        rows = []
+        for t, week in enumerate(weeks):
+            status = plan[t, j]
+            shares = fp_shares(status, rng, cfg["exits"])
+            ret = books_r[t, j] if status in ("ok", "degraded") else None
+            rows.append(fp_row(week, ret, status, shares, basis,
+                               return_status=unavailable_code.get(m) if status == "unavailable" else None))
+        returns[f] = rows
+        c = Counter(r["status"] for r in rows)
+        counts[f] = {k: int(c.get(k, 0)) for k in ("ok", "degraded", "unavailable", "no_holdings",
+                                                     "shares_not_recorded", "return_not_yet_realised")}
+    X = fp_characteristics(W)
+    books = fp_books(W, X, cfg)
+    prng = rng_for("fp_portfolios", m)
+    portfolios = []
+    for j, f in enumerate(FP_FACTORS):
+        latest = returns[f][-1]
+        portfolios.append(fp_portfolio(W, f, None if latest["status"] == "no_holdings" else books[f], X, latest,
+                                       basis, prng))
+    latest = clock["latest"]
+    gaps = clock["gaps"]
+    n_cal = T + len(gaps)
     data = {
-        "market": m, "release_id": "factor_daily_20261007t021508334190z",
-        "factor_contract_sha256": hexid("factor-contract-fixture", n=64),
-        "contract_factors": [f[0] for f in FACTORS],
-        "research_passport": {
-            "passport_schema_version": "1.0", "research_case_id": hexid("case", m, n=64),
-            "short_id": f"SF-{hexid('case', m, n=6).upper()}", "research_chain_id": f"CH-{hexid('chain', m, n=10).upper()}",
-            "chain_position": "portfolio", "source_research_case_id": None, "parent_research_case_id": None,
-            "surface": "portfolio", "market": m, "factor_definitions": [],
-            "universe_version": "factor_candidate_complete_case_v1_20260822", "methodology_version": None,
-            "backtest_engine_version": None,
-            "portfolio_membership_version": "factor_membership_v3p2 atomic snapshot + index constituents (ERP display)",
-            "publication_gate_version": "factor_operating_status_v1 atomic admission",
-            "ranking_variable": "canonical factor signal; ERP primary index", "portfolio_cutoff": None,
-            "weighting_method": "ERP index-weighted; non-ERP 50/50 long-short with equal-weighted legs",
-            "rebalance_rule": "factor-specific canonical rebalance calendar", "benchmark_id": cfg["benchmark"][0],
-            "cost_model": {"gross_or_net": "gross", "cost_model_id": "none", "cost_model_version": "pure_factor_no_cost",
-                           "buy_cost_bps": None, "sell_cost_bps": None, "market_impact_model": None, "tax_model": None},
-            "test_type": "display-only canonical pure-factor portfolio",
-            "point_in_time_status": "latest published membership snapshot",
-            "publication_status": "only pointer-selected published factors carry returns and holdings",
-            "data_cutoff": None, "generated_at": None, "freshness_status": None,
-            "surface_oos_status": "not_applicable", "source_evidence_oos_status": "in_sample",
-        },
-        "as_of": cfg["eod"] if ready_R else None, "n_active": len(ready_ids), "n_risk_ready": len(ready_ids),
-        "factors": factors, "aggregate": aggregate, "word_cloud": [],
-        "narrative_coverage": {"holdings_total": hold_total, "holdings_with_narrative": 0, "coverage_pct": 0.0},
-        "raw_survivors_summary": sorted(
-            [{"factor_name": f[2].split("_")[0], "publish_state": "published" if f[0] not in blocked else "blocked",
-              "evidence_status": f[5], "effective_sign": 1, "semantic_label": f[4]} for f in FACTORS],
-            key=lambda r: r["factor_name"]),
-        "disclosure": "ERP is the market excess return over the official index. SMB to LIQ are built from one "
-                      "point-in-time ticker universe as +50% long / -50% short legs with equal weights. Gate state "
-                      "is disclosed per factor and is not used as a row filter. Synthetic fixture values.",
+        "market": m, "contract": FP_CONTRACT, "publication": dict(pub),
+        "formation_window": {"first": pub["first_formation"], "last": pub["last_formation"]},
+        "status": "available", "formation_date": latest["formation_date"].isoformat(),
+        "week_start": latest["week_start"].isoformat(), "entry_session": clock["entry"].isoformat(),
+        "week_state": "realised", "return_state": "realised", "open_week": None, "n_weeks": clock["n_weeks"],
+        "in_holdout": None, "holdout_start": None, "holdout_rule": FP_HOLDOUT_RULE,
+        "formation_panel": ["entry_session"],
+        "portfolios": portfolios, "returns": returns, "counts": counts,
+        "calendar_grid": {"n_calendar_weeks": n_cal, "n_formation_weeks": T,
+                          "gap_weeks": [g.isoformat() for g in gaps], "gap_share": len(gaps) / n_cal,
+                          "label": "Weeks with no session appear as gaps in the calendar grid; the series is not "
+                                   "compressed (fixture wording)."},
+        "survivorship": common["survivorship"], "measurement": common["measurement"],
+        "served_caveats": common["served_caveats"],
+        "return_basis": {"basis": basis, "label": common["basis_label"], "returns_label": common["returns_label"],
+                         "twin_returns_label": common["twin_label"], "source": "rows", "n_rows": common["n_rows"],
+                         "declared": basis, "ruling": "fixture ruling 1", "rule": FP_BASIS_RULE},
+        "degraded_rule": {"rule": FP_RULE, "rule_ruling": "fixture ruling 3", "text": FP_DEGRADED_TEXT,
+                          "label": FP_DEGRADED_LABEL, "terms": ["carried", "invalid", "unwitnessed_exit"],
+                          "threshold": 0.05, "source": "publication_declaration", "n_rows": common["n_rows"],
+                          "n_rows_carrying": 0, "stated_values": [], "per_series": {s: FP_RULE for s in FP_SERIES},
+                          "declared": FP_RULE, "declaration_state": "declared", "ruling": "fixture ruling 6",
+                          "mechanism": FP_DEGRADED_MECHANISM, "shares_note": FP_SHARES_NOTE},
+        "labels": {"product": FP_LABELS["product"], "returns": common["returns_label"], "cost": FP_LABELS["cost"],
+                   "candidates": FP_LABELS["candidates"], "holdout": FP_LABELS["holdout"], "timing": FP_TIMING,
+                   "status": dict(FP_STATUS_LABELS), "degraded_rule": FP_DEGRADED_TEXT,
+                   "degraded_rule_label": FP_DEGRADED_LABEL, "open_week": FP_OPEN_WEEK},
+        "freshness": fp_freshness(clock),
     }
-    return {"ok": True, "schema_version": "surgeflow.factor_portfolios.v1", "source": "/api/portfolio/factor-portfolios",
-            "market": m, "note": NOTE, "data": {"ok": True, "data": data}}
+    if m in FP_TWIN_MARKETS:
+        twin_meta = {"s3b_ff_2x3_ew": "Fama-French 2x3 long-short measurement portfolio, equal-weighted; for "
+                                      "measurement, not the product (fixture wording).",
+                     "s3b_ff_2x3_rp126": "Fama-French 2x3 long-short measurement portfolio, weighted by inverse "
+                                         "126-session volatility; for measurement, not the product (fixture wording)."}
+        twins = {}
+        trng = rng_for("fp_twin_rows", m)
+        gap_t = [t for t in range(T) if (plan[t] == "unavailable").any()]
+        never = FP_TWIN_NEVER.get(m, ())
+        for name in FP_TWINS:
+            series = {}
+            for j, f in enumerate(FP_FACTORS):
+                rows = []
+                for t, week in enumerate(weeks):
+                    if f in never:  # a 2x3 cell had too few names to form: every served week, as live us shows
+                        rows.append(fp_row(week, None, "unavailable", (None, None, None), basis,
+                                           return_status="s3b_cell_below_min", state="insufficient", end_null=True))
+                    elif t in gap_t:  # the return inputs were incomplete for every other series that week
+                        rows.append(fp_row(week, None, "unavailable", fp_shares("unavailable", trng, 1.0), basis,
+                                           return_status="s3b_low_session_coverage", state="degraded"))
+                    else:
+                        rows.append(fp_row(week, twins_r[name][t, j], "ok", fp_shares("ok", trng, 0.2), basis))
+                series[f] = rows
+            twins[name] = {"label": twin_meta[name], "role": "measurement_twin", "basis": "investable_at_entry",
+                           "basis_label": FP_TIMING, "return_basis": basis, "return_basis_label": common["basis_label"],
+                           "returns_label": common["twin_label"], "degraded_rule": FP_RULE,
+                           "degraded_rule_label": FP_DEGRADED_LABEL, "returns": series}
+        data["measurement_twins"] = twins
+    data["cache"] = {"state": cfg["cache"][0], "age_seconds": cfg["cache"][1]}
+    return {"ok": True, "schema_version": "surgeflow.factor_portfolios.v2",
+            "source": "/api/{market}/three-model/portfolios", "market": m, "note": FP_NOTE, "data": data}
 
 
-# ---------------------------------------------------------------------------- summary (INFERRED shape)
-# Live GET /api/v1/summary answered HTTP 500 on 2026-10-07, so this whole payload keeps the shape inferred
-# from the keyless /api/summary twin and the website JavaScript. Nothing here is confirmed by a live v1 body.
+FP_HK_CAVEATS = [f"Placeholder data caveat {k} (fixture)." for k in range(1, 7)]  # shape only: list[str]
+FP_HK_CAVEATS_LABEL = "Known data caveats (fixture placeholder):"
+
+
+def fp_meta_payload(W: dict) -> dict:
+    m = W["m"]
+    head = {"ok": True, "schema_version": "surgeflow.factor_portfolios_meta.v2",
+            "source": "/api/{market}/three-model/meta", "market": m, "note": FP_NOTE}
+    rb_rule = {"ruling": "fixture ruling 1", "rule": FP_BASIS_RULE}
+    dr_tail = {"ruling": "fixture ruling 6", "mechanism": FP_DEGRADED_MECHANISM, "shares_note": FP_SHARES_NOTE,
+               "declaration_keys": list(FP_DECLARATION_KEYS)}
+    if m not in FP_CFG:  # hk: the live empty state, with the market's data caveats
+        empty_status = {k: (None if k in ("ok", "degraded") else v) for k, v in FP_STATUS_LABELS.items()}
+        return {**head, "data": {
+            "market": m, "contract": FP_CONTRACT, "status": "empty", "reason_code": "no_publication_for_market",
+            "message": FP_EMPTY_MESSAGE,
+            "market_caveats": {"ruling": "fixture ruling 16", "label": FP_HK_CAVEATS_LABEL,
+                               "items": list(FP_HK_CAVEATS)},
+            "contract_revision": FP_REVISION,
+            "return_basis": {"state": "no_portfolios_published", "basis": None, "label": None, "returns_label": None,
+                             "twin_returns_label": None, "publications": [], **rb_rule},
+            "degraded_rule": {"state": "no_portfolios_published", "rule": None, "rule_ruling": None, "text": None,
+                              "label": None, "terms": None, "threshold": None, "publications": [], **dr_tail},
+            "labels": {"status": empty_status, "degraded_rule": None, "degraded_rule_label": None},
+            "cache": {"state": "stale_revalidating", "age_seconds": 118.6}}}
+    cfg = FP_CFG[m]
+    clock = fp_clock(m)
+    pub = fp_publication(m, clock)
+    common = fp_common(m, pub, clock["n_weeks"])
+    rng = rng_for("fp_meta", m)
+    N = W["N"]
+    plan = fp_status_plan(m, len(clock["weeks"]), rng_for("fp_plan", m))
+    data = {
+        "market": m, "contract": FP_CONTRACT, "status": "available", "reason_code": None, "message": None,
+        "models": {"portfolios": {"state": "published", "first_formation": pub["first_formation"],
+                                  "last_formation": pub["last_formation"], "n_publications": 1, "latest": dict(pub),
+                                  "holdout_start": None, "holdout_rule": FP_HOLDOUT_RULE, "open_week": None,
+                                  "formation_panel": ["entry_session"]},
+                   "pick": {"state": "not_published"}, "product": {"state": "not_published"}},
+        "publications": [dict(pub)], "n_publications": 1,
+        "universe": {"rule": "complete_pit_v1", "computed_as_of": pub["data_through_session"],
+                     "as_of_date": clock["entry"].isoformat(), "n_in_universe": N,
+                     "n_evaluated": int(round(N * float(rng.uniform(1.12, 1.35)))), "measured_state": "measured"},
+        "holdout": {"portfolios": {"start": None, "rule": FP_HOLDOUT_RULE}}, "holdout_label": FP_LABELS["holdout"],
+        "cost_basis": ["gross_of_costs"], "cost_label": FP_LABELS["cost"],
+        "model_versions": {"A": f"s6w_engine_{hexid('fp-engine', m, n=16)}_pit_entry_session", "C": None, "B": None},
+        "admission": None, "filter_admitted": None, "data_through_session": pub["data_through_session"],
+        "served_tables": list(FP_SERVED_TABLES),
+        "freshness": {"portfolios": fp_freshness(clock), "pick": None, "product": None},
+        "formation_panel": ["entry_session"], "open_week": None, "measurement": common["measurement"],
+        "survivorship": common["survivorship"], "market_caveats": None, "served_caveats": common["served_caveats"],
+        "contract_revision": FP_REVISION,
+        "return_basis": {"state": "declared", "basis": cfg["basis"], "label": common["basis_label"],
+                         "returns_label": common["returns_label"], "twin_returns_label": common["twin_label"],
+                         "publications": [{"publication_id": pub["publication_id"], "state": "declared",
+                                           "basis": cfg["basis"],
+                                           "sources": {
+                                               "receipt_json.return_basis_declared": cfg["basis"],
+                                               "caveats_json.measurement_costs_price.return_basis": cfg["basis"]}}],
+                         **rb_rule},
+        "degraded_rule": {"state": "declared", "rule": FP_RULE, "rule_ruling": "fixture ruling 3",
+                          "text": FP_DEGRADED_TEXT, "label": FP_DEGRADED_LABEL,
+                          "terms": ["carried", "invalid", "unwitnessed_exit"], "threshold": 0.05,
+                          "publications": [{"publication_id": pub["publication_id"], "state": "declared",
+                                            "rule": FP_RULE,
+                                            "sources": {"checks_json.R_weight_shares_status.predicate": FP_RULE},
+                                            "checks_degraded_weeks": int((plan == "degraded").any(axis=1).sum())}],
+                          **dr_tail},
+        "labels": {"candidates": FP_LABELS["candidates"], "cost": FP_LABELS["cost"], "timing": FP_TIMING,
+                   "returns": common["returns_label"], "status": dict(FP_STATUS_LABELS),
+                   "degraded_rule": FP_DEGRADED_TEXT, "degraded_rule_label": FP_DEGRADED_LABEL,
+                   "universe": FP_LABELS["universe"]},
+        "publication": dict(pub),
+        "cache": {"state": "stale_revalidating" if m == "us" else "fresh",
+                  "age_seconds": round(float(rng.uniform(150, 420)), 1)},
+    }
+    return {**head, "data": data}
+
+
+# ---------------------------------------------------------------------------- summary
+# The first live snapshot (2026-10-07, about 05:00 UTC) answered HTTP 500, so the shape was first inferred from
+# the keyless /api/summary twin and the website JavaScript. The refreshed snapshot of the same day (about 23:10
+# UTC) answered (surgeflow.summary.v1, source /api/summary) and confirmed every key path and JSON type here;
+# the values stay synthetic.
 def long_meta(m: str, start: date, n: int) -> dict:
     cfg = CFG[m]
     pit = m == "cn"
@@ -1985,7 +2472,8 @@ def summary_payload(worlds: dict) -> dict:
             ranked = sorted(ok, key=lambda i: vals[i], reverse=rev)[:3]
             leaders[key] = {"characteristic": char, "description": desc,
                             "leaders": [{"ticker": W["tickers"][i], "name": W["names"][i],
-                                         "characteristic_value": round(float(vals[i]), 4)} for i in ranked]}
+                                         "characteristic_value": int(round(float(vals[i]))) if key == "smb"
+                                         else round(float(vals[i]), 4)} for i in ranked]}  # live: market cap is an int
         populated = m in ("cn", "hk")
         premiums = {}
         if populated:
@@ -2048,7 +2536,8 @@ def summary_payload(worlds: dict) -> dict:
                                  "reason_code": "fresh_same_definition_not_verified",
                                  "message": "Cross-market factor figures are withheld until every market passes the "
                                             "same-definition check.",
-                                 "legacy_source": None, "replacement_source": None, "freshness_status": "not_verified",
+                                 "legacy_source": "stock_data.factor_returns_v1", "replacement_source": None,
+                                 "freshness_status": "not_verified",
                                  "expected_session_date": None, "model_changed": False},
         "factor_leaders_methodology": {
             "type": "characteristic_leaders",
@@ -2060,7 +2549,7 @@ def summary_payload(worlds: dict) -> dict:
         },
         "markets": markets,
     }
-    return {"ok": True, "schema_version": "surgeflow.public_api.v1", "data": data}
+    return {"ok": True, "schema_version": "surgeflow.summary.v1", "source": "/api/summary", "data": data}
 
 
 MARKET_TZ = {"us": "America/New_York", "cn": "Asia/Shanghai", "jp": "Asia/Tokyo", "hk": "Asia/Hong_Kong"}
@@ -2543,7 +3032,7 @@ def me_payload() -> dict:
     return {
         "ok": True, "schema_version": "surgeflow.public_api.v1", "key_prefix": "sf_live_xxxx",
         "member_id": "m_" + "0" * 24, "plan": "free",
-        "scopes": ["ai", "factors", "hotlist", "macro", "ml", "news", "notes", "realtime", "screen", "summary", "whales"],
+        "scopes": ["factors", "hotlist", "macro", "ml", "news", "notes", "realtime", "screen", "summary", "whales"],
         "key_created_at": "2026-10-01T09:12:44.120518+00:00", "founding_analyst_number": 99, "is_founding_analyst": True,
         "referral_code": code,
         "invite_url": f"{SITE}/membership?utm_source=member_invite&utm_medium=referral&utm_campaign=member_referral"
@@ -2583,6 +3072,7 @@ def build() -> dict[str, dict]:
         files[f"whales_{m}.json"] = whales_payload(W, gate_total)
         files[f"news_{m}.json"] = news_payload(W)
         files[f"factor_portfolios_{m}.json"] = fp_payload(W)
+        files[f"factor_portfolios_meta_{m}.json"] = fp_meta_payload(W)
     files["summary.json"] = summary_payload(worlds)
     macro = {m: macro_payload(m) for m in MARKETS}
     files["macro_calendar.json"] = macro["us"]  # default market=us
@@ -2599,7 +3089,12 @@ def build() -> dict[str, dict]:
     return files
 
 
-def render(payload: dict) -> str:
+COMPACT = re.compile(r"factor_portfolios_(us|cn|jp|hk)\.json")  # large weekly series: one line, no spaces
+
+
+def render(name: str, payload: dict) -> str:
+    if COMPACT.fullmatch(name):
+        return json.dumps(clean(payload), separators=(",", ":"), ensure_ascii=False) + "\n"
     return json.dumps(clean(payload), indent=1, ensure_ascii=False) + "\n"
 
 
@@ -2607,7 +3102,7 @@ def main() -> int:
     parser = argparse.ArgumentParser(description=__doc__, formatter_class=argparse.RawDescriptionHelpFormatter)
     parser.add_argument("--check", action="store_true", help="compare with the files on disk; write nothing")
     args = parser.parse_args()
-    files = {name: render(payload) for name, payload in build().items()}
+    files = {name: render(name, payload) for name, payload in build().items()}
     if args.check:
         stale = [n for n, text in files.items() if not (OUT / n).exists() or (OUT / n).read_text() != text]
         for n in stale:

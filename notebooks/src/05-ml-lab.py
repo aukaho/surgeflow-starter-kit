@@ -9,8 +9,8 @@
 # 1. **Regression.** Which stock characteristics go with the day's differences in
 #    return *between* stocks?
 # 2. **PCA** (principal component analysis). What are the few main directions in
-#    which these stocks differ? And how much do SurgeFlow's factor returns
-#    overlap?
+#    which these stocks differ? And, week by week, what drives SurgeFlow's
+#    long-only factor books: the market they all hold, or their styles?
 # 3. **Clustering.** Do the stocks fall into a few styles, and do those styles
 #    match sectors or SurgeFlow's own groups? SurgeFlow's groups are compared
 #    at the cluster level (their sector mix) on every run; the stock-by-stock
@@ -20,7 +20,9 @@
 # Everything here is **cross-sectional and descriptive**. Cross-sectional means
 # we compare many stocks on one day, not one stock over time. The regression
 # explains how one day's stocks differ from one another. It does **not**
-# forecast tomorrow's returns, and it does not recommend trades.
+# forecast tomorrow's returns, and it does not recommend trades. The one look
+# over time, the PCA of SurgeFlow's weekly factor books in section 11.2, is
+# descriptive too: it summarises past weekly returns and forecasts nothing.
 #
 # **What you will learn**
 #
@@ -36,8 +38,9 @@
 # - Ridge and lasso inside a scikit-learn `Pipeline`, scored by k-fold
 #   cross-validation against a do-nothing baseline.
 # - PCA on standardised features: scree plot, parallel analysis, loadings and
-#   score maps. Then a second PCA on daily factor returns, when they are
-#   published.
+#   score maps. Then PCA on SurgeFlow's weekly long-only factor books, both
+#   ways: on raw returns, where one market component dominates, and on each
+#   style's return minus the MARKET book's, where the styles show up.
 # - k-means (elbow and silhouette), Ward hierarchical clustering (dendrogram),
 #   the adjusted Rand index (ARI) to compare two clusterings, and a
 #   cluster-level comparison of sector mixes when stock labels are too few.
@@ -50,12 +53,13 @@
 # | GET | `/api/v1/markets/{market}/realtime` | The current-session turnover board (50 names) | Optional: the busiest names' session return, for exploring only |
 # | GET | `/api/v1/markets/{market}/whales` | Six top-20 institutional-holdings boards | A whale signal per stock |
 # | GET | `/api/v1/markets/{market}/ml/clusters` | SurgeFlow's latest clustering run | Labels and sector mixes to compare our clusters with |
-# | GET | `/api/v1/markets/{market}/factor-portfolios` | Pure-factor portfolios with daily return series (when published) | Input for a second PCA |
+# | GET | `/api/v1/markets/{market}/factor-portfolios` | Seven weekly long-only factor books (MARKET and six styles) with their weekly return series; query `weeks`, `holdings`, `measurement` | Input for the factor-book PCAs |
+# | GET | `/api/v1/markets/{market}/factor-portfolios/meta` | Publication metadata: cost label, freshness block, caveats | The cost label and the metadata's freshness block |
 #
 # Markets: `us`, `cn`, `jp`, `hk`. With the default settings the notebook makes
-# 7 requests, plus up to 3 more when your market publishes fewer than 3 factor
-# return series (at the time of writing no market does, so expect 10 in total;
-# the free plan allows 2,000 a day). It runs in about two minutes.
+# 8 requests, plus up to 3 more when your market has no factor publication and
+# the factor section falls back to another market (at the time of writing `hk`
+# has none; the free plan allows 2,000 a day). It runs in about two minutes.
 #
 # **Words used in this notebook**
 #
@@ -79,6 +83,8 @@
 # | k-means | Splits stocks into k groups so that each stock is close to its group's centre |
 # | silhouette | How cleanly clusters separate, from −1 to 1. Higher is cleaner |
 # | ARI | Adjusted Rand index: agreement between two clusterings. 1 = identical, about 0 = chance |
+# | book | One of SurgeFlow's weekly long-only factor portfolios: MARKET, or one of six styles |
+# | spread (style − MARKET) | A style book's weekly return minus the MARKET book's: the market cancels, about one unit of the style remains |
 
 # %% [markdown]
 # ## 1. Connect
@@ -110,7 +116,11 @@
 MARKET = "us"              # one of "us", "cn", "jp", "hk"
 SCREEN_PAGES = 3           # screen pages to fetch, largest market cap first: 3 x 100 = the ~300 largest names
 PAGE_SIZE = 100            # screen rows per page: 1-100 (a larger value is rejected with VALIDATION_ERROR)
-FACTOR_FALLBACK = True     # fewer than 3 factor return series for MARKET? try the other markets (up to 3 more requests)
+FACTOR_WEEKS = 260         # weekly factor-book returns to request: 1-1000 (260 weeks = about five years)
+FACTOR_FALLBACK = True     # no factor publication for MARKET (data.status "empty")? try the other markets in turn
+                           # (up to 3 more requests)
+BOOK_COVERAGE_MIN = 0.9    # a factor book enters the PCA only if at least 90% of its served weeks are "ok"
+MIN_FACTOR_WEEKS = 52      # the factor-book PCAs need at least this many aligned clean weeks (one year)
 
 WINSOR_Q = 0.01            # winsorise at the 1st and 99th percentiles (0 switches winsorising off)
 OUTLIER_Z = 3.5            # a value counts as an outlier when its robust z-score is above this
@@ -129,6 +139,7 @@ LABEL_TOP = 3              # charts label at most this many points; hover shows 
 
 assert MARKET in MARKETS, f"MARKET must be one of {MARKETS}"
 assert 1 <= PAGE_SIZE <= 100, "PAGE_SIZE must be between 1 and 100"
+assert 1 <= FACTOR_WEEKS <= 1000, "FACTOR_WEEKS must be between 1 and 1000"
 COLOR = MARKET_COLORS[MARKET]                      # this market's colour in every chart of the kit
 TODAY = pd.Timestamp.now(tz="UTC").normalize()
 print(f"Studying {MARKET_NAMES[MARKET]} ({MARKET}). Today is {TODAY:%Y-%m-%d} UTC.")
@@ -1033,9 +1044,8 @@ else:
 # **Freshness lives in `data.run`.** `show_freshness` only finds `market`, so
 # we print the run's date, age and `stale` flag ourselves. `run.stale` and
 # `run.age_days` count **calendar days**, not trading sessions. During an
-# exchange holiday (China's National Day closure, 1-7 October 2026, reopening
-# on 8 October, for example) a correct run can be flagged stale; SurgeFlow
-# calls this a labelling issue on its side, and the data itself is correct.
+# exchange holiday (China's week-long National Day closure, for example) a
+# run that already reflects the latest session can be flagged stale.
 # So do not trust the flag alone: compare `run.as_of_date` with the market's
 # last trading session. Here that is the screen's session (`SCREEN_AS_OF`,
 # section 3), at no extra request; health's
@@ -1200,186 +1210,330 @@ else:
 # - Cluster IDs are labels. Never use them as numbers or array positions.
 
 # %% [markdown]
-# ## 7. Factor portfolios: daily factor returns
+# ## 7. Factor portfolios: weekly long-only books
 #
-# **What it is for.** A *factor* is a characteristic that tends to explain why
-# groups of stocks move together: the market (ERP), size (SMB), value (HML),
-# momentum (WML), profitability (RMW), investment (CMA) and liquidity (LIQ).
-# SurgeFlow builds a portfolio for each one and, once a factor passes its
-# publication gates, publishes a year of **daily returns** (`return_series`, a
-# list of `{date, ret}` with `ret` a daily **fraction**). In this lab they feed
-# a second PCA (section 11): do these return streams carry separate
-# information, or mostly the same?
+# **What it is for.** A *style* (also called a factor) is a characteristic
+# that many stocks share and that moves their prices together: size, value,
+# momentum, profitability, investment and liquidity. Every week SurgeFlow
+# builds one **long-only book** per style, plus a MARKET book. A book only
+# buys stocks (no short selling), is fully invested, and is weighted so that
+# its exposure is about 1 to its own style and about 0 to the other styles.
+# Its **market exposure is 1 by construction** (the API's `labels.product`
+# says so; it is quoted below).
 #
-# A factor that fails the gates is `blocked`: it is still listed (gate state is
-# disclosed, not used as a filter) but its return series is empty. **An
-# all-blocked market is normal.** When `FACTOR_FALLBACK` is on and the market
-# has fewer than 3 published series, the cell tries the other markets (at most 3
-# more requests) and says which one it used. The section is optional, so every
-# request uses `sf_try`.
+# One consequence matters for the rest of the lab: **the raw weekly returns
+# of all seven books move together with the market.** A style shows up in the
+# difference, the style book's weekly return minus the MARKET book's. Both
+# carry the market once, so the market cancels and about one unit of the
+# style remains. Section 11.2 runs a PCA both ways.
+#
+# **The call.** `weeks=FACTOR_WEEKS` asks for that many weekly returns per
+# book. `holdings=0` and `measurement=false` leave out the holdings lists and
+# the Fama-French measurement twins, which this lab does not use (notebook 04
+# does), so the download stays small.
+#
+# **Empty is normal; errors are not.** The state lives at `data.status`:
+# `"available"` or `"empty"`. Empty is HTTP 200 with a `data.reason_code` and
+# a `data.message`: a market without a publication (`hk` at the time of
+# writing, `no_publication_for_market`), or a `formation_date` that was not
+# published (`formation_date_not_published`; this lab never asks for one). The
+# cell shows the message and, with `FACTOR_FALLBACK` on, tries the other
+# markets in turn. Errors are different: HTTP 400 (`INVALID_FACTOR`,
+# `INVALID_DATE` or `INVALID_MARKET`) means a bad parameter, so fix the call,
+# and HTTP 503 means the data could not be read. The section is optional, so
+# it uses `sf_try`, which prints a note and returns `None` where `sf_get`
+# would raise `SurgeFlowError`.
+#
+# **Freshness.** Publications are weekly; the API reports how many weeks the
+# latest formation is behind the current week (`weeks_behind`) together with a
+# `state` (it counts one week behind as `current`). The cell shows the
+# response's `data.freshness` block and the metadata's block exactly as sent.
 
 # %%
-def published_series(payload) -> int:
-    """How many factors in this payload carry a return series (0 for an unavailable payload)."""
+def factor_state(payload) -> tuple:
+    """(status, reason_code, message) from payload["data"]. The status is "available" or "empty"; empty is
+    HTTP 200, not an error. A failed request (sf_try returned None) has no status."""
     if payload is None:
-        return 0
-    return sum(1 for factor in records(payload, "factor_portfolios") if factor["return_series"])
+        return None, None, None
+    data = payload["data"]
+    return data["status"], data.get("reason_code"), data.get("message")
 
 
-fp_payload = sf_try(f"/api/v1/markets/{MARKET}/factor-portfolios")
-if fp_payload is not None:
-    show_freshness(fp_payload, "Factor portfolios:")
+def fetch_books(market: str):
+    """One factor-portfolios request for the weekly returns only: no holdings, no measurement twins."""
+    payload = sf_try(f"/api/v1/markets/{market}/factor-portfolios", weeks=FACTOR_WEEKS, holdings=0,
+                     measurement="false")
+    if payload is not None:
+        show_freshness(payload, f"Factor portfolios ({market}):")
+    return payload
+
+
+def show_empty(market: str, state: tuple) -> None:
+    """The API's own reason for an empty answer, shown as data. A failed request already printed its note."""
+    status, code, message = state
+    if status is None:
+        display(Markdown(f"> {MARKET_NAMES[market]}: no answer (see the note above)."))
+    else:
+        display(Markdown(f"> {MARKET_NAMES[market]}: `data.status` = `{status}` · `data.reason_code` = "
+                         f"`{code}`\n>\n> {message}"))
+
+
+def freshness_table(rows: list):
+    """Freshness blocks as table rows, values exactly as the API sent them. A "behind" state is printed in bold
+    red; nothing else is changed or added."""
+    frame = pd.DataFrame(rows)
+    mark = lambda value: "font-weight: 700; color: #b3261e" if value == "behind" else ""
+    styled = frame.style.hide(axis="index")
+    return styled.map(mark, subset=["state"]) if "state" in frame.columns else styled
+
+
+fp_payload = fetch_books(MARKET)
 FACTOR_MARKET = MARKET
-tried = {MARKET: published_series(fp_payload)}
-if tried[MARKET] < 3 and FACTOR_FALLBACK:
-    print(f"{MARKET_NAMES[MARKET]} publishes {tried[MARKET]} factor return series; trying the other markets.")
-    for m in MARKETS:
-        if m == MARKET:
+tried = {MARKET: factor_state(fp_payload)}
+if tried[MARKET][0] != "available":
+    show_empty(MARKET, tried[MARKET])
+    for m in (MARKETS if FACTOR_FALLBACK else ()):
+        if m in tried:
             continue
-        candidate = sf_try(f"/api/v1/markets/{m}/factor-portfolios")
-        if candidate is not None:
-            show_freshness(candidate, f"Factor portfolios ({m}):")
-        tried[m] = published_series(candidate)
-        if tried[m] >= 3:
+        candidate = fetch_books(m)
+        tried[m] = factor_state(candidate)
+        if tried[m][0] == "available":
             fp_payload, FACTOR_MARKET = candidate, m
             break
-display(pd.DataFrame({"factors with a return series": tried}).T)
-fp = fp_payload["data"]["data"] if fp_payload is not None else {}
-if fp:
-    print(f"Using {MARKET_NAMES[FACTOR_MARKET]} factors: as of {fp['as_of'] or 'n/a (nothing published)'}, release "
-          f"{fp['release_id']}, {fp['n_active']} active, {fp['n_risk_ready']} risk-ready.")
+        show_empty(m, tried[m])
+FP_OK = tried[FACTOR_MARKET][0] == "available"
+display(pd.DataFrame([{"market": m, "data.status": s or "no answer", "data.reason_code": c or "-"}
+                      for m, (s, c, _) in tried.items()]).style.hide(axis="index"))
+
+fpd = fp_payload["data"] if FP_OK else {}
+fp_meta = sf_try(f"/api/v1/markets/{FACTOR_MARKET}/factor-portfolios/meta") if FP_OK else None
+META_OK = fp_meta is not None and fp_meta["data"]["status"] == "available"
+if fp_meta is not None:
+    show_freshness(fp_meta, "Factor-portfolio metadata:")
+if FP_OK:
+    print(f"Using the {MARKET_NAMES[FACTOR_MARKET]} ({FACTOR_MARKET}) books: {fp_payload['schema_version']}, "
+          f"publication {fpd['publication']['publication_id']}, {fpd['n_weeks']} weeks in its history; we asked "
+          f"for {FACTOR_WEEKS} weeks of returns.")
+    fresh_rows = [{"source": "data.freshness", **fpd["freshness"]}]
+    meta_fresh = (fp_meta["data"].get("freshness") or {}) if META_OK else {}
+    fresh_rows += [{"source": f"meta: data.freshness.{model}", **block} for model, block in meta_fresh.items() if block]
+    display(freshness_table(fresh_rows))
+else:
+    display(Markdown("> No factor publication came back (see the messages above), so the rest of this section "
+                     "and the factor PCAs in section 11.2 are skipped. Notebook 04 shows the empty state in detail."))
 
 # %% [markdown]
-# **Raw preview.** `to_frame` flattens the nested `stats` block into dotted
-# columns (`stats.vol_annual`, ...). The return series stay as lists for now.
-# This table is also the gate report: `publish_state` and `gate_reason` say
-# why a factor is held back.
+# **Raw preview.** Two parts of the response matter here. `data.portfolios`
+# holds one record per book with its latest exposures: `exposure_market`,
+# `own_exposure` and `max_abs_other_style` show the construction (market about
+# 1, own style about 1, every other style about 0), and `checks_passed` counts
+# the API's own checks. `data.returns` is a **dictionary** keyed by book; each
+# value is a list of weekly rows, previewed below the table.
 
 # %%
-factors_raw = to_frame(fp_payload, "factor_portfolios") if fp_payload is not None else pd.DataFrame()
-PREVIEW = ["factor_id", "factor_label", "publish_state", "is_risk_ready", "stats.n_obs", "stats.vol_annual",
-           "gate_reason"]
-factors_raw[PREVIEW] if not factors_raw.empty else factors_raw
+books = pick(pd.DataFrame(records(fp_payload, "factor_portfolios") if FP_OK else []),
+             ["factor", "status", "state", "n_holdings", "universe_n", "exposures", "own_exposure",
+              "max_abs_other_style", "checks"])
+books.insert(5, "exposure_market", books["exposures"].map(lambda e: e["market"] if isinstance(e, dict) else np.nan))
+books["checks_passed"] = books["checks"].map(
+    lambda c: f"{sum(bool(v) for v in c.values())} of {len(c)}" if isinstance(c, dict) and c else "n/a")
+display(books.drop(columns=["exposures", "checks"]).style.hide(axis="index")
+        .format({"exposure_market": "{:.3f}", "own_exposure": "{:.3f}", "max_abs_other_style": "{:.1e}"},
+                na_rep="n/a"))
+
+returns_long_raw = pd.DataFrame([{"book": book, **row} for book, series in (fpd["returns"] if FP_OK else {}).items()
+                                 for row in series])
+print(f"data.returns: {len(fpd['returns']) if FP_OK else 0} books, {len(returns_long_raw):,} weekly rows.")
+pick(returns_long_raw, ["book", "week_start", "formation_date", "week_end_session", "week_return", "status",
+                        "in_inference", "carried_weight_share"]).head()
 
 # %% [markdown]
-# ### Cleaning: from nested lists to a date × factor table
+# **In the API's own words.** Before reading any number, read SurgeFlow's
+# labels verbatim: what a book is, what one weekly return measures (the return
+# basis can differ between markets), what the returns leave out, and what the
+# numbers are not.
+
+# %%
+def quote(field: str, text) -> None:
+    """Show one of the API's labels verbatim, with the field it came from."""
+    display(Markdown(f"**`{field}`**\n\n> {text if text else '(not sent in this response)'}"))
+
+
+RETURNS_LABEL = fpd["return_basis"]["returns_label"] if FP_OK else None
+if not FP_OK:
+    display(Markdown("> No labels to show: no factor publication came back."))
+else:
+    fp_labels = fpd["labels"]
+    quote("data.labels.product", fp_labels["product"])
+    quote("data.return_basis.returns_label", RETURNS_LABEL)
+    if META_OK:
+        quote("meta: data.cost_label", fp_meta["data"]["cost_label"])
+    else:
+        quote("data.labels.cost", fp_labels["cost"])
+    quote("data.labels.candidates", fp_labels["candidates"])
+
+# %% [markdown]
+# ### Cleaning: from a dictionary of lists to a week × book table
 #
-# 1. Unpack each factor's `return_series` into a long table (factor, date,
-#    return).
-# 2. Parse dates as UTC and coerce returns to numbers.
-# 3. De-duplicate on the natural key (factor, date).
-# 4. Pivot to one column per factor and keep only the dates every published
-#    factor shares (the *aligned* dates), counting what that drops.
-# 5. Check our numbers against the API's own: the aligned-date count and each
-#    factor's annualised volatility (daily standard deviation × √252).
+# 1. Unpack `data.returns` into one long table (book, week, return, status).
+# 2. Parse `week_start` as a UTC date and coerce `week_return` to a number. It
+#    is a weekly **fraction** (0.01 = 1%).
+# 3. De-duplicate on the natural key (book, `week_start`), and check our status
+#    counts against the API's own `data.counts`.
+# 4. Keep only the weeks whose `status` is `ok`. A `degraded` week is served
+#    with a label but excluded from inference (its `in_inference` is false);
+#    `unavailable` and `no_holdings` weeks have no return. Every dropped week
+#    is counted, per book and status.
+# 5. Calendar gaps: a week in which the market was closed all week has no
+#    formation, so it is simply absent (`data.calendar_grid.gap_weeks`). The
+#    series is not compressed, and a PCA does not depend on the order of the
+#    weeks, so we only report the gaps.
+# 6. Pivot to one column per book. A book enters the PCA only when at least
+#    `BOOK_COVERAGE_MIN` of its served weeks are `ok`; the others are listed,
+#    never silently dropped. Then keep the weeks on which every remaining book
+#    is `ok` (the *aligned* weeks) and count what that drops.
 
 # %%
-factors = pick(pd.DataFrame(records(fp_payload, "factor_portfolios") if fp_payload is not None else []),
-               ["factor_id", "factor_label", "publish_state", "gate_reason", "stats", "return_series"])
-FACTOR_ORDER = factors["factor_id"].tolist()                       # contract order: ERP ... LIQ
-FACTOR_COLOR = dict(zip(FACTOR_ORDER, SERIES))                      # colour follows the factor, never its rank
-FACTOR_NAME = {f: f"{lab} ({f.upper()})" for f, lab in zip(factors["factor_id"], factors["factor_label"])}
+BOOKS = ["MARKET", "SIZE", "VALUE", "MOMENTUM", "PROFITABILITY", "INVESTMENT", "LIQUIDITY"]   # contract order
+BOOK_COLOR = {"MARKET": INK, **dict(zip(BOOKS[1:], SERIES))}    # colour follows the book (as in notebook 04)
+F_COLOR = MARKET_COLORS[FACTOR_MARKET]                          # the factor market's colour, for the PCA bars
+STATUSES = ["ok", "degraded", "unavailable", "no_holdings", "shares_not_recorded", "return_not_yet_realised"]
 
-series_long = pd.DataFrame(
-    [{"factor_id": fid, "date": point["date"], "ret": point["ret"]}
-     for fid, series in zip(factors["factor_id"], factors["return_series"]) for point in (series or [])],
-    columns=["factor_id", "date", "ret"])
-series_long["date"] = pd.to_datetime(series_long["date"], utc=True, errors="coerce")
-series_long["ret"] = pd.to_numeric(series_long["ret"], errors="coerce")
-n_raw = len(series_long)
-series_long = series_long.dropna(subset=["date"]).drop_duplicates(subset=["factor_id", "date"])
-returns_wide = (series_long.pivot(index="date", columns="factor_id", values="ret").sort_index()
-                if not series_long.empty else pd.DataFrame())
-returns_wide = returns_wide[[f for f in FACTOR_ORDER if f in returns_wide.columns]]
-aligned = returns_wide.dropna()
+USE, left_out, aligned = [], [], pd.DataFrame()
+if not FP_OK:
+    display(Markdown("> Nothing to clean: no factor publication came back."))
+else:
+    weekly = pick(returns_long_raw, ["book", "week_start", "week_return", "status", "in_inference"])
+    weekly["week_start"] = pd.to_datetime(weekly["week_start"], utc=True, errors="coerce")
+    weekly["week_return"] = pd.to_numeric(weekly["week_return"], errors="coerce")
+    n_rows = len(weekly)
+    weekly = weekly.dropna(subset=["week_start"]).drop_duplicates(subset=["book", "week_start"])
 
-blocked = factors[factors["return_series"].map(lambda s: len(s or [])) == 0]
-print(f"{n_raw} (factor, date) points -> {len(series_long)} after cleaning; {returns_wide.shape[1]} factors with "
-      f"data; {len(returns_wide)} dates, of which {len(aligned)} are shared by all of them "
-      f"({len(returns_wide) - len(aligned)} dropped).")
-for _, row in blocked.iterrows():
-    print(f"  blocked: {FACTOR_NAME[row['factor_id']]} - {row['gate_reason'] or 'no reason given'}")
+    present = [b for b in BOOKS if b in set(weekly["book"])] + sorted(set(weekly["book"]) - set(BOOKS))
+    api_counts = pd.DataFrame(fpd["counts"]).T
+    statuses = STATUSES + sorted((set(weekly["status"].dropna()) | set(api_counts.columns)) - set(STATUSES))
+    status_counts = (pd.crosstab(weekly["book"], weekly["status"])
+                     .reindex(index=present, columns=statuses, fill_value=0).rename_axis(index="book", columns=None))
+    api_counts = api_counts.reindex(index=present, columns=statuses).fillna(0).astype(int)
+    counts_match = bool((api_counts.to_numpy() == status_counts.to_numpy()).all())
 
-if not aligned.empty:
-    checks = pd.DataFrame({
-        "api_vol_annual": [row["stats"]["vol_annual"] for _, row in factors.iterrows()],
-        "our_vol_annual": [returns_wide[f].dropna().std(ddof=1) * np.sqrt(252) if f in returns_wide else np.nan
-                           for f in factors["factor_id"]],
-    }, index=[FACTOR_NAME[f] for f in factors["factor_id"]])
-    api_aligned = fp["aggregate"]["n_aligned_dates"]
-    print(f"Aligned dates: API {api_aligned}, ours {len(aligned)} -> "
-          f"{'match' if api_aligned == len(aligned) else 'DIFFER'}.")
-    display(checks.dropna(how="all").style.format("{:.2%}", na_rep="n/a"))
+    clean = weekly[(weekly["status"] == "ok") & weekly["week_return"].notna()]
+    ok_without_return = int(((weekly["status"] == "ok") & weekly["week_return"].isna()).sum())
+    wide = clean.pivot(index="week_start", columns="book", values="week_return").sort_index()
+    served = weekly.groupby("book")["week_start"].nunique().reindex(present)
+    coverage = (wide.notna().sum().reindex(present).fillna(0) / served).fillna(0.0)
+    USE = [b for b in present if coverage[b] >= BOOK_COVERAGE_MIN]
+    left_out = [b for b in present if b not in USE]
+    aligned = wide[USE].dropna() if USE else pd.DataFrame()
+    gaps = fpd["calendar_grid"]["gap_weeks"]
+
+    dropped = status_counts.drop(columns="ok").sum()
+    print(f"{n_rows:,} weekly rows -> {len(weekly):,} after parsing and de-duplication. Our status counts "
+          f"{'match' if counts_match else 'DIFFER from'} the API's data.counts.")
+    dropped_text = ", ".join(f"{n:,} {s}" for s, n in dropped.items() if n) or "none"
+    print(f"Kept {len(clean):,} 'ok' weeks; dropped {dropped_text}"
+          + (f", and {ok_without_return} 'ok' rows without a return" if ok_without_return else "")
+          + f". Every kept week has in_inference = true: {'yes' if clean['in_inference'].eq(True).all() else 'NO'}.")
+    print(f"Calendar gaps in the served window (weeks the market was closed all week, absent from the series): "
+          f"{len(gaps)}.")
+    if left_out:
+        print(f"Left out of the PCA (fewer than {BOOK_COVERAGE_MIN:.0%} of their served weeks 'ok'): "
+              + ", ".join(f"{b} ({coverage[b]:.0%})" for b in left_out) + ".")
+    print(f"Aligned weeks, on which all {len(USE)} remaining books are 'ok': {len(aligned)} of the {len(wide)} "
+          f"weeks with any 'ok' book ({len(wide) - len(aligned)} dropped).")
+    report = status_counts.copy()
+    report.insert(0, "served_weeks", served.astype(int))
+    report["ok_share"] = coverage
+    report["enters_PCA"] = ["yes" if b in USE else "no" for b in present]
+    display(report.style.format({"ok_share": "{:.0%}"}))
+    quote("data.calendar_grid.label", fpd["calendar_grid"]["label"])
 
 # %% [markdown]
-# ### Chart: how each factor portfolio compounded
+# ### Chart: the books move together; the styles separate against MARKET
 #
-# Each line starts at 1.00 and multiplies by (1 + daily return) every day: the
-# value of one unit invested in the portfolio. Lines keep the same colour for
-# the same factor everywhere in this notebook.
+# Top panel: each book starts at 1.00 and compounds its clean weekly returns
+# (1 + return, week after week, over the aligned weeks only). Bottom panel:
+# each style book divided by the MARKET book, so the market's move cancels.
+# MARKET is the thick ink line on top and the dotted line at 1.00 below; a book
+# keeps its colour everywhere in this lab.
 
 # %%
-if factors.empty:
-    display(Markdown("> The factor-portfolio endpoint is unavailable right now (see the note above), so there is "
-                     "nothing to chart, and the factor PCA in section 11 will be skipped. Try again later."))
-elif aligned.empty:
-    reasons = sorted({token.strip() for text in blocked["gate_reason"].dropna() for token in str(text).split(";")
-                      if token.strip()})
-    display(Markdown(
-        f"> No published factor return series came back ({len(blocked)} of {len(factors)} factors blocked in "
-        f"{MARKET_NAMES[FACTOR_MARKET]}; other markets tried: {', '.join(m for m in tried if m != MARKET) or 'none'}). "
-        "There is nothing to chart, and the factor PCA in section 11 will be skipped. This is normal while "
-        "SurgeFlow's publication gates hold the factors back."
-        + (f" Gate reasons today: {', '.join(f'`{r}`' for r in reasons)}." if reasons else "")))
+if aligned.empty:
+    display(Markdown("> No aligned weekly returns came back, so there is nothing to chart, and the factor PCAs "
+                     "in section 11.2 are skipped."))
 else:
     growth = (1 + aligned).cumprod()
-    final = growth.iloc[-1].sort_values(ascending=False)
-    best, worst = final.index[0], final.index[-1]
-    fig = go.Figure()
-    for f in aligned.columns:
+    has_market = "MARKET" in USE
+    style_books = [b for b in USE if b != "MARKET"]
+    n_rows_fig = 2 if has_market and style_books else 1
+    fig = make_subplots(rows=n_rows_fig, cols=1, shared_xaxes=True, vertical_spacing=0.09,
+                        subplot_titles=("Raw long-only books: value of 1", "Each style book ÷ the MARKET book")
+                        [:n_rows_fig])
+    for b in USE:
         fig.add_trace(go.Scatter(
-            x=growth.index, y=growth[f], mode="lines", name=FACTOR_NAME[f], line=dict(color=FACTOR_COLOR[f], width=2),
-            hovertemplate=f"{FACTOR_NAME[f]}<br>%{{x|%Y-%m-%d}}: %{{y:.3f}}<extra></extra>"))
-    # End labels, nudged apart vertically when two lines finish close together.
-    min_gap = 0.045 * float(growth.max().max() - growth.min().min())
-    placed = []
-    for f, value in final.sort_values().items():
-        y_label = max(value, placed[-1] + min_gap) if placed else value
-        placed.append(y_label)
-        fig.add_annotation(x=growth.index[-1], y=y_label, text=f"{f.upper()} {value - 1:+.0%}", showarrow=False,
-                           xanchor="left", xshift=6, font=dict(size=11, color=FACTOR_COLOR[f]))
-    fig.add_hline(y=1, line=dict(color=AXIS, width=1))
-    fig.update_xaxes(title_text="Date (UTC)")
-    fig.update_yaxes(title_text="Value of 1 unit invested (×)")
-    blocked_text = (", ".join(FACTOR_NAME[f] for f in blocked["factor_id"]) + " blocked (no series)"
-                    if len(blocked) else "no factor blocked")
+            x=growth.index, y=growth[b], mode="lines", name=b, legendgroup=b,
+            line=dict(color=BOOK_COLOR.get(b, MUTED), width=3 if b == "MARKET" else 1.6),
+            hovertemplate=f"{b}<br>week of %{{x|%Y-%m-%d}}: %{{y:.3f}}×<extra></extra>"), row=1, col=1)
+    fig.update_yaxes(title_text="Value of 1 (×)", row=1, col=1)
+    if n_rows_fig == 2:
+        relative = growth[style_books].div(growth["MARKET"], axis=0)
+        for b in style_books:
+            fig.add_trace(go.Scatter(
+                x=relative.index, y=relative[b], mode="lines", name=b, legendgroup=b, showlegend=False,
+                line=dict(color=BOOK_COLOR.get(b, MUTED), width=1.6),
+                hovertemplate=f"{b} ÷ MARKET<br>week of %{{x|%Y-%m-%d}}: %{{y:.3f}}×<extra></extra>"), row=2, col=1)
+        fig.add_hline(y=1, line=dict(color=INK, width=2, dash="dot"), row=2, col=1)
+        fig.update_yaxes(title_text="Book ÷ MARKET (×)", row=2, col=1)
+    fig.update_xaxes(title_text="Week start (UTC)", row=n_rows_fig, col=1)
+    corr_market = aligned.corr()["MARKET"].drop("MARKET") if has_market and style_books else pd.Series(dtype=float)
+    if len(corr_market) and corr_market.min() >= 0.7:
+        headline = (f"All {len(USE)} books move with the market (weekly correlation with MARKET "
+                    f"{corr_market.min():.2f} to {corr_market.max():.2f}); the styles separate only relative to MARKET")
+    elif len(corr_market):
+        headline = (f"The books' weekly correlation with MARKET ranges from {corr_market.min():.2f} to "
+                    f"{corr_market.max():.2f}; relative to MARKET, the styles separate")
+    else:
+        headline = f"{len(USE)} long-only books, compounded week by week"
     title, top = chart_title(
-        f"Over {len(aligned)} trading days, {FACTOR_NAME[best]} compounded most ({final[best] - 1:+.0%}) and "
-        f"{FACTOR_NAME[worst]} least ({final[worst] - 1:+.0%})",
-        f"{MARKET_NAMES[FACTOR_MARKET]} pure-factor portfolios, daily, {aligned.index[0]:%Y-%m-%d} to "
-        f"{aligned.index[-1]:%Y-%m-%d} · {blocked_text}")
-    fig.update_layout(title=title, height=500, margin=dict(t=top, r=90, b=120),
-                      legend=legend_below(500, top, 120))
+        headline,
+        f"{MARKET_NAMES[FACTOR_MARKET]} long-only factor books · {len(aligned)} aligned clean weeks, "
+        f"{aligned.index[0]:%Y-%m-%d} to {aligned.index[-1]:%Y-%m-%d} · weekly returns, gross of costs · "
+        "compounded over the kept weeks only")
+    height = 320 + 260 * n_rows_fig
+    fig.update_layout(title=title, height=height, margin=dict(t=top + 10, r=30, b=120),
+                      legend=legend_below(height, top + 10, 120))
     fig.show()
-    display(pd.DataFrame({"growth_of_1": final, "daily_mean": aligned.mean(), "daily_sd": aligned.std()})
-            .rename(index=FACTOR_NAME).style.format({"growth_of_1": "{:.3f}", "daily_mean": "{:+.3%}",
-                                                     "daily_sd": "{:.3%}"}))
+    twin = pd.DataFrame({"weeks": aligned.count(), "weekly_sd": aligned.std(), "end_value": growth.iloc[-1]})
+    if has_market:
+        twin["corr_with_MARKET"] = aligned.corr()["MARKET"]
+        twin["spread_weekly_sd"] = aligned.sub(aligned["MARKET"], axis=0).std().where(twin.index != "MARKET")
+        twin["end_relative_to_MARKET"] = (growth.iloc[-1] / growth["MARKET"].iloc[-1]).where(twin.index != "MARKET")
+    twin.index.name = "book"
+    display(twin.style.format({"weekly_sd": "{:.2%}", "end_value": "{:.3f}", "corr_with_MARKET": "{:.2f}",
+                               "spread_weekly_sd": "{:.2%}", "end_relative_to_MARKET": "{:.3f}"}, na_rep="-"))
 
 # %% [markdown]
-# **How to read this.** A line above 1.00 made money over the window, below lost
-# it. Steep stretches are strong runs; jagged stretches are volatile ones. The
-# ending values are labelled on the right. When every factor is blocked, the
-# gate report above is the whole story for today: read `gate_reason` to see
-# which test a factor has not passed yet.
+# **How to read this.** In the top panel the lines travel together: every book
+# carries the market once, and the table's `corr_with_MARKET` column puts a
+# number on it. In the bottom panel the shared move is divided out. A line
+# that rises spent the window ahead of MARKET, one that falls behind it; this
+# is where the styles differ. `spread_weekly_sd` is the size of a typical
+# week's style-minus-MARKET difference, much smaller than a book's own weekly
+# swing (`weekly_sd`). Section 11.2 turns both pictures into PCAs.
 #
 # **Caveats.**
 #
-# - These are research portfolios, before trading costs. They are not funds
-#   you can buy.
-# - `effective_sign` tells you when SurgeFlow flipped a factor's direction; the
-#   series are used exactly as published.
-# - One year is a short window for factor returns, and the window ends on the
-#   factor release's `as_of` date, not necessarily on the screen session.
+# - Weekly data: a few years of weeks is a modest sample, and the weeks dropped
+#   in cleaning are skipped, so the lines are a measurement over the kept
+#   weeks, not the record of a portfolio someone held.
+# - The returns are gross of costs, on the basis the response states
+#   (`data.return_basis.returns_label`, quoted above). The basis can differ
+#   between markets, so read it before you compare two of them.
+# - These are retrospective research measurements. SurgeFlow's own label for
+#   them is quoted above (`data.labels.candidates`): they are model
+#   candidates, not recommendations, and nothing here is a fund you can buy.
+# - How current the books are is what `data.freshness` reports; its `state`
+#   and `weeks_behind` are shown above exactly as the API sends them.
 
 # %% [markdown]
 # ## 8. Extension: one feature table, cleaned in the open
@@ -2587,120 +2741,223 @@ else:
 # change from day to day, and a component that barely beats the noise line can
 # swap places with its neighbour on a new sample. The map of each stock's
 # scores comes in section 12.3, coloured by cluster.
-#
-# ### 11.2 A second PCA: do the factor returns overlap?
-#
-# Now we apply PCA to a different kind of data: the **daily returns** of the
-# factor portfolios from section 7. Each column is a factor, each row a day.
-# Standardising puts the volatile market factor on the same footing as the
-# calmer long-short factors. If one component held most of the variance, the
-# factors would mostly be one bet in several disguises. If the variance spreads
-# out, each factor brings its own information, which is what "pure" factors are
-# designed to do.
-#
-# We also check our correlation matrix against the one the API publishes
-# (`data.data.aggregate.factor_correlation`). This part needs at least 3
-# published factors with 30 shared days; when SurgeFlow's gates hold the
-# factors back, it says so and moves on.
-
-# %%
-FACTOR_OK = aligned.shape[1] >= 3 and len(aligned) >= 30
-if not FACTOR_OK:
-    display(Markdown(f"> Only {aligned.shape[1]} factors with aligned return series came back (market "
-                     f"{FACTOR_MARKET}; at least 3 with 30 shared days are needed), so there is no factor PCA today. "
-                     "This is normal while the factors are blocked: re-run on another day, or see notebook 04."))
-else:
-    f_corr = aligned.corr()
-    api_corr = fp["aggregate"]["factor_correlation"]
-    if api_corr:
-        api = pd.DataFrame(api_corr["values"], index=api_corr["factor_ids"], columns=api_corr["factor_ids"])
-        common = [f for f in f_corr.columns if f in api.columns]
-        gap = float((f_corr.loc[common, common] - api.loc[common, common]).abs().max().max())
-        print(f"Our factor correlations vs the API's: largest difference {gap:.4f} over {len(common)} factors "
-              f"({'match' if gap < 0.01 else 'check the alignment window'}).")
-    f_pipe = Pipeline([("scale", StandardScaler()), ("pca", PCA(random_state=RANDOM_STATE))])
-    f_scores = f_pipe.fit_transform(aligned)
-    fZ = f_pipe.named_steps["scale"].transform(aligned)
-    f_evr = f_pipe.named_steps["pca"].explained_variance_ratio_
-    f_null = parallel_analysis(fZ, N_PERMUTATIONS, RANDOM_STATE)
-    f_beats = f_evr > f_null
-    F_KEEP = int(np.argmin(f_beats)) if not f_beats.all() else len(f_evr)
-    equal_share = 1 / len(f_evr)
-    fig = scree_figure(
-        f_evr, f_null, F_KEEP,
-        headline=f"The factors carry mostly separate information: PC1 holds {f_evr[0]:.0%} of the variance, against "
-              f"{equal_share:.0%} if all {len(f_evr)} were unrelated" if f_evr[0] < 0.5
-              else f"One direction dominates the factors: PC1 holds {f_evr[0]:.0%} of the variance",
-        subtitle=f"PCA on z-scored daily returns of {len(f_evr)} {MARKET_NAMES[FACTOR_MARKET]} factor portfolios · "
-                 f"{len(aligned)} aligned days · noise level from {N_PERMUTATIONS} shuffles")
-    fig.show()
-    display(pd.DataFrame({"variance_share": f_evr, "cumulative": np.cumsum(f_evr), "noise_95th": f_null},
-                         index=[f"PC{i}" for i in range(1, len(f_evr) + 1)]).style.format("{:.1%}"))
 
 # %% [markdown]
-# **How to read this.** Same reading as the first scree plot. With unrelated
-# factors every component would hold about 1 ÷ (number of factors) of the
-# variance. The closer the bars are to that flat level, the more independent
-# the factors. Shuffling ignores day-to-day patterns such as volatility
-# clustering, so treat the noise line as a rough guide here.
+# ### 11.2 PCA on SurgeFlow's factor books, both ways
 #
-# ### Chart: factor correlations and loadings side by side
+# Now a different kind of data: the **weekly returns** of the long-only factor
+# books from section 7. Each column is a book, each row one aligned clean
+# week. As always we standardise each column first, then run PCA twice:
+#
+# 1. **On the raw long-only returns.** Every book has market exposure 1, so
+#    one component, the market, should hold most of the variance and load
+#    about evenly on every book.
+# 2. **On the style-minus-MARKET returns**: each style book's weekly return
+#    minus the MARKET book's (up to six series). The market cancels, and what
+#    is left is the styles. Does one direction still dominate, or does each
+#    style bring its own information?
+#
+# Both PCAs use the parallel-analysis noise line of section 11.1. They need at
+# least 3 books with `MIN_FACTOR_WEEKS` aligned weeks (the spread PCA also
+# needs the MARKET book and at least 3 style books); otherwise the cell says so
+# and moves on. The sample is **weekly**: a few hundred weeks at most, for up
+# to seven series.
 
 # %%
-if not FACTOR_OK:
-    display(Markdown("> No factor PCA today (see the previous cell), so there is nothing to chart."))
-else:
-    f_load, _ = oriented_loadings(fZ, f_scores, len(f_evr))
-    f_load = pd.DataFrame(f_load, index=aligned.columns, columns=[f"PC{i + 1}" for i in range(len(f_evr))])
-    f_names = [FACTOR_NAME[f] for f in aligned.columns]
-    pc1 = f_load["PC1"]
-    together = [FACTOR_NAME[f] for f in pc1[pc1 >= 0.3].sort_values(ascending=False).index]
-    against = [FACTOR_NAME[f] for f in pc1[pc1 <= -0.3].sort_values().index]
-    f_story = (f"pits {' and '.join(together)} against {' and '.join(against)}" if together and against
-               else f"moves {' and '.join(together)} together" if together else "has no dominant factor")
-    pairs = f_corr.where(np.tril(np.ones(f_corr.shape, dtype=bool), k=-1)).stack()
-    top_pair = pairs.abs().idxmax()
-    f_tri = lower_triangle(f_corr)
-    corr_values = f_tri.to_numpy()
+def factor_pca(frame: pd.DataFrame) -> dict:
+    """Standardised PCA in a Pipeline: variance shares, the parallel-analysis noise level, the number of leading
+    components that beat it, and loadings as correlations (each component flipped so its largest loading is +)."""
+    pipe = Pipeline([("scale", StandardScaler()), ("pca", PCA(random_state=RANDOM_STATE))])
+    scores = pipe.fit_transform(frame)
+    Z = pipe.named_steps["scale"].transform(frame)
+    evr = pipe.named_steps["pca"].explained_variance_ratio_
+    null = parallel_analysis(Z, N_PERMUTATIONS, RANDOM_STATE)
+    beats = evr > null
+    load, _ = oriented_loadings(Z, scores, len(evr))
+    pcs = [f"PC{i + 1}" for i in range(len(evr))]
+    return {"evr": evr, "null": null, "keep": int(np.argmin(beats)) if not beats.all() else len(evr), "pcs": pcs,
+            "load": pd.DataFrame(load, index=frame.columns, columns=pcs)}
 
-    fig = make_subplots(rows=1, cols=2, horizontal_spacing=0.16, column_widths=[0.5, 0.5],
-                        subplot_titles=("Correlation of daily returns", "Loadings on each component"))
-    fig.add_trace(go.Heatmap(
-        z=corr_values, x=[FACTOR_NAME[f] for f in f_tri.columns], y=[FACTOR_NAME[f] for f in f_tri.index],
-        coloraxis="coloraxis", xgap=2, ygap=2, hoverongaps=False,
-        text=[["" if np.isnan(v) else f"{v:+.2f}" for v in row] for row in corr_values], texttemplate="%{text}",
-        hovertemplate="%{y}<br>%{x}<br>r = %{z:+.2f}<extra></extra>"), row=1, col=1)
-    fig.add_trace(go.Heatmap(
-        z=f_load.to_numpy(), x=[f"PC{i + 1} ({v:.0%})" for i, v in enumerate(f_evr)], y=f_names,
-        coloraxis="coloraxis", xgap=2, ygap=2, text=f_load.map(lambda v: f"{v:+.2f}").to_numpy(),
-        texttemplate="%{text}", hovertemplate="%{y}<br>%{x}<br>loading %{z:+.2f}<extra></extra>"), row=1, col=2)
-    fig.update_layout(coloraxis=dict(colorscale=DIVERGING, cmin=-1, cmax=1, cmid=0,
-                                     colorbar=dict(title=dict(text="r", side="right"), thickness=14, len=0.8,
-                                                   outlinewidth=0)))
-    fig.update_xaxes(tickangle=-35, ticks="", showgrid=False)
-    fig.update_yaxes(autorange="reversed", ticks="", showgrid=False)
+
+def join_words(items) -> str:
+    """['SIZE', 'VALUE', 'MOMENTUM'] -> 'SIZE, VALUE and MOMENTUM'."""
+    items = [str(i) for i in items]
+    return items[0] if len(items) == 1 else ", ".join(items[:-1]) + " and " + items[-1]
+
+
+def spread_words(books: list) -> str:
+    """['VALUE', 'INVESTMENT'] -> 'the VALUE and INVESTMENT spreads'."""
+    return f"the {join_words(books)} spread{'s' if len(books) > 1 else ''}"
+
+
+def spread_story(load: pd.Series, cut: float = 0.4) -> str:
+    """What one spread component is made of, from its strong loadings (|r| >= cut)."""
+    up = list(load[load >= cut].sort_values(ascending=False).index)
+    down = list(load[load <= -cut].sort_values().index)
+    if up and down:
+        return f"sets {spread_words(up)} against {spread_words(down)}"
+    if up:
+        return f"moves {spread_words(up)} together" if len(up) > 1 else f"is mostly {spread_words(up)}"
+    return f"has no dominant spread (every loading is below {cut})"
+
+
+SPREAD_BOOKS = [b for b in USE if b != "MARKET"] if "MARKET" in USE else []
+FACTOR_PCA_OK = len(USE) >= 3 and len(aligned) >= MIN_FACTOR_WEEKS
+SPREAD_OK = FACTOR_PCA_OK and len(SPREAD_BOOKS) >= 3
+if not FACTOR_PCA_OK:
+    display(Markdown(f"> Only {len(USE)} books with {len(aligned)} aligned clean weeks came back (at least 3 books "
+                     f"with {MIN_FACTOR_WEEKS} weeks are needed), so there is no factor PCA this time. Section 7 "
+                     "shows what came back; notebook 04 goes deeper."))
+else:
+    raw_pca = factor_pca(aligned)
+    spreads = aligned[SPREAD_BOOKS].sub(aligned["MARKET"], axis=0) if SPREAD_OK else pd.DataFrame()
+    spread_pca = factor_pca(spreads) if SPREAD_OK else None
+    print(f"Weekly data, {MARKET_NAMES[FACTOR_MARKET]}: {len(aligned)} aligned weeks for {len(USE)} books "
+          f"(about {len(aligned) / len(USE):.0f} weekly observations per variable)"
+          + (f"; {len(SPREAD_BOOKS)} style-minus-MARKET spreads." if SPREAD_OK
+             else "; too few style books (or no MARKET book) for the spread PCA."))
+    quote("data.return_basis.returns_label", RETURNS_LABEL)
+
+    panels = [("Raw long-only books", raw_pca)] + ([("Style minus MARKET", spread_pca)] if SPREAD_OK else [])
+    fig = make_subplots(rows=1, cols=len(panels), shared_yaxes=True, horizontal_spacing=0.06,
+                        subplot_titles=[f"{name} ({len(p['evr'])} series)" for name, p in panels])
+    shown = set()
+    for col, (name, p) in enumerate(panels, start=1):
+        evr, null, keep, pcs = p["evr"], p["null"], p["keep"], p["pcs"]
+        cumulative = np.cumsum(evr)
+        traces = [
+            go.Bar(x=pcs[:keep], y=evr[:keep], name="Component beats shuffled data", marker_color=F_COLOR,
+                   hovertemplate=f"{name}<br>%{{x}}: %{{y:.1%}} of the variance<extra></extra>"),
+            go.Bar(x=pcs[keep:], y=evr[keep:], name="Component within noise", marker_color=MUTED,
+                   hovertemplate=f"{name}<br>%{{x}}: %{{y:.1%}} of the variance<extra></extra>"),
+            go.Scatter(x=pcs, y=null, mode="lines+markers", name="Shuffled data, 95th percentile",
+                       line=dict(color=INK, dash="dash", width=2), marker=dict(size=5, color=INK),
+                       hovertemplate=f"{name}<br>%{{x}}: noise reaches %{{y:.1%}}<extra></extra>"),
+            go.Scatter(x=pcs, y=cumulative, mode="lines+markers", name="Cumulative share",
+                       line=dict(color=INK_2, width=2), marker=dict(size=6, color=INK_2),
+                       hovertemplate=f"{name}<br>PC1 to %{{x}}: %{{y:.1%}}<extra></extra>"),
+        ]
+        for trace in traces:
+            if len(trace.x):
+                trace.update(legendgroup=trace.name, showlegend=trace.name not in shown)
+                shown.add(trace.name)
+                fig.add_trace(trace, row=1, col=col)
+        fig.update_xaxes(title_text="Principal component", row=1, col=col)
+    fig.update_yaxes(title_text="Share of total variance (%)", tickformat=".0%", range=[0, 1.05], row=1, col=1)
+    raw1 = raw_pca["evr"][0]
+    headline = f"Raw books: PC1 holds {raw1:.0%} of the variance" + (" (the market)" if raw1 >= 0.5 else "")
+    if SPREAD_OK:
+        k = len(SPREAD_BOOKS)
+        headline += (f"; minus MARKET, PC1 holds {spread_pca['evr'][0]:.0%} of the spreads' variance "
+                     f"({1 / k:.0%} each if unrelated)")
     title, top = chart_title(
-        f"{FACTOR_NAME[top_pair[0]]} and {FACTOR_NAME[top_pair[1]]} are the most linked pair "
-        f"(r = {f_corr.loc[top_pair]:+.2f}); PC1 {f_story}",
-        f"{MARKET_NAMES[FACTOR_MARKET]} factors · {len(aligned)} days to {aligned.index[-1]:%Y-%m-%d} · "
-        "loadings are correlations with each component's score")
-    top += 30                                                         # room for the two panel titles
-    fig.update_layout(title=title, height=top + 420, margin=dict(t=top, l=10, b=10), plot_bgcolor=SURFACE)
+        headline,
+        f"PCA on z-scored weekly returns · {MARKET_NAMES[FACTOR_MARKET]} long-only factor books · {len(aligned)} "
+        f"aligned weeks · bars: share per component; solid line: cumulative share; dashed: noise level from "
+        f"{N_PERMUTATIONS} shuffles")
+    top += 24                                                         # room for the panel titles
+    fig.update_layout(title=title, barmode="overlay", height=top + 430, margin=dict(t=top, b=120),
+                      legend=legend_below(top + 430, top, 120))
     fig.show()
-    display(f_corr.rename(index=FACTOR_NAME, columns=FACTOR_NAME).style.format("{:+.2f}"))
-    display(f_load.rename(index=FACTOR_NAME).style.format("{:+.2f}"))
+    scree_twin = pd.DataFrame({"raw_share": raw_pca["evr"], "raw_cumulative": np.cumsum(raw_pca["evr"]),
+                               "raw_noise_95th": raw_pca["null"]}, index=raw_pca["pcs"])
+    if SPREAD_OK:
+        scree_twin = scree_twin.join(pd.DataFrame(
+            {"spread_share": spread_pca["evr"], "spread_cumulative": np.cumsum(spread_pca["evr"]),
+             "spread_noise_95th": spread_pca["null"]}, index=spread_pca["pcs"]))
+    display(scree_twin.style.format("{:.1%}", na_rep="-"))
 
 # %% [markdown]
-# **How to read this.** On the left, deep colours mark pairs of factors that
-# tend to win or lose on the same days. A familiar pattern is value (HML) moving
-# with investment (CMA) and against momentum (WML). On the right, each column
-# is a component: factors with deep cells in the same column move together, and
-# opposite colours mean they move in opposite directions. PC1 sums up the
-# biggest shared swing; later columns are smaller, more specific ones.
+# **How to read this.** Left, the raw books: PC1's bar towers over the others
+# and the cumulative line jumps close to 100% at PC1. One direction, the
+# market, carries almost all of the week-to-week variation, because every book
+# holds the market once. Right, the same books after subtracting MARKET: the
+# bars are flatter and the cumulative line climbs step by step, so the styles
+# differ along several directions. With k unrelated series every component
+# would hold about 1 ÷ k of the variance; compare PC1 with that level, not with
+# zero. Shuffling ignores week-to-week patterns such as volatility clustering,
+# so treat the noise line as a rough guide here.
 #
-# **Caveats.** Correlations between factors change over time; one year is a
-# single regime. The market factor (ERP) is an index excess return, the others
-# are long-short, so ERP's correlations mean something slightly different.
+# ### Chart: what the components are made of (loadings)
+#
+# A loading is the correlation between a series and a component's score, as in
+# section 11.1. Left: each raw book's loading on the raw PC1. Right: the
+# loadings of the style-minus-MARKET spreads on every spread component.
+
+# %%
+if not FACTOR_PCA_OK:
+    display(Markdown("> No factor PCA this time (see the previous cell), so there is nothing to chart."))
+else:
+    pc1 = raw_pca["load"]["PC1"]
+    n_cols = 2 if SPREAD_OK else 1
+    fig = make_subplots(rows=1, cols=n_cols, horizontal_spacing=0.22, column_widths=[0.38, 0.62][:n_cols],
+                        subplot_titles=("Raw books: loading on PC1", "Style − MARKET: loadings")[:n_cols])
+    fig.add_trace(go.Bar(
+        x=pc1.to_numpy(), y=list(pc1.index), orientation="h", marker_color=F_COLOR, showlegend=False,
+        text=[f"{v:+.2f}" for v in pc1], textposition="inside", insidetextanchor="end",
+        hovertemplate="%{y}: loading %{x:+.2f} on raw PC1<extra></extra>"), row=1, col=1)
+    fig.update_xaxes(title_text="Loading on raw PC1 (r)", range=[min(0.0, float(pc1.min()) - 0.1), 1.0],
+                     row=1, col=1)
+    fig.update_yaxes(autorange="reversed", ticks="", row=1, col=1)
+    even = float(pc1.max() - pc1.min()) <= 0.2 and float(pc1.min()) > 0
+    headline = (f"Raw PC1 loads about evenly on every book ({pc1.min():+.2f} to {pc1.max():+.2f}): the common "
+                "market move" if even else f"Raw PC1 loads from {pc1.min():+.2f} to {pc1.max():+.2f} across the books")
+    if SPREAD_OK:
+        s_load = spread_pca["load"]
+        fig.add_trace(go.Heatmap(
+            z=s_load.to_numpy(), x=[f"{pc} ({v:.0%})" for pc, v in zip(spread_pca["pcs"], spread_pca["evr"])],
+            y=[f"{b} − MARKET" for b in s_load.index], colorscale=DIVERGING, zmin=-1, zmax=1, zmid=0, xgap=2, ygap=2,
+            text=s_load.map(lambda v: f"{v:+.2f}").to_numpy(), texttemplate="%{text}", textfont=dict(size=11),
+            hovertemplate="%{y}<br>%{x}<br>loading %{z:+.2f}<extra></extra>",
+            colorbar=dict(title=dict(text="Loading (r)", side="right"), thickness=14, len=0.8, outlinewidth=0)),
+            row=1, col=2)
+        fig.update_xaxes(title_text="Spread component (share of variance)", ticks="", showgrid=False, row=1, col=2)
+        fig.update_yaxes(autorange="reversed", ticks="", showgrid=False, row=1, col=2)
+        headline += f"; on the spreads, PC1 {spread_story(s_load['PC1'])}"
+    title, top = chart_title(
+        headline,
+        f"{MARKET_NAMES[FACTOR_MARKET]} long-only factor books · {len(aligned)} aligned weeks · loading = correlation "
+        "of each z-scored weekly series with a component's score")
+    top += 30                                                         # room for the panel titles
+    height = top + 90 + 46 * max(len(USE), 4)
+    fig.update_layout(title=title, height=height, margin=dict(t=top, l=10, b=70), plot_bgcolor=SURFACE)
+    fig.show()
+    if SPREAD_OK:
+        n_say = int(min(max(spread_pca["keep"], 2), len(spread_pca["pcs"]), 4))
+        display(Markdown("\n".join(
+            f"- **Spread {pc}** ({spread_pca['evr'][i]:.0%} of the spreads' variance) {spread_story(s_load[pc])}."
+            for i, pc in enumerate(spread_pca["pcs"][:n_say]))
+            + "\n\nA week with a high score on a component is a week in which the spreads with positive loadings "
+              "were high together (and those with negative loadings low)."))
+    display(raw_pca["load"].iloc[:, :3].rename_axis("raw book").style.format("{:+.2f}"))
+    if SPREAD_OK:
+        display(s_load.rename(index=lambda b: f"{b} − MARKET").rename_axis("spread").style.format("{:+.2f}"))
+        display(spreads.corr().rename(index=lambda b: f"{b} − MARKET", columns=lambda b: f"{b} − MARKET")
+                .rename_axis(index="correlation", columns=None).style.format("{:+.2f}"))
+
+# %% [markdown]
+# **How to read this.** Left: similar bars mean the raw PC1 is close to an
+# equal-weight average of all the books, which is the market they all hold.
+# That is why a PCA of raw long-only returns says little about styles. Right:
+# read down a column to name a spread component. Deep cells of the same colour
+# are spreads that move together on that component; opposite colours move in
+# opposite directions. The sentences above the tables name the leading
+# components, and the last table holds the spreads' correlations.
+#
+# **Caveats.**
+#
+# - Weekly returns over a few years: enough to describe how the series moved
+#   together, not to forecast. Correlations between styles change over time,
+#   and one window can mix several regimes.
+# - Every spread subtracts the same MARKET return, so anything particular to
+#   the MARKET book's week is shared by all spreads and pulls them together.
+#   Part of a spread PC1 can be that shared leg rather than a style.
+# - The returns are gross of costs, on the basis quoted above
+#   (`data.return_basis.returns_label`). A style-minus-MARKET spread is a
+#   measurement, not a position anyone held.
+# - Descriptive only: the books are model candidates, not recommendations
+#   (`data.labels.candidates`, quoted in section 7), and no component here is a
+#   performance claim.
 
 # %% [markdown]
 # ## 12. Extension: clustering, our own map of styles
@@ -3445,7 +3702,8 @@ else:
 #
 # - Notebook 01 explains the screen, realtime, hotlist and sector boards field
 #   by field; notebook 02 explores the ML clusters and every whale board;
-#   notebook 04 covers the factor portfolios and their gates.
+#   notebook 04 covers the factor books in depth: the metadata, exposures,
+#   holdings, measurement twins, query parameters and error codes.
 # - Run the notebook on another day. The coefficients will move: that is the
 #   honest lesson of a cross-sectional, same-day description.
 #
@@ -3454,7 +3712,8 @@ else:
 # *Research and education only. Nothing here is investment advice or a
 # recommendation to buy or sell any security. The regression, PCA and clusters
 # describe how one day's stocks differ from each other; they do not forecast
-# returns. The endpoint name `realtime` names a current-session board, not a
+# returns. The factor-book PCA summarises past weekly returns, gross of costs;
+# the books are model candidates, not recommendations. The endpoint name `realtime` names a current-session board, not a
 # live-tick feed, and data cadence varies by market: always check the
 # freshness fields. Whale boards reflect disclosure filings that can be weeks or
 # months old.*

@@ -1,6 +1,7 @@
 {
  "ok": true,
- "schema_version": "surgeflow.public_api.v1",
+ "schema_version": "surgeflow.summary.v1",
+ "source": "/api/summary",
  "data": {
   "timestamp": "2026-10-07T05:10:22.796374+00:00",
   "fx_rates": {
@@ -28,7 +29,7 @@
    "policy_version": "overview_factor_premium_containment_v1",
    "reason_code": "fresh_same_definition_not_verified",
    "message": "Cross-market factor figures are withheld until every market passes the same-definition check.",
-   "legacy_source": null,
+   "legacy_source": "stock_data.factor_returns_v1",
    "replacement_source": null,
    "freshness_status": "not_verified",
    "expected_session_date": null,
@@ -127,17 +128,17 @@
        {
         "ticker": "GHPD",
         "name": "Summitry United Communications, Inc.",
-        "characteristic_value": 10996122535.7596
+        "characteristic_value": 10996122536
        },
        {
         "ticker": "EXS",
         "name": "Riverbend Petroleum Corp.",
-        "characteristic_value": 11654891101.6131
+        "characteristic_value": 11654891102
        },
        {
         "ticker": "FGA",
         "name": "Clearpath First Motors Corp.",
-        "characteristic_value": 11688146764.965
+        "characteristic_value": 11688146765
        }
       ]
      },
@@ -1112,17 +1113,17 @@
        {
         "ticker": "601193",
         "name": "润润旅游股份",
-        "characteristic_value": 29651630865.53
+        "characteristic_value": 29651630866
        },
        {
         "ticker": "001884",
         "name": "安正建设",
-        "characteristic_value": 30617976094.3914
+        "characteristic_value": 30617976094
        },
        {
         "ticker": "603796",
         "name": "宇益建设",
-        "characteristic_value": 30885456412.8619
+        "characteristic_value": 30885456413
        }
       ]
      },
@@ -2197,17 +2198,17 @@
        {
         "ticker": "9824",
         "name": "TOKAI SEIKI ELECTRONICS CO.,LTD.",
-        "characteristic_value": 338596703272.0815
+        "characteristic_value": 338596703272
        },
        {
         "ticker": "9483",
         "name": "KAEDE TECHNO CONSTRUCTION CO.,LTD.",
-        "characteristic_value": 345770394847.7449
+        "characteristic_value": 345770394848
        },
        {
         "ticker": "7973",
         "name": "FUJIMI KOGYO ELECTRONICS CO.,LTD.",
-        "characteristic_value": 346215229161.8449
+        "characteristic_value": 346215229162
        }
       ]
      },
@@ -3182,17 +3183,17 @@
        {
         "ticker": "08310",
         "name": "宏鼎物流",
-        "characteristic_value": 29438878632.577
+        "characteristic_value": 29438878633
        },
        {
         "ticker": "04374",
         "name": "隆航装备控股",
-        "characteristic_value": 29492402921.9936
+        "characteristic_value": 29492402922
        },
        {
         "ticker": "02356",
         "name": "通华乳业",
-        "characteristic_value": 29592550193.537
+        "characteristic_value": 29592550194
        }
       ]
      },

@@ -4,7 +4,6 @@
  "source": "/api/news/feed",
  "market": "jp",
  "data": {
-  "ok": true,
   "market": "jp",
   "count": 40,
   "total_matching": 24700,

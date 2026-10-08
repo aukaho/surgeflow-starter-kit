@@ -360,10 +360,9 @@ def explain_run(run: dict, market: str, last_session=None) -> None:
 # **Freshness lives in `data.run`.** `show_freshness` only finds `market`
 # here, so we print the run's date, age and `stale` flag ourselves.
 # `run.stale` and `run.age_days` count **calendar days**, not trading
-# sessions. During an exchange holiday (China's National Day closure, 1-7
-# October 2026, reopening on 8 October, for example) a correct run can be
-# flagged stale. SurgeFlow calls this a labelling issue on its side; the data
-# itself is correct. So do not trust the flag alone: we also read
+# sessions. Across an exchange holiday (China's week-long National Day
+# closure, for example) a run that already reflects the latest session can be
+# flagged stale. So do not trust the flag alone: we also read
 # `/api/v1/health` once and compare `run.as_of_date` with the market's last
 # published session, `markets.<market>.published_session_date`. When the two
 # match, the map covers the market's latest session, whatever the flag says.

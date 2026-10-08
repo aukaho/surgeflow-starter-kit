@@ -21,17 +21,19 @@ hash and cannot show it again.
 
 ## What the key can access
 
-The key unlocks 13 authenticated, read-only endpoints in four markets: `us`
+The key unlocks 14 authenticated, read-only endpoints in four markets: `us`
 (United States), `cn` (China), `jp` (Japan) and `hk` (Hong Kong). They cover:
 
 - identity, plan and usage;
 - the four-market summary, the market screen and the sector snapshot;
 - current-session turnover boards and momentum hotlists;
 - ML clusters and institutional-holdings (whale) boards;
-- news, factor portfolios, daily Notes, the macro calendar and bond ETFs.
+- news, daily Notes, the macro calendar and bond ETFs;
+- the weekly factor portfolios and their publication metadata (`/meta`).
 
 The AI research committee is paused. Its endpoints, `/api/v1/ai/ratings` and
-`/api/v1/ai/grade-book`, are retired and answer HTTP 410.
+`/api/v1/ai/grade-book`, are retired and answer HTTP 410 with the code
+`ENDPOINT_RETIRED`.
 
 The live catalogue is authoritative for endpoints, plans, limits and response
 shapes:
@@ -163,9 +165,18 @@ Errors use one envelope:
 - `401 API_KEY_REQUIRED`: the key is missing or invalid.
 - `4xx VALIDATION_ERROR`: a parameter is out of range, for example
   `page_size=101` on the screen (the maximum is 100). Read `error.code` and
-  `error.message`; do not rely on other keys inside `error`.
+  `error.message`; do not rely on other keys inside `error` (the one
+  documented extra is `error.factors` on `INVALID_FACTOR`, below).
+- `400 INVALID_FACTOR`, `400 INVALID_DATE`, `400 INVALID_MARKET`: the factor
+  portfolios reject an unknown `factor` (`error.factors` lists the valid
+  names), a `formation_date` that is not `YYYY-MM-DD`, or a market outside
+  `us`, `cn`, `jp` and `hk`.
+- `410 ENDPOINT_RETIRED`: the endpoint has been retired, so retrying will not
+  help. The paused AI committee's two endpoints answer this way.
 - `429`: you are over the rate limit. Wait before you retry, and honour
   `Retry-After` when it is sent.
+- `503`: the factor portfolios cannot read their data right now. Treat it as
+  temporarily unavailable and try again later.
 - **An error inside an HTTP 200.** An endpoint whose upstream source fails can
   answer `200` with `"ok": true` at the top level and the error one level
   down: `{"ok": true, "data": {"ok": false, "error": {...}}}`. `news` does
@@ -173,12 +184,17 @@ Errors use one envelope:
 - **HTTP 500 with a plain-text body.** `summary` can answer
   `500 Internal Server Error` with no JSON envelope. Treat it as temporarily
   unavailable and try again later.
+- **An empty state is not an error.** The factor portfolios answer `200` with
+  `{"ok": true, "data": {"status": "empty", "reason_code": "...", "message": "..."}}`
+  when there is nothing to serve, for example for a market without a
+  publication. Check `payload["data"]["status"]` and show `data.message`.
 
 ### Where the records live
 
 Most payloads wrap their content in `data`. The market screen is the legacy
 exception, with its rows at the top level. The catalogue's `response_shapes`
-names the main record list for each endpoint:
+names the main record list for each endpoint, and for the factor portfolios
+also the state to read first (`payload.data.status`):
 
 | Endpoint | Records (`response_shapes`) |
 |---|---|
@@ -187,7 +203,8 @@ names the main record list for each endpoint:
 | `ml/clusters` | `payload.data.clusters` and `payload.data.anomaly_watch` |
 | `whales` | `payload.data.signal_board.signals` (a dict of boards) |
 | `news` | `payload.data.articles` |
-| `factor-portfolios` | `payload.data.data.factors` |
+| `factor-portfolios` | `payload.data.portfolios` (one book per factor). State at `payload.data.status`. The weekly returns are at `payload.data.returns`, a dict keyed by factor |
+| `factor-portfolios/meta` | `payload.data.publications`. State at `payload.data.status` |
 | `notes/daily` | `payload.data.notes` |
 | `macro/calendar` | `payload.data.data.events` |
 | `bond/etfs` | `payload.data.data.etfs` |
@@ -195,19 +212,22 @@ names the main record list for each endpoint:
 
 **An empty list is normal.** A closed market, a weekend, or a hotlist with no
 qualifying names can return zero rows. Read the freshness fields (`as_of_*`,
-`market_status`, `data_quality`, `stale_reason`) before the numbers.
+`market_status`, `data_quality`, `stale_reason`) before the numbers. The factor
+portfolios say so explicitly: `data.status` is `"empty"`, with a `reason_code`
+and a `message`, and their freshness is a block of its own (`data.freshness`).
 
 **Check the unit of every number.** Two "returns" in this API are measured
 differently, so never mix them:
 
 - Fractions (0.0142 = 1.42%): screen and sector `change_pct`, the sector
   means, `ma*_excess`, `ep`, `bp`, `sp`, `profit_margin`, `revenue_growth`
-  and `dividend_yield`. Factor `return_series` values are fractions in the
-  synthetic fixtures; confirm the unit when a factor is published (every
-  factor was blocked, with an empty series, in the live snapshots).
-- Percents (1.42 = 1.42%): realtime and hotlist `intraday_return_pct`,
-  grade-book returns, and the bond ETF `pct_change_1d`, the `*_pct` fields
-  and `expense_ratio`.
+  and `dividend_yield`. In the factor portfolios: every `week_return` (a
+  weekly return, 0.0125 = 1.25% for the week), holding `weight` (a book's
+  weights sum to 1) and the `*_weight_share` fields.
+- Exposures (1.0 = one unit): factor-portfolio `exposures`, `own_exposure`
+  and `max_abs_other_style` are loadings on a style, not percents.
+- Percents (1.42 = 1.42%): realtime and hotlist `intraday_return_pct`, and
+  the bond ETF `pct_change_1d`, the `*_pct` fields and `expense_ratio`.
 - Ratios (2.0 = twice): `turnover_vs_10d` and `projected_vs_yesterday`.
 - Money: screen and realtime amounts are in local currency. Fields ending in
   `_usd` and the bond ETF `aum` are in US dollars.
@@ -638,41 +658,211 @@ for etf in etfs:
 
 ### Factor portfolios
 
-#### `GET /api/v1/markets/{market}/factor-portfolios`
+Two endpoints serve SurgeFlow's weekly **long-only pure factor portfolios**
+(schema `surgeflow.factor_portfolios.v2`): one book per style (`SIZE`,
+`VALUE`, `MOMENTUM`, `PROFITABILITY`, `INVESTMENT`, `LIQUIDITY`) plus a
+`MARKET` book. Read the small `/meta` answer first, then ask the main endpoint
+for only what you need. Version 2 replaced the earlier list of seven factors
+(ERP to LIQ, at `payload.data.data.factors`), which is gone; code written for
+that shape needs updating.
 
-The canonical pure-factor portfolios, ERP to LIQ, with signed holdings
-weights, expected-shortfall statistics, aligned correlations and daily
-return series. Each factor discloses its publication gate state instead of
-being filtered out.
+How to read the books (this matters before any number):
+
+- **Long-only, fully invested, rebuilt weekly.** Each book only buys stocks,
+  its weights sum to 1, and it is built so that its exposure is about 1 to its
+  own style and about 0 to the other styles. Its **market exposure is 1 by
+  construction** (`data.labels.product` states this).
+- **So raw returns move together.** Every book carries the market once, so the
+  raw weekly returns of all seven books rise and fall with the market.
+- **The style is the difference.** A style book's weekly return **minus the
+  `MARKET` book's** return for the same week cancels the market: both have
+  market exposure 1, and they differ by about one unit of the style.
+- **PCA, two ways.** A PCA on the raw long-only returns is dominated by one
+  market component. Run it on the style-minus-`MARKET` series to see the
+  styles.
+- **Return basis and costs.** Returns are gross of costs. The return basis is
+  declared per market and can differ between markets (a split-adjusted price
+  return in one, a dividend-adjusted total return in another, for example).
+  Quote the response's own `data.return_basis.returns_label`, and `/meta`'s
+  `cost_label`, instead of paraphrasing them.
+- **Freshness.** Publications are weekly, and the API reports how many weeks
+  the latest formation is behind the current week together with a `state` (it
+  counts one week behind as `current`). Show `state` and `weeks_behind`
+  exactly as the response reports them.
+- **Not recommendations.** `data.labels.candidates` says it in the API's own
+  words: these are model candidates, not recommendations, and no accuracy or
+  performance claim is made. Research and education only.
+
+#### `GET /api/v1/markets/{market}/factor-portfolios/meta`
+
+Publication metadata for the factor portfolios: a small answer to read before
+the books.
 
 - Scope: `factors`. Query: none.
-- Records: `payload.data.data.factors` (two `data` levels), always 7
-  factors. A blocked factor has `publish_state: "blocked"`, a `gate_reason`
-  listing the checks it has not passed, `stats` whose values are null
-  (`n_obs: 0`) and an empty `return_series`. All seven can be blocked at the
-  same time, so handle a release with no returns.
+- State: `payload.data.status` is `"available"` or `"empty"` (HTTP 200 either
+  way). An empty answer carries `data.reason_code`
+  (`no_publication_for_market` for a market without a publication) and
+  `data.message` instead of the fields below. It can still carry
+  `data.market_caveats`, the known data caveats for that market.
+- Records: `payload.data.publications`, one row per publication, with
+  `publication_id`, `first_formation`, `last_formation`,
+  `data_through_session` and `published_at`. The publication being served is
+  also at `payload.data.publication`.
+- Also in `payload.data`: `models` (each model's `state`, for example
+  `published` or `not_published`, and its formation window), `universe`
+  (`n_in_universe` and its dates), `holdout` and `holdout_label`,
+  `cost_basis` and `cost_label`, `return_basis` (with `returns_label`),
+  `served_caveats.items[]` (`key`, `state`, `text`), `survivorship` and
+  `labels`.
+- **Freshness, per model.** `data.freshness.portfolios` holds
+  `latest_formation_date`, `latest_week_start`, `current_week_start`,
+  `weeks_behind` and `state`; a model that is not published yet is `null`
+  here. (The main endpoint's `data.freshness` is the same block without the
+  model level.)
 - Taught in: [04 Factor portfolios](../notebooks/04-factor-portfolios.ipynb).
-  Used again in [05 ML lab](../notebooks/05-ml-lab.ipynb) (a second PCA, run
-  only when factors are published).
 
 ```bash
 curl -sS -H "Authorization: Bearer ${SURGEFLOW_API_KEY}" \
-  "https://stock-api-c4qdowjxva-uc.a.run.app/api/v1/markets/us/factor-portfolios"
+  "https://stock-api-c4qdowjxva-uc.a.run.app/api/v1/markets/us/factor-portfolios/meta"
 ```
 
 ```python
-factors = get("/api/v1/markets/us/factor-portfolios")["data"]["data"]["factors"]
-for factor in factors:
-    print(factor["factor_id"], factor["publish_state"], len(factor["return_series"]), factor["gate_reason"])
+for market in ("us", "cn", "jp", "hk"):
+    meta = get(f"/api/v1/markets/{market}/factor-portfolios/meta")["data"]
+    if meta["status"] != "available":  # "empty" is an HTTP 200 state, not an error
+        print(f"{market}: {meta['status']} ({meta['reason_code']}) {meta['message']}")
+        continue
+    fresh = meta["freshness"]["portfolios"]
+    print(f"{market}: {len(meta['publications'])} publication(s), serving {meta['publication']['publication_id']}")
+    print(f"    freshness state: {fresh['state']} | weeks_behind: {fresh['weeks_behind']}")
+    print(f"    {meta['cost_label']}")
 ```
+
+#### `GET /api/v1/markets/{market}/factor-portfolios`
+
+The books themselves: for one formation week, each book's exposures, the
+API's own checks and its largest holdings, plus the weekly return series of
+every book, status counts, labels, caveats, the return basis and the freshness
+block.
+
+- Scope: `factors`.
+- Query (all optional):
+
+  | Parameter | Values | Default | What it does |
+  |---|---|---|---|
+  | `factor` | `MARKET`, `SIZE`, `VALUE`, `MOMENTUM`, `PROFITABILITY`, `INVESTMENT`, `LIQUIDITY` | all seven | Return one book only |
+  | `formation_date` | `YYYY-MM-DD` | the latest | The formation week whose books you want |
+  | `weeks` | 1 to 1000 | 52 | Weeks of returns per book |
+  | `holdings` | 0 to 5000 | 25 | Largest holdings per book; 0 for none |
+  | `measurement` | `true`, `false` | `true` | Add the Fama-French 2x3 long-short measurement twins |
+
+- **Ask for what you need.** Five years of weeks with 25 holdings and the
+  measurement twins come to several megabytes. For return series only, send
+  `holdings=0` and `measurement=false`.
+- State: `payload.data.status`, `"available"` or `"empty"` (HTTP 200 either
+  way). An empty answer carries `data.reason_code` and `data.message`: for
+  example `no_publication_for_market` for a market without a publication
+  (`hk` when this guide was written), or `formation_date_not_published` for
+  a `formation_date` that is not a published formation week. Show
+  `data.message`; it is not an error.
+- Errors: HTTP 400 `INVALID_FACTOR` (`error.factors` lists the valid names),
+  `INVALID_DATE` or `INVALID_MARKET`; HTTP 503 when the data cannot be read
+  right now.
+- Records: `payload.data.portfolios`, one record per book: `factor`,
+  `status`, `week_return` (fraction), `n_holdings`, `universe_n`,
+  `exposures` (`market`, `size`, `value`, `momentum`, `profitability`,
+  `investment`, `liquidity`), `own_exposure`, `max_abs_other_style`, `checks`
+  (`sum_ok`, `own_ok`, `others_ok`, `bounds_ok`, `matches_published`),
+  `sum_weight`, `holdings` (`ticker`, `sector`, `weight`, `exposures`),
+  `holdings_truncated`, `return_basis_label`, and the carried, invalid and
+  exit weight shares. A book that could not be formed that week has a
+  `status` other than `"available"` (for example `"infeasible"`, with
+  `infeasible_constraint` naming the failed constraint), `n_holdings: 0` and
+  no `exposures` or `checks`, so check `status` before you read them.
+- Weekly returns: `payload.data.returns` is a **dict keyed by factor**. Each
+  value is a list of weekly rows with `week_start`, `formation_date`,
+  `week_end_session`, `week_return` (fraction), `status` (`ok`, `degraded`,
+  `unavailable`, `no_holdings`, ...; `status_label` explains each),
+  `in_inference`, `carried_weight_share`, `in_holdout` and
+  `return_basis_label`. `week_return` is `null` when a week has no return.
+  A degraded week keeps its return but is excluded from inference
+  (`in_inference: false`); `data.degraded_rule` states the rule. Calendar
+  weeks in which the market was closed all week are gaps
+  (`data.calendar_grid.gap_weeks`), never compressed.
+- Also in `payload.data`: `counts` (weeks per status, per factor),
+  `publication` (`publication_id`, `first_formation`, `last_formation`,
+  `data_through_session`, `published_at`), `n_weeks` (weeks in the whole
+  publication, not in this answer), `freshness` (`latest_formation_date`,
+  `latest_week_start`, `current_week_start`, `weeks_behind`, `state`),
+  `labels` (`product`, `returns`, `cost`, `candidates`, `holdout`, `timing`,
+  `status`), `return_basis` (`returns_label`), `served_caveats.items[]`,
+  `survivorship` (`state`, `estimate_label`, `points_per_year`, `bound`),
+  `calendar_grid`, `degraded_rule`, `week_state`, `return_state` and `cache`.
+- Measurement twins (with `measurement=true`):
+  `payload.data.measurement_twins.s3b_ff_2x3_ew` (equal weight) and
+  `.s3b_ff_2x3_rp126` (inverse 126-session volatility weight). Each is a
+  Fama-French 2x3 long-short measurement portfolio, not the product, with its
+  own `label` and `returns_label` and weekly rows at `returns[FACTOR]`, shaped
+  like `data.returns`.
+- In the kit, `records(payload, "factor_portfolios")` returns
+  `payload.data.portfolios`; read `payload.data.returns` yourself.
+- Taught in: [04 Factor portfolios](../notebooks/04-factor-portfolios.ipynb).
+  Used again in [05 ML lab](../notebooks/05-ml-lab.ipynb) (PCA on the weekly
+  returns, raw and style minus `MARKET`).
+
+```bash
+curl -sS -H "Authorization: Bearer ${SURGEFLOW_API_KEY}" \
+  "https://stock-api-c4qdowjxva-uc.a.run.app/api/v1/markets/us/factor-portfolios?weeks=156&holdings=10&measurement=false"
+
+# One book, one week, no holdings (an unknown factor answers HTTP 400 INVALID_FACTOR)
+curl -sS -H "Authorization: Bearer ${SURGEFLOW_API_KEY}" \
+  "https://stock-api-c4qdowjxva-uc.a.run.app/api/v1/markets/jp/factor-portfolios?factor=VALUE&weeks=1&holdings=0&measurement=false"
+```
+
+```python
+data = get("/api/v1/markets/us/factor-portfolios", weeks=156, holdings=10, measurement="false")["data"]
+if data["status"] != "available":  # "empty" is an HTTP 200 state, not an error
+    print(data["reason_code"], "-", data["message"])
+else:
+    fresh = data["freshness"]
+    print("freshness state:", fresh["state"], "| weeks_behind:", fresh["weeks_behind"])
+    print(data["return_basis"]["returns_label"])
+    print(data["labels"]["candidates"])
+    for book in data["portfolios"]:
+        if book["status"] != "available":  # e.g. "infeasible": no holdings this week
+            print(f"{book['factor']:<13} {book['status']} ({book.get('infeasible_constraint')})")
+            continue
+        print(f"{book['factor']:<13} own exposure {book['own_exposure']:.3f} | largest other "
+              f"{book['max_abs_other_style']:.1e} | {book['n_holdings']} names | checks pass: {all(book['checks'].values())}")
+```
+
+Then turn the returns dict into one table and subtract the `MARKET` book:
+
+```python
+import pandas as pd
+
+weekly = pd.DataFrame({  # one column per book, one row per week_start
+    factor: pd.Series({row["week_start"]: row["week_return"] for row in rows if row["in_inference"]}, dtype=float)
+    for factor, rows in data["returns"].items()
+}).sort_index()
+print(weekly.count())  # weeks per book that count for inference; a book can have few or none
+spreads = weekly.drop(columns="MARKET").sub(weekly["MARKET"], axis=0)  # style book minus MARKET book
+print(pd.DataFrame({
+    "raw book vs MARKET": weekly.drop(columns="MARKET").corrwith(weekly["MARKET"]),
+    "book minus MARKET vs MARKET": spreads.corrwith(weekly["MARKET"]),
+}).round(2))
+```
+
+The first column shows the raw long-only books moving with the market; the
+second shows how much of that is left once the `MARKET` book is subtracted.
 
 ## Data boundary
 
 Endpoint names such as `realtime` describe the current-session board.
 SurgeFlow does not claim a live-tick feed for any of the four markets.
-Historical, factor and fundamental outputs may be current to the last
-completed market session, and cadence varies by market. Check each response's
-freshness and evidence fields before you use it.
+Historical and fundamental outputs may be current to the last completed market
+session, the factor portfolios are weekly, and cadence varies by market. Check
+each response's freshness and evidence fields before you use it.
 
 SurgeFlow is research software. It does not place orders and is not
 investment advice.

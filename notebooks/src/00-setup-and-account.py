@@ -558,6 +558,7 @@ KIT_MAP = {
     "/api/v1/macro/calendar": ["03-news-notes-macro-bonds"],
     "/api/v1/bond/etfs": ["03-news-notes-macro-bonds"],
     "/api/v1/markets/{market}/factor-portfolios": ["04-factor-portfolios", "05-ml-lab"],
+    "/api/v1/markets/{market}/factor-portfolios/meta": ["04-factor-portfolios"],
 }
 RETIRED = {
     "/api/v1/ai/ratings": "retired: AI committee paused (HTTP 410)",
@@ -624,8 +625,10 @@ print("Scopes not on the free plan:", ", ".join(not_free) if not_free else "none
 # **How to read this**
 #
 # - Each row is a scope (a permission) and the endpoints it unlocks. `{m}` stands for a market code.
-# - Most scopes unlock one endpoint. `screen` also covers `sector`, and `macro` covers the calendar
-#   and bond ETFs. The `ai` scope belongs to the paused AI committee, whose endpoints are retired.
+# - Most scopes unlock one endpoint. `screen` also covers `sector`, `macro` covers the calendar
+#   and bond ETFs, and `factors` covers the factor portfolios and their `/meta` route. The paused
+#   AI committee's endpoints are retired (HTTP 410); if the catalogue still lists them, or an `ai`
+#   scope, they are marked retired and not counted.
 # - The `free` column says whether a free key holds that scope. Section 5 checks the scopes of your
 #   own key.
 
@@ -645,11 +648,28 @@ print("dig(example, 'data', 'rows') ->", dig(example, "data", "rows"), "(the sam
 # %% [markdown]
 # Now compare the two sources, key by key. One helper key is a companion of a catalogue entry:
 # `ml_anomalies` is the second list in the `ml/clusters` response.
+#
+# Some catalogue entries name two kinds of path. The factor portfolios' entries read like
+# "state at payload.data.status; per-factor portfolios at payload.data.portfolios": the **state**
+# says whether there is anything to read, and the **records** are the list itself. The cell keeps
+# the two apart, so only record paths are compared with `RESPONSE_SHAPES`.
 
 # %%
-def catalogue_paths(sentence: str) -> list[tuple]:
-    """'rows are returned at payload.data.rows' -> [('data', 'rows')]."""
-    return [tuple(p.split(".")) for p in re.findall(r"payload\.([A-Za-z_][\w.]*\w)", sentence)]
+def catalogue_paths(sentence: str) -> tuple[list[tuple], list[tuple]]:
+    """Split a response_shapes sentence into (record paths, state paths).
+
+    'state at payload.data.status; publications at payload.data.publications'
+    -> ([('data', 'publications')], [('data', 'status')])
+    """
+    record_paths, state_paths = [], []
+    for clause in re.split(r"[;,]", sentence):
+        found = [tuple(p.split(".")) for p in re.findall(r"payload\.([A-Za-z_][\w.]*\w)", clause)]
+        (state_paths if clause.strip().lower().startswith("state") else record_paths).extend(found)
+    return record_paths, state_paths
+
+
+def dotted(paths: list[tuple]) -> str:
+    return " + ".join("payload." + ".".join(p) for p in paths) or "-"
 
 
 COMPANION = {"ml_anomalies": "ml_clusters"}
@@ -659,7 +679,7 @@ for key, path in RESPONSE_SHAPES.items():
 
 shape_rows = []
 for shape in sorted(set(catalog["response_shapes"]) | set(helper_groups)):
-    from_catalog = catalogue_paths(catalog["response_shapes"].get(shape, ""))
+    from_catalog, state_at = catalogue_paths(catalog["response_shapes"].get(shape, ""))
     from_helper = [path for _, path in helper_groups.get(shape, [])]
     if not from_helper:
         verdict = "catalogue only"
@@ -669,28 +689,38 @@ for shape in sorted(set(catalog["response_shapes"]) | set(helper_groups)):
         verdict = "✓ match" if set(from_catalog) == set(from_helper) else "✕ differs"
     shape_rows.append({
         "shape": shape,
-        "catalogue: records at": " + ".join("payload." + ".".join(p) for p in from_catalog) or "-",
+        "catalogue: records at": dotted(from_catalog),
+        "catalogue: state at": dotted(state_at),
         "RESPONSE_SHAPES": " + ".join(f"{k}: {'.'.join(p)}" for k, p in helper_groups.get(shape, [])) or "-",
         "verdict": verdict,
     })
 shapes = pd.DataFrame(shape_rows)
 print(shapes["verdict"].value_counts().to_string())
+with_state = shapes.loc[shapes["catalogue: state at"] != "-", "shape"].tolist()
+print("Shapes that also name a state path:", ", ".join(with_state) or "none")
 shapes
 
 # %% [markdown]
 # What the comparison teaches:
 #
 # - **Depth varies.** `screen` keeps rows at the top level (`payload.rows`). Most endpoints use
-#   `payload.data.<list>`. Factor portfolios, the macro calendar and bond ETFs wrap twice
+#   `payload.data.<list>`, and so do the factor portfolios: one book per factor at
+#   `payload.data.portfolios`, and the publication list of `/factor-portfolios/meta` at
+#   `payload.data.publications`. The macro calendar and bond ETFs wrap twice
 #   (`payload.data.data.<list>`). Always use the documented path; never guess.
+# - **Read the state before the records.** Both factor-portfolio shapes also name
+#   `payload.data.status`: `"available"`, or `"empty"` when there is nothing to read, for example
+#   a market without a publication. An empty answer is still HTTP 200 with `"ok": true`; it
+#   carries a `reason_code` and a `message` instead of records, so show the message.
+# - **Not every main block is a list.** The factor portfolios' weekly returns sit beside the
+#   books at `payload.data.returns`, a *dict keyed by factor* (each value a list of weekly rows).
+#   For `whales`, `payload.data.signal_board.signals` is a *dict of six boards*. So
+#   `records(payload, "whales")` returns `[]`, and the whales notebook loops over the boards instead.
 # - **`addin` is not a v1 endpoint.** It describes the keyless Google Sheets add-on namespace
 #   (`/api/addin/...`), whose rows sit at `payload.rows`. The v1 helper does not need it.
-# - **A matching path is not the whole story.** For `whales`, `payload.data.signal_board.signals`
-#   is a *dict of six boards*, not a list. So `records(payload, "whales")` returns `[]`, and the
-#   whales notebook loops over the boards instead.
-# - **Retired endpoints can linger in the catalogue.** While it still lists the paused AI
-#   committee's endpoints, `ai_ratings` and `ai_grade_book` read "catalogue only": the helper
-#   dropped them.
+# - **Retired endpoints drop out.** The paused AI committee's endpoints answer HTTP 410
+#   (`ENDPOINT_RETIRED`), and the helper dropped their shapes. If the catalogue still lists one
+#   when you run this, it reads "catalogue only" in the table.
 # - **Two endpoints have no entry at all.** `/api/v1/me` is one flat object. `/api/v1/summary` is
 #   expected to keep one record per market at `payload.data.markets`. That path is not confirmed
 #   yet (see section 6), so the notebook checks it before using it.
@@ -723,9 +753,15 @@ except SurgeFlowError as err:
 #
 # | What you get back | Example | What `sf_get` does |
 # |---|---|---|
-# | An HTTP error with an error envelope | `401 API_KEY_REQUIRED`; a 4xx `VALIDATION_ERROR` when a parameter is out of range, such as `page_size` above 100 on the screen | raises at once |
+# | An HTTP error with an error envelope | `401 API_KEY_REQUIRED`; a 4xx `VALIDATION_ERROR` when a parameter is out of range, such as `page_size` above 100 on the screen; `400 INVALID_FACTOR`, `INVALID_DATE` or `INVALID_MARKET` from the factor portfolios; `410 ENDPOINT_RETIRED` from the retired AI endpoints | raises at once |
 # | **HTTP 200** with a failure inside `data` | `{"ok": true, "data": {"ok": false, "error": {"code": "INTERNAL_ERROR", "message": "news feed temporarily unavailable"}}}` | raises: the outer `ok` is not the whole story |
-# | A server error with a plain-text body | `HTTP 500 Internal Server Error` | retries, then raises with code `NON_JSON` |
+# | A server error | `HTTP 500 Internal Server Error` with a plain-text body; `HTTP 503` when the factor portfolios cannot be read | retries, then raises (code `NON_JSON` for a plain-text body) |
+#
+# One more answer looks like a problem but is not: an **empty state**. The factor portfolios answer
+# HTTP 200 with `{"ok": true, "data": {"status": "empty", "reason_code": ..., "message": ...}}` for a
+# market without a publication (`no_publication_for_market`) or a `formation_date` that was not
+# published (`formation_date_not_published`). `sf_get` returns it like any other payload; check
+# `data.status` and show `data.message`.
 #
 # For an optional section, use `sf_try` instead of `sf_get`. It prints a short note and returns
 # `None`, so the rest of the notebook keeps running. Section 6 uses it.
@@ -734,11 +770,11 @@ except SurgeFlowError as err:
 # **Caveats**
 #
 # - The catalogue is in **beta** (`status`). Read it at the start of a project, not on every run.
-# - Descriptions can run ahead of, or behind, the data. The retired grade book's description still
-#   mentions take-profit, for example, although the paused AI committee's book had a single exit
-#   rule (the "Drop Out Zone") when this kit last read it.
+# - Descriptions are short summaries and can run ahead of, or behind, the data. The responses
+#   carry their own labels, states and freshness fields; read those too.
 # - Some parameter limits appear only in descriptions (news `limit` up to 50, macro `days` up to
-#   60) and some not at all (screen `page_size` up to 100). The notebook for each endpoint states them.
+#   60, factor-portfolio `weeks` up to 1000 and `holdings` 0 to 5000) and some not at all (screen
+#   `page_size` up to 100). The notebook for each endpoint states them.
 # - The admin endpoints listed in the catalogue need an admin token. They are not for members.
 
 # %% [markdown]

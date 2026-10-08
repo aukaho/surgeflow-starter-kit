@@ -2,7 +2,8 @@
 
 `tools/mock_api.py` serves these JSON files when a notebook runs offline
 (`python tools/run_notebooks.py --mock`). This file is also the **field
-reference** for the 15 authenticated SurgeFlow API v1 endpoints: check an
+reference** for the 14 authenticated SurgeFlow API v1 endpoints in the live
+catalogue (the paused AI committee's two endpoints are retired): check an
 endpoint's table before you write a column name into a notebook.
 
 ## Provenance
@@ -13,6 +14,9 @@ endpoint's table before you write a column name into a notebook.
   never be committed. The fixtures copy their key paths, nesting, JSON types,
   null patterns, enum vocabularies and value ranges. Where an earlier,
   guessed fixture disagreed with a live response, the live response won.
+  A second snapshot the same day (about 23:10 UTC) refreshed
+  `tests/fixtures/live/`. The factor-portfolio fixtures (v2 and `meta`) and
+  the `ml/clusters`, `news` and `summary` shapes follow it.
 - **Values are synthetic.** `generate_fixtures.py` writes every value except
   in `catalog.json` and `health.json`:
   - no number is copied from a live response;
@@ -29,12 +33,15 @@ endpoint's table before you write a column name into a notebook.
 - **Real files.** `catalog.json` (`GET /api/v1/catalog`) and `health.json`
   (`GET /api/v1/health`) are live responses from 2026-10-07. The generator
   never writes them.
-- **Two endpoints errored live.** `news` answered
+- **Two endpoints errored in the first snapshot.** `news` answered
   `200 {"ok": true, "data": {"ok": false, "error": {"code": "INTERNAL_ERROR", ...}}}`
-  for every market, and `summary` answered `HTTP 500 Internal Server Error`.
-  Their fixtures keep an **inferred** success shape. Notebooks must call both
-  with `sf_try`, which returns `None` and prints a note. (`sf_get` raises
-  `SurgeFlowError` for the error nested inside the 200.)
+  for every market, and `summary` answered `HTTP 500 Internal Server Error`,
+  so their shapes were first inferred. In the refreshed snapshot both
+  answered, and the fixtures now match those bodies (news has no `data.ok`;
+  summary has `source` and schema `surgeflow.summary.v1`). Notebooks still
+  call both with `sf_try`, which returns `None` and prints a note when an
+  upstream failure comes back. (`sf_get` raises `SurgeFlowError` for the error
+  nested inside the 200.)
 
 Labels used in the tables:
 
@@ -52,15 +59,16 @@ means 0.05 = 5%. **Percent** means 5.0 = 5%.
 | Endpoint | Fixture file(s) | Records (`RESPONSE_SHAPES` key) |
 |---|---|---|
 | `GET /api/v1/me` | `me.json` | flat object |
-| `GET /api/v1/summary` | `summary.json` (**inferred**) | `data.markets` (no `RESPONSE_SHAPES` entry) |
+| `GET /api/v1/summary` | `summary.json` | `data.markets` (no `RESPONSE_SHAPES` entry) |
 | `GET /api/v1/markets/{m}/screen` | `screen_{m}.json`, `screen_{m}.page2.json`, `screen_{m}.page3.json` | `rows` (`screen`) |
 | `GET /api/v1/markets/{m}/realtime` | `realtime_{m}.json` | `data.rows` (`realtime`) |
 | `GET /api/v1/markets/{m}/hotlist` | `hotlist_{m}.json` | `data.rows` (`hotlist`) |
 | `GET /api/v1/markets/{m}/sector` | `sector_{m}.json` | `data.rows` (`sector`) |
-| `GET /api/v1/markets/{m}/news` | `news_{m}.json` (**inferred**) | `data.articles` (`news`) |
+| `GET /api/v1/markets/{m}/news` | `news_{m}.json` | `data.articles` (`news`) |
 | `GET /api/v1/markets/{m}/ml/clusters` | `ml_clusters_{m}.json` | `data.clusters` (`ml_clusters`), `data.anomaly_watch` (`ml_anomalies`) |
 | `GET /api/v1/markets/{m}/whales` | `whales_{m}.json` | `data.signal_board.signals` (`whales`): a **dict of six boards** |
-| `GET /api/v1/markets/{m}/factor-portfolios` | `factor_portfolios_{m}.json` | `data.data.factors` (`factor_portfolios`) |
+| `GET /api/v1/markets/{m}/factor-portfolios` | `factor_portfolios_{m}.json` (one-line JSON) | `data.portfolios` (`factor_portfolios`); state at `data.status`; weekly rows in the **dict** `data.returns` |
+| `GET /api/v1/markets/{m}/factor-portfolios/meta` | `factor_portfolios_meta_{m}.json` | `data.publications` (`factor_portfolios_meta`); state at `data.status` |
 | `GET /api/v1/notes/daily` | `notes_daily.json` (market=all), `notes_daily_{m}.json` (**inferred**) | `data.notes` (`notes`) |
 | `GET /api/v1/macro/calendar` | `macro_calendar.json` (market=us), `macro_calendar_{cn,jp,hk}.json` (**inferred** market copies) | `data.data.events` (`macro_calendar`) |
 | `GET /api/v1/bond/etfs` | `bond_etfs.json` | `data.data.etfs` (`bond_etfs`) |
@@ -78,8 +86,9 @@ How `tools/mock_api.py` resolves a request (see its docstring):
   probe saved only the defaults (`market=us` for the calendar, `market=all`
   for notes), so the per-market files are inferred copies of the same shape.
 - **Every other query parameter is ignored offline**: `page_size`, `sort`,
-  `dir`, `tab`, `limit`, `ticker`, `sentiment`, `days` and `as_of_date`.
-  Notebooks must not assert that a filter was applied.
+  `dir`, `tab`, `limit`, `ticker`, `sentiment`, `days`, `as_of_date`, and the
+  factor-portfolio `factor`, `formation_date`, `weeks`, `holdings` and
+  `measurement`. Notebooks must not assert that a filter was applied.
 
 ## Regenerate
 
@@ -90,8 +99,10 @@ python tests/fixtures/generate_fixtures.py --check   # exits 1 if a file differs
 
 The generator uses the standard library and numpy only, and its output is
 deterministic: each component draws from `default_rng([SEED, crc32(name)])`.
-Fix values in the generator, never in the JSON files. The 56 files total about
-4.5 MB (limit: 5 MB); every whales file is under 150 KB.
+Fix values in the generator, never in the JSON files. The 56 generated files
+total about 7.4 MB. The four `factor_portfolios_{m}.json` files are one-line
+JSON, 3.6 MB together (budget: 4 MB); every other file is indented, and every
+whales file is under 150 KB.
 
 ## Refresh against the live API
 
@@ -99,7 +110,7 @@ Fix values in the generator, never in the JSON files. The 56 files total about
 SURGEFLOW_API_KEY=sf_live_... python tools/probe_endpoints.py
 ```
 
-The probe uses about 50 requests. It saves every response to
+The probe uses about 55 requests. It saves every response to
 `tests/fixtures/live/` and prints, per endpoint, the key paths found live but
 not in the fixture (`+`) and the reverse (`-`), using `paths()`, which samples
 the first five items of each list. To check without calling the API, compare
@@ -108,22 +119,25 @@ again over **all** list items. Collapse the two dynamic-key maps first:
 `sector_mix` (keys are sector names) and `top_features` (keys are feature
 names).
 
-Residual difference after this regeneration (live snapshot of 2026-10-07 vs
-fixtures). Each line is expected and documented below:
+Residual difference after this regeneration (refreshed live snapshot of
+2026-10-07 vs fixtures). Each line is expected and documented below:
 
 | File | `paths()` (first 5 items) | All items, dynamic keys collapsed | Why |
 |---|---|---|---|
-| `news_{m}.json` | +3 / −38 | +3 / −40 | Live sent the nested error (`data.error.*`); the fixture keeps the inferred success shape. |
-| `summary.json` | +1 / −291 | +1 / −298 | Live sent HTTP 500 (saved as `_non_json`); the fixture keeps the inferred shape. |
-| `factor_portfolios_{us,cn,jp}.json` | 0 / −16 | 0 / −22 | Live blocked all seven factors, so `return_series[]`, `top_holdings[]` and the `factor_correlation` object were empty or null. The fixture publishes most factors (live-empty shapes). `factor_portfolios_hk.json` is identical to live. |
+| `factor_portfolios_{cn,jp}.json` | +359 / 0 | +359 (cn), +373 (jp) / 0 | `data.measurement_twins` is omitted in cn and jp (size budget). |
+| `factor_portfolios_us.json` | about +8 / −3 | 0 / −1 | `exit_label` is optional (rows with an unwitnessed exit), so the first-five sample differs; the fixture also has it on LIQUIDITY rows, which live never forms. |
+| `ml_clusters_{m}.json` | 3–9 / 4–8 | 0 / 0 | `sector_mix` and `top_features` keys are data, not schema. Every fixture key belongs to the live vocabulary. |
 | `hotlist_cn.json` | 0 / −13 | 0 / −14 | Live CN was empty; the fixture has 20 rows with the live US row shape. |
-| `ml_clusters_{m}.json` | 5–10 / 2–8 | 0 / 0 | `sector_mix` and `top_features` keys are data, not schema. Every fixture key belongs to the live vocabulary. |
-| every other file | 0 / 0 | 0 / 0 | |
+| `realtime_cn.json` | 0 / −10 | 0 / −10 | The refreshed live CN board was empty (Golden Week); the fixture keeps the closed-session rows. |
+| `ai_*.json` (live only) | | | Retired endpoints (HTTP 410); no fixture. |
+| every other file, including both `meta` files per market | 0 / 0 | 0 / 0 | |
 
-JSON types also match for every shared path. The only exceptions are the
-populated factor fields (live-empty, above). The type comparison treats the
-three screen pages of a market as one table, because rare nulls land on
-different pages.
+JSON types match on shared factor-portfolio and `ml/clusters` paths, except
+us LIQUIDITY rows, which live serves only as `no_holdings` (all nulls). A few
+older files differ only in null patterns that follow the later clock (for
+example `realtime_{jp,hk}` `stale_reason` is a string once those markets
+closed). The type comparison treats the three screen pages of a market as one
+table, because rare nulls land on different pages.
 
 ## Fixture clock
 
@@ -136,7 +150,7 @@ York, Golden Week in China, the afternoon session in Tokyo and Hong Kong.
 | Realtime | CLOSED, `stale` / `market_closed`, as of 2026-10-06 20:00 UTC | CLOSED, `stale` / `market_closed`, as of 2026-09-30 06:59 UTC | **OPEN**, `ok`, 15,967 s of 19,800 elapsed | **OPEN**, `ok`, 10,567 s of 19,800 elapsed |
 | Hotlist | CLOSED, `stale`, 20 rows | CLOSED, `stale`, 20 rows | OPEN, **`empty`** / `no_current_hotlist_members`, 0 rows | OPEN, **`empty`**, 0 rows |
 | ML run `as_of_date` / `age_days` / `stale` | 2026-10-05 / 2 / false | 2026-09-30 / 7 / **true** | 2026-10-06 / 1 / false | 2026-10-06 / 1 / false |
-| Factor portfolios | 6 of 7 published (LIQ blocked) | 5 of 7 (CMA, LIQ blocked) | 6 of 7 (LIQ blocked) | **all 7 blocked**, as every market was live |
+| Factor portfolios (v2) | `available`, freshness `behind` / 2 weeks; current LIQUIDITY book infeasible | `available`, freshness `current` / 1 week | `available`, freshness `behind` / 2 weeks | **`empty`** (`no_publication_for_market`) |
 
 The AI research committee is paused and its two endpoints are retired (HTTP
 410), so there are no AI fixtures.
@@ -157,14 +171,14 @@ Structure built in, so the tutorials find something:
 
 - **Clusters.** Every ticker belongs to a latent style archetype (momentum,
   volatility, quality, value, growth, attention, size and leverage
-  loadings). Screen columns are noisy readings of those styles; the 33
+  loadings). Screen columns are noisy readings of those styles; the 34
   `ml/clusters` features are other readings of them. Volatility and leverage
   never reach the screen. Per-ticker cluster labels exist only for
   `representative_tickers` (8 per cluster, mostly from the three screen pages),
   `anomaly_watch[]` and `changed_group[].to_cluster_id`: 65–85 labelled screen
   tickers per market. K-means on standardised screen columns (k = the
   cluster count), compared on those tickers, gives an **adjusted Rand index of
-  about 0.16–0.26**. `run.quality.silhouette` (0.10–0.17) is measured in the
+  about 0.13–0.24**. `run.quality.silhouette` (0.10–0.17) is measured in the
   model's feature space.
 - **Daily change.** `change_pct` = market × beta + sector shock + a weak
   momentum and turnover-surge link + fat-tailed noise. Regressed on the other
@@ -172,10 +186,19 @@ Structure built in, so the tutorials find something:
   `ma10_excess` / `ma50_excess` / `ma200_excess`, because price / MA − 1
   contains today's move mechanically (the live data shows the same, R² ≈
   0.24–0.54). Without the moving-average columns, R² ≈ 0.04–0.11.
-- **Factor returns.** 252 trading days of daily returns per published factor,
-  with fat tails, volatility clustering and modest correlations (mean |ρ|
-  about 0.15, max about 0.4: HML–CMA +0.4, HML–WML −0.35, SMB–LIQ +0.35).
-  `stats` and `aggregate.factor_correlation` are computed from the series.
+- **Factor portfolios.** 104 weeks per published market. Each long-only
+  book's weekly return = a common market return + its own style spread +
+  small noise, with fat tails and volatility clustering. Raw returns of the
+  seven books correlate at about 0.94–0.99 with MARKET, and PCA on them gives
+  PC1 ≈ 94–96 % of the variance. Book − MARKET isolates the style spread
+  (weekly volatility about 0.4–1.0 %, modest cross-correlations, max |ρ|
+  about 0.4); PCA on those six series gives PC1 ≈ 26–30 %. The us twins are
+  long-short, so they correlate with book − MARKET (about 0.6–0.9), not with
+  the market. Holdings come from the shared universe. Style exposures are
+  normal scores of size (small = positive), book/price, 12-1 momentum,
+  margin, conservative investment and low turnover. Each style book is the
+  nearest-to-equal-weight long-only book (weights ≤ 5 %) with exposure
+  exactly 1 to its own style and 0 to the others.
 - **Identities that hold** (most also hold live):
   - Sector rows are the screen universe: same `change_pct`, and `name` equals
     the screen's `company_name`.
@@ -198,11 +221,16 @@ Structure built in, so the tutorials find something:
   - hk screen `dividend_yield` is always `null`, and
     `data_quality.dividend_yield_currency_aligned_pct` is 0.0.
   - jp and hk hotlists are empty.
-  - hk factor portfolios are fully blocked.
+  - hk factor portfolios and their `meta` answer the empty state
+    (`status: "empty"`, `reason_code: "no_publication_for_market"`).
+  - The us LIQUIDITY book is infeasible this week (`status: "infeasible"`,
+    no exposures, `holdings: []`); some weekly rows are `no_holdings` or
+    `unavailable`, with `week_return: null`.
   - cn `anomaly_watch[].coverage_ratio` is `null` and cn
     `model_notes.feature_count` is `null`.
-  - Some hk `changed_group[].from_cluster_name` values are `null` (a cluster
-    id that no longer exists).
+  - One us `changed_group[].from_cluster_name` is `null`: its
+    `from_cluster_id` belongs to a cluster that no longer exists. In the
+    refreshed snapshot this moved from hk to us, and us has 9 clusters.
   - The cn notes `turnover` section has no `top_rows`.
 
   The live API can also return an empty realtime board or hotlist, so **notebooks must handle an empty list everywhere**.
@@ -218,18 +246,19 @@ Envelope keys differ by endpoint (all live unless marked):
 | screen | `ok, schema_version, market, as_of_date, generated_at, page, page_size, total_pages, count, data_quality, rows`; legacy shape: no `data` |
 | realtime, hotlist | `ok, schema_version, source_schema_version, data` |
 | sector, whales, ml/clusters, macro/calendar | `ok, schema_version, source, market, data` |
-| factor-portfolios | `ok, schema_version, source, market, note, data` |
+| factor-portfolios, factor-portfolios/meta | `ok, schema_version, source, market, note, data` |
 | notes/daily | `ok, schema_version, source, market` (`"all"` by default), `data` |
 | bond/etfs | `ok, schema_version, source, data` |
 | me | flat: `ok, schema_version, ...` |
 | news | `ok, schema_version, source, market, data`; on failure `data = {"ok": false, "error": {code, message}}` |
-| summary | **inferred**: `ok, schema_version, data` |
+| summary | `ok, schema_version, source, data` |
 
 `schema_version` is endpoint-specific (`surgeflow.market_screen.v1`,
 `surgeflow.market_realtime.v1`, `surgeflow.market_hotlist.v1`,
 `surgeflow.market_sector.v1`, `surgeflow.market_news.v1`,
 `surgeflow.ml_clusters.v1`, `surgeflow.market_whales.v1`,
-`surgeflow.factor_portfolios.v1`, `surgeflow.daily_notes.v1`,
+`surgeflow.factor_portfolios.v2`, `surgeflow.factor_portfolios_meta.v2`,
+`surgeflow.summary.v1`, `surgeflow.daily_notes.v1`,
 `surgeflow.macro_calendar.v1`, `surgeflow.bond_etfs.v1`); `me` uses
 `surgeflow.public_api.v1`. `source` names the backend twin
 (`/api/page/sector`, `/api/ml/latest`, ...).
@@ -245,11 +274,12 @@ Envelope keys differ by endpoint (all live unless marked):
 | `key_created_at` | str UTC | | live |
 | `key_prefix`, `member_id`, `referral_code`, `invite_url`, `referrals`, `founding_analyst_number`, `is_founding_analyst` | various | **Personal. Never display them in a notebook**: screenshots get shared, and `key_prefix` trips the key-leak check. Fixture values are fake | live |
 
-### `GET /api/v1/summary` → `summary.json` (inferred)
+### `GET /api/v1/summary` → `summary.json`
 
-Live returned `HTTP 500` on 2026-10-07, so the whole shape is **inferred** from
-the keyless `/api/summary` twin and the website JavaScript. Use
-`sf_try("/api/v1/summary")`.
+The first snapshot returned `HTTP 500`, so the shape was inferred from the
+keyless `/api/summary` twin and the website JavaScript. The refreshed snapshot
+answered (`surgeflow.summary.v1`, `source: /api/summary`) and matches the
+fixture's key paths and types. Use `sf_try("/api/v1/summary")`.
 
 | Field | Type | Notes |
 |---|---|---|
@@ -342,22 +372,17 @@ Same `data` metadata as realtime (`schema_version: addin.hotlist.v1`,
 | `rows[].turnover_per_second`, `market_cap_usd`, `projected_turnover_usd`, `previous_day_turnover_usd` | float, **USD** | | live |
 | `rows[].projected_vs_yesterday` | float, ratio | | live |
 
-### `GET /api/v1/markets/{market}/news` → `news_{m}.json` (inferred)
+### `GET /api/v1/markets/{market}/news` → `news_{m}.json`
 
-**Live returned an error for every market on 2026-10-07** (inside a 200):
+**The first snapshot returned an error for every market** (inside a 200):
 `{"ok": true, "schema_version": "surgeflow.market_news.v1", "source": "/api/news/feed", "market": m, "data": {"ok": false, "error": {"code": "INTERNAL_ERROR", "message": "news feed temporarily unavailable"}}}`.
-Use `sf_try`, and keep the section working when articles come back. The
-success shape is **inferred**:
-
-- The envelope follows the error response, with `data.ok: true`.
-- The article keys match the three articles that live `notes/daily` embeds
-  per market, which raises confidence in them.
-- `count`, `total_matching`, `offset`, `coverage{...}` and `methodology{...}`
-  follow the keyless `/api/news/feed` twin.
+The refreshed snapshot answered for every market, and its key paths and types
+match the fixture (there is no `data.ok` on success). Keep using `sf_try`, so
+the section survives the error form.
 
 | Field | Type | Notes |
 |---|---|---|
-| `data.ok`, `market`, `count`, `total_matching`, `offset` | | |
+| `data.market`, `count`, `total_matching`, `offset` | | |
 | `data.coverage` | dict | `total_articles, scored_pct, disclosures, media, languages[], latest_date, scope, sentiment_latest_date` |
 | `data.articles[].article_id`, `published_utc` | str | `published_utc` is ISO `...Z` for most providers and `YYYY-MM-DD HH:MM:SS` for `fmp` |
 | `data.articles[].title`, `description`, `publisher_name`, `article_url` | str | `article_url` can be `""`. Fixture text is placeholder; fixture links point to example.com |
@@ -380,12 +405,12 @@ success shape is **inferred**:
 | `clusters[].ticker_count` | int | Sums to `clustered_ticker_count` | live |
 | `clusters[].sector_mix` | dict[str, int] | **Dynamic keys**: the six largest sectors; `Unknown` for unclassified | live |
 | `clusters[].representative_tickers` | list[str] (8) | | live |
-| `clusters[].top_features` | dict[str, float] | **Dynamic keys**: six features with the largest absolute centroid z-score, in that order. Vocabulary: `ret_20d, ret_63d, ret_126d, ret_252d, rv_20, rv_63, rv_252, downside_vol_63, vol_of_vol_63, residual_vol_252_d, beta_252_d, max_drawdown_252, distance_from_high_252, rolling_sharpe_63, r2_252_d, profit_margin, revenue_growth, ni_growth, cfo_growth, leverage_debt_to_mcap, val_ep_z, val_bp_z, val_cfop_z, log_market_cap, turnover_to_mcap, pa_mfe_21d, pa_mae_21d, pa_edge_21d, pa_mfe_52w, pa_mae_52w, pa_edge_52w, pa_sir_infectious, pa_sir_recovered` | live |
+| `clusters[].top_features` | dict[str, float] | **Dynamic keys**: six features with the largest absolute centroid z-score, in that order. Vocabulary: `ret_20d, ret_63d, ret_126d, ret_252d, rv_20, rv_63, rv_252, downside_vol_63, vol_of_vol_63, residual_vol_252_d, beta_252_d, max_drawdown_252, distance_from_high_252, rolling_sharpe_63, r2_252_d, profit_margin, revenue_growth, ni_growth, cfo_growth, leverage_debt_to_mcap, val_ep_z, val_bp_z, val_cfop_z, log_market_cap, turnover_to_mcap, log_turnover, pa_mfe_21d, pa_mae_21d, pa_edge_21d, pa_mfe_52w, pa_mae_52w, pa_edge_52w, pa_sir_infectious, pa_sir_recovered` | live |
 | `clusters[].jaccard_vs_prior`, `membership_entrants`, `membership_leavers` | null | Always null live | live |
 | `anomaly_watch[]` (40) | dict | `ticker, cluster_id, cluster_name, anomaly_score (0..1), pca_reconstruction_error, centroid_distance, coverage_ratio (float?; null for cn), low_coverage, top_drivers[{feature, z}] (4, z clipped to ±5)` | live |
 | `anomaly_total` | int | Names above the anomaly threshold (= `model_notes.anomaly_count_p95`) | live |
-| `changed_group[]` (40) | dict | `ticker, from_cluster_id, from_cluster_name (str?), to_cluster_id, to_cluster_name, cluster_confidence, days_in_cluster` | live |
-| `model_notes` | dict | `cluster_count, clustered_ticker_count, anomaly_count_p95, avg_confidence, changed_count, feature_count (int?), feature_set_version, model_version, cluster_model_version, estimator_count, methodology, guardrails[4], disclaimer` | live |
+| `changed_group[]` (40) | dict | `ticker, from_cluster_id, from_cluster_name (str?), to_cluster_id, to_cluster_name, cluster_confidence, days_in_cluster`. `from_cluster_name` is null when `from_cluster_id` names a cluster that no longer exists (fixture: one us row) | live |
+| `model_notes` | dict | `cluster_count, clustered_ticker_count, anomaly_count_p95, avg_confidence, changed_count, feature_count (int?), feature_set_version, model_version, cluster_model_version, estimator_count, methodology, guardrails[4], disclaimer`. `feature_count` is null for cn. The refreshed live value is 36 (34 names observed); the fixture reports its own 34-name vocabulary | live |
 
 ### `GET /api/v1/markets/{market}/whales` → `whales_{m}.json`
 
@@ -409,27 +434,157 @@ boards** (top 20 each). Iterate over `payload["data"]["signal_board"]["signals"]
 
 ### `GET /api/v1/markets/{market}/factor-portfolios` → `factor_portfolios_{m}.json`
 
-`payload["data"]["data"]` holds the release. Always seven factors
-(`contract_factors`: `erp, smb, hml, wml, rmw, cma, liq`). Gate state is
-disclosed, not used as a row filter.
+Schema `surgeflow.factor_portfolios.v2` (source `/api/{market}/three-model/portfolios`).
+It replaced the v1 release and its seven blocked `erp … liq` factors, which are
+gone. Shape from the refreshed live snapshot (`weeks=260, holdings=25`,
+measurement on); every value in the fixtures is synthetic.
+
+**What the books are.** Seven **weekly, long-only** books, one per factor:
+`MARKET, SIZE, VALUE, MOMENTUM, PROFITABILITY, INVESTMENT, LIQUIDITY`. Each book
+has exposure ≈ 1 to its own style and ≈ 0 to the other styles; market exposure
+is 1 by construction (`labels.product`). So the raw weekly returns of all seven
+books move together with the market, and a style shows up as **book − MARKET**.
+In the fixtures PCA on the raw returns gives PC1 ≈ 94–96 % of the variance;
+PCA on the six style-minus-MARKET series gives PC1 ≈ 26–30 %.
+
+**Query** (live; **ignored offline**, so the fixture answers every query the
+same way): `factor` (one of the seven), `formation_date` (YYYY-MM-DD), `weeks`
+(1–1000, default 52), `holdings` (0–5000, default 25), `measurement` (default
+true: adds `data.measurement_twins`). Scope `factors`.
+
+**State and errors.**
+
+- `data.status` is `available` or `empty`. **Empty is HTTP 200 with
+  `ok: true`**, plus `data.reason_code` and `data.message`. Show the message;
+  it is not an error. `reason_code` values: `no_publication_for_market`
+  (hk; `factor_portfolios_hk.json` has the live empty-state keys and the
+  public message) and `formation_date_not_published` (a `formation_date`
+  without a publication; same keys, no fixture).
+- HTTP 400 `INVALID_FACTOR` (`error.factors` lists the valid names),
+  `INVALID_DATE`, `INVALID_MARKET`; HTTP 503 when the data cannot be read
+  (`sf_get` raises `SurgeFlowError`, `sf_try` returns `None`). The mock serves
+  none of these.
+
+**Fixtures.** us, cn and jp are `available` with **104 served weeks** (two
+years) and 25 holdings per book; hk is `empty`. Only us carries
+`data.measurement_twins`; cn and jp omit the key (size budget; the shape a
+`measurement=false` answer is expected to have — inferred). The four files are
+one-line JSON, 3.6 MB together (budget 4 MB). Built in, as live shows it:
+
+- us: one week with incomplete return data (`unavailable` books; SIZE and
+  LIQUIDITY `no_holdings`), an eight-week SIZE `no_holdings` stretch, eight
+  degraded rows, and **an infeasible current LIQUIDITY book** (`no_holdings`
+  in the last three weeks; live us LIQUIDITY is never formed);
+  `exit_unwitnessed` on about 28 % of rows.
+- cn: one `unavailable` week across all books, two `no_holdings` weeks, two
+  degraded rows, one calendar gap week; no exits (as live).
+- jp: every week formed, three degraded rows, a few `exit_unwitnessed` rows;
+  the latest `formation_date` is later than its `week_start` (holidays).
 
 | Field | Type | Notes | Source |
 |---|---|---|---|
-| `market, release_id, factor_contract_sha256, contract_factors[], research_passport{...}, n_active, n_risk_ready, raw_survivors_summary[], disclosure` | | `research_passport` carries `benchmark_id` (`sp500`, `csi300`, `nikkei225`, `hsi`) and the cost model | live |
-| `as_of` | str? | Null when nothing is published | live |
-| `factors[].factor_id, factor_label, factor_name_published, side_displayed, effective_sign, semantic_label, evidence_status` | | e.g. `smb` / `Size` / `SMB_FF3` / `long-short pure factor` | live |
-| `factors[].publish_state` | str | `blocked` (**live: all factors in all markets**) / `published` (fixture, from the twin) | live / live-empty |
-| `factors[].gate_reason` | str? | `;`-joined tokens such as `correlation_triangle_not_tested`, `premium_not_significant_5pct`, `factor_sample_below_252`; null when published | live |
-| `factors[].is_risk_ready`, `risk_ready_reason` (`factor_withheld`), `agreement_score` | | | live |
-| `factors[].n_holdings_active_leg, holdings_as_of, holdings_weighting, holdings_preview_count, holdings_complete, benchmark_id, benchmark_name, constituent_source, return_construction` | | Null/0 when blocked | live (values when published: live-empty) |
-| `factors[].stats` | dict | `n_obs, vol_annual, sharpe, max_dd, var_95_252d, es_95_252d, mean_annual`; all null when blocked | live (populated: live-empty) |
-| `factors[].holdings_metrics` | dict | `ep_mcap_weighted, dy_mcap_weighted, tot_market_cap, n_constituents_total, n_constituents_with_mcap, n_constituents_with_ep, n_constituents_with_dy` | live (populated: live-empty) |
-| `factors[].top_holdings[]` | list | `leg (index / long / short), ticker, name, sector, market_cap (local), latest_price, weight (signed), leg_weight, signal_value?, weight_source` | **live-empty** |
-| `factors[].return_series[]` | list | `{date, ret}`, ret is a daily **fraction**, 252 days when published | **live-empty** |
-| `factors[].distribution_series` | list | Always `[]` | live |
-| `aggregate` | dict | `equal_weight_stats{...}, factor_correlation ({factor_ids, values} or null), n_aligned_dates, correlation_start, correlation_as_of, return_series[{date, ret}]` | live (populated: live-empty) |
-| `word_cloud` | list | `[]` live and in the fixture | live |
-| `narrative_coverage` | dict | `holdings_total, holdings_with_narrative, coverage_pct` | live |
+| `data.market`, `contract` | str | `three_model_served_schema_v1` | live |
+| `data.status` | str | `available` / `empty`. `reason_code` and `message` exist only in the empty state | live |
+| `data.publication` | dict | `publication_id, phase (A), kinds[], published_at (UTC "Z"), first_formation, last_formation, data_through_session, code_commit, image_digest, engine_run_id, s3_run_id, s3b_run_id, attempt, checks_sha256` | live |
+| `data.formation_window` | dict | `first, last` (dates) | live |
+| `data.formation_date`, `week_start`, `entry_session` | str (date) | Latest formation: the first session of its week, that week's Monday, and the session before the formation | live |
+| `data.week_state`, `return_state` | str | `realised` | live |
+| `data.open_week`, `in_holdout`, `holdout_start` | null | | live |
+| `data.n_weeks` | int | Formation weeks in the whole publication (more than the served rows) | live |
+| `data.holdout_rule` | str | | live |
+| `data.formation_panel` | list[str] | `["entry_session"]` | live |
+| `data.portfolios[]` | list (7) | One record per factor for the latest formation (table below). `records(payload, "factor_portfolios")` | live |
+| `data.returns` | **dict** factor → list | Weekly rows, oldest first (table below). A dict, not a list: iterate `.items()` | live |
+| `data.counts` | dict factor → dict | `ok, degraded, unavailable, no_holdings, shares_not_recorded, return_not_yet_realised` over the served rows | live |
+| `data.calendar_grid` | dict | `n_calendar_weeks, n_formation_weeks, gap_weeks[]` (Mondays of weeks with no session), `gap_share, label`. Gaps are not compressed | live |
+| `data.survivorship` | dict | `state (estimated), label, note, source, points_per_year` (float, negative), `bound (lower), estimate_label` | live |
+| `data.measurement` | dict | `pure_long_only, s3b_ff_2x3_ew, s3b_ff_2x3_rp126` → `{basis: investable_at_entry, label}` | live |
+| `data.served_caveats` | dict | `state (declared), ruling, publication_id, label, items[], n_to_be_measured`. `items[]{key, state (stated), state_label, text}`; keys `formation_timing, measurement_costs_price, vintage, survivorship` (+ `points_per_year, bound`), `coverage_threshold, liquidity_concentration`. Fixture texts are placeholders | live |
+| `data.return_basis` | dict | `basis, label, returns_label, twin_returns_label, source (rows), n_rows, declared, ruling, rule`. **The basis differs by market**: us and cn `total_return_dividend_adjusted` ("total return, dividend-adjusted"), jp `price_return_split_adjusted` ("price return, split-adjusted"). Quote `returns_label`; never hard-code the basis | live |
+| `data.degraded_rule` | dict | `rule, rule_ruling, text, label, terms [carried, invalid, unwitnessed_exit], threshold (0.05), source, n_rows, n_rows_carrying, stated_values[], per_series{pure_long_only, s3b_ff_2x3_ew, s3b_ff_2x3_rp126}, declared, declaration_state, ruling, mechanism, shares_note` | live |
+| `data.labels` | dict | `product, returns, cost, candidates, holdout, timing, status{ok, degraded, unavailable, no_holdings, shares_not_recorded, return_not_yet_realised}, degraded_rule, degraded_rule_label, open_week`. Fixture wording is a placeholder except `candidates` ("Model candidates, not recommendations; no accuracy or performance claim is made.") | live |
+| `data.freshness` | dict | `latest_formation_date, latest_week_start, current_week_start, weeks_behind` (int), `state`. Publications are weekly; the API reports how many weeks the latest formation is behind the current week, with a state (one week behind counts as `current`). Display both as served. Fixture: us `behind` / 2, cn `current` / 1, jp `behind` / 2, as live | live |
+| `data.measurement_twins` | dict | **us fixture only.** `s3b_ff_2x3_ew`, `s3b_ff_2x3_rp126` → `label, role (measurement_twin), basis, basis_label, return_basis, return_basis_label, returns_label, degraded_rule, degraded_rule_label, returns{FACTOR: rows}`. Fama-French 2x3 **long-short** weekly returns: no market exposure, so they track book − MARKET; the MARKET twin is a market excess return | live |
+| `data.cache` | dict | `state` (`fresh` / `stale_revalidating`), `age_seconds` | live |
+
+`data.portfolios[]`:
+
+| Field | Type | Notes | Source |
+|---|---|---|---|
+| `factor` | str | | live |
+| `status`, `state` | str | `available` / `ok`; a book that could not be formed: `infeasible` / `infeasible` | live |
+| `construction` | str? | `normalised_objective_weight` (MARKET; us `normalised_objective_weight_reprojected`), `dual_exact_nearest_ew_l2_turnover` (us, cn), `lsq_linear_nearest_ew_l2_turnover` (jp); null when infeasible | live |
+| `infeasible_constraint` | str? | e.g. `other_exposure:SIZE` | live |
+| `week_return` | float? | **Fraction**; equals the last row of `returns[factor]` | live |
+| `return_status`, `return_state`, `week_status` | str | `ok`, `realised`, the row status; infeasible: `no_holdings` (all three) | live |
+| `turnover_one_way` | float? | Null for MARKET | live |
+| `n_holdings`, `universe_n` | int | Names held / universe size | live |
+| `formation_panel` | list[str]? | Null when infeasible | live |
+| `return_basis`, `return_basis_label` | str | | live |
+| `carried_weight_share`, `invalid_weight_share`, `exit_weight_share` | float? | Fractions (largest share over the holding sessions); null without holdings | live |
+| `exit_state` | str? | `exit_unwitnessed` or null | live |
+| `degraded_rule`, `degraded_rule_label`, `degraded_rule_source` | str | `degraded_rule_source`: `publication_declaration` | live |
+| `carried_weight_share_max`, `invalid_weight_share_max`, `exit_unwitnessed_weight_share_max` | null | | live |
+| `exposures`, `exposures_published` | dict[str, float] | `market, size, value, momentum, profitability, investment, liquidity`. `market` = sum of weights = 1 | live |
+| `own_exposure`, `max_abs_other_style` | float | ≈ 1 and ≈ 0 (fixture: exact to ~1e-15; MARKET cn/jp ≈ 0.007) | live |
+| `readback_published` | bool | | live |
+| `checks` | dict[str, bool] | `sum_ok, own_ok, others_ok, bounds_ok, matches_published` | live |
+| `sum_weight` | float | 1 for the whole book | live |
+| `holdings[]` | list | `ticker, sector, weight` (fraction of the book), `exposures{size, value, momentum, profitability, investment, liquidity}` (z-scores). Largest weight first; fixture tickers come from the shared universe | live |
+| `holdings_truncated` | bool | True when `n_holdings` exceeds the holdings shown: **the shown weights sum to less than 1** | live |
+| `reason_code` | str | **Infeasible books only** (`infeasible_no_holdings`). They have no `exposures`, `own_exposure`, `max_abs_other_style`, `exposures_published`, `readback_published`, `checks`, `sum_weight` or `holdings_truncated`, and `holdings: []` | live |
+
+Weekly rows (`data.returns[F][]` and `data.measurement_twins[T].returns[F][]`):
+
+| Field | Type | Notes | Source |
+|---|---|---|---|
+| `week_start`, `formation_date` | str (date) | The week's Monday and its first session | live |
+| `week_end_session` | str? | The week's last session; null on a twin row that could not form | live |
+| `week_return` | float? | **Fraction**; null unless `status` is `ok` or `degraded` | live |
+| `status` | str | `ok`, `degraded` (shown, excluded from inference), `unavailable`, `no_holdings`; the vocabulary also has `shares_not_recorded`, `return_not_yet_realised` | live |
+| `state` | str | `ok`; `infeasible` (no_holdings); twins: `insufficient`, `degraded` | live |
+| `return_status` | str | `ok`, `no_holdings`, `return_unavailable_low_coverage` (us), `return_unavailable_whole_market_gap` (cn); twins: `s3b_cell_below_min`, `s3b_low_session_coverage` | live |
+| `status_label` | str | = `labels.status[status]` | live |
+| `in_inference` | bool | True only for `ok` | live |
+| `carried_weight_share`, `invalid_weight_share`, `exit_weight_share`, `exit_state` | float?, str? | As in the portfolio record. Degraded = the three shares add up to more than 5 % | live |
+| `degraded_rule`, `degraded_rule_label`, `degraded_rule_source`, `*_max` | str, null | As in the portfolio record | live |
+| `measurement_basis` | str | `investable_at_entry` | live |
+| `return_basis`, `return_basis_label` | str | | live |
+| `in_holdout` | null | | live |
+| `exit_label` | str | **Optional**: only on rows with `exit_state: exit_unwitnessed` (us, jp; none in cn) | live |
+
+### `GET /api/v1/markets/{market}/factor-portfolios/meta` → `factor_portfolios_meta_{m}.json`
+
+Schema `surgeflow.factor_portfolios_meta.v2` (source
+`/api/{market}/three-model/meta`), no query. Publication metadata for the same
+books. `tools/mock_api.py` maps the path to `factor_portfolios_meta_{m}.json`.
+us, cn and jp are `available`; hk is `empty` with its market caveats.
+
+| Field | Type | Notes | Source |
+|---|---|---|---|
+| `data.market`, `contract`, `status` | str | `available` / `empty` | live |
+| `data.reason_code`, `message` | str? | Null when available; hk: `no_publication_for_market` and the public message | live |
+| `data.models` | dict | `portfolios{state (published), first_formation, last_formation, n_publications, latest{...publication}, holdout_start, holdout_rule, open_week, formation_panel}`, `pick{state: not_published}`, `product{state: not_published}` | live |
+| `data.publications[]`, `n_publications`, `publication` | list, int, dict | Publication records (keys as `data.publication` above) | live |
+| `data.universe` | dict | `rule, computed_as_of, as_of_date, n_in_universe, n_evaluated, measured_state` | live |
+| `data.holdout{portfolios{start, rule}}`, `holdout_label` | dict, str | | live |
+| `data.cost_basis` | list[str] | `["gross_of_costs"]` | live |
+| `data.cost_label` | str | Quote it for the cost basis (placeholder wording in the fixture) | live |
+| `data.model_versions` | dict | `A` (str), `C`, `B` (null) | live |
+| `data.admission`, `filter_admitted`, `open_week` | null | | live |
+| `data.data_through_session` | str (date) | | live |
+| `data.served_tables` | list[str] | | live |
+| `data.freshness` | dict | `portfolios{latest_formation_date, latest_week_start, current_week_start, weeks_behind, state}` (the same block as the portfolios payload), `pick: null`, `product: null` | live |
+| `data.formation_panel`, `measurement`, `survivorship`, `served_caveats` | | As in the portfolios payload | live |
+| `data.market_caveats` | dict? | Null for us, cn, jp; hk: `{ruling, label, items[str]}` (fixture items are placeholders) | live |
+| `data.contract_revision` | str | | live |
+| `data.return_basis` | dict | `state (declared), basis, label, returns_label, twin_returns_label, publications[{publication_id, state, basis, sources{...}}], ruling, rule`. hk: `state: no_portfolios_published`, nulls, `publications: []` | live |
+| `data.degraded_rule` | dict | `state, rule, rule_ruling, text, label, terms, threshold, publications[{publication_id, state, rule, sources{...}, checks_degraded_weeks}], ruling, mechanism, shares_note, declaration_keys[]`. hk: nulls | live |
+| `data.labels` | dict | `candidates, cost, timing, returns, status{...}, degraded_rule, degraded_rule_label, universe`; hk: only `status` (`ok`, `degraded` null), `degraded_rule`, `degraded_rule_label` (null) | live |
+| `data.cache` | dict | | live |
+
+The `sources` dicts use dotted key names (`receipt_json.return_basis_declared`);
+read them with `["..."]`, not with `dig`.
 
 ### `GET /api/v1/notes/daily` → `notes_daily.json`, `notes_daily_{m}.json`
 
@@ -518,8 +673,9 @@ Ten US credit ETFs at `payload["data"]["data"]["etfs"]`.
 
 ## Known gaps for notebook authors
 
-- `news` and `summary` failed live on 2026-10-07. Call them with `sf_try` and
-  skip the section when it returns `None`.
+- `news` and `summary` failed in the first snapshot and answered in the
+  refreshed one. Call them with `sf_try` and skip the section when it returns
+  `None`.
 - `/api/v1/me` returns personal fields. Display only `plan`, `scopes`,
   `rate_limit` and `usage`.
 - `records(payload, "whales")` is always `[]` (the boards are a dict), and
@@ -527,14 +683,16 @@ Ten US credit ETFs at `payload["data"]["data"]["etfs"]`.
 - `show_freshness` cannot see the freshness of:
   - ml_clusters (`data.run`);
   - whales (`data.as_of`);
-  - factor portfolios (`data.data.as_of`, often null);
+  - factor portfolios (`data.freshness.state` and `weeks_behind`, and
+    `data.publication`; empty state: `data.status`, `data.message`);
   - macro (`data.data.last_checked_utc`);
   - bond ETFs (per-row dates).
 
   Print those fields explicitly.
 - Units differ between fields:
   - fractions: screen `change_pct`, `ma*_excess`, `ep/bp/sp`,
-    `dividend_yield`, sector means, `crowdedness_pct`, factor `ret`;
+    `dividend_yield`, sector means, `crowdedness_pct`, factor
+    `week_return`, the factor `*_weight_share` fields and holding `weight`;
   - percents: `intraday_return_pct`, `*_portfolio_pct`,
     bond `*_pct`, `expense_ratio`;
   - ratios: `turnover_vs_10d`, `projected_vs_yesterday`;

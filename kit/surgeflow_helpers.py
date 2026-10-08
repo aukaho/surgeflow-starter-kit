@@ -28,7 +28,8 @@ RESPONSE_SHAPES = {
     "whales": ("data", "signal_board", "signals"),
     "sector": ("data", "rows"),
     "news": ("data", "articles"),
-    "factor_portfolios": ("data", "data", "factors"),
+    "factor_portfolios": ("data", "portfolios"),           # v2: weekly long-only books; state at data.status
+    "factor_portfolios_meta": ("data", "publications"),
     "notes": ("data", "notes"),
     "macro_calendar": ("data", "data", "events"),
     "bond_etfs": ("data", "data", "etfs"),

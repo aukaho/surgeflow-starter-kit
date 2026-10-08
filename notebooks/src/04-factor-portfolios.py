@@ -1,90 +1,107 @@
 # %% [markdown]
-# # 05 · Factor portfolios: pure-factor returns, risk and holdings
+# # 04 · Factor portfolios: weekly long-only style books, their exposures and returns
 #
-# A **factor** is a simple rule for sorting stocks: by size, by how cheap they
-# look, by how they did last year. Stocks on the same side of a rule tend to
-# move together. A **factor portfolio** turns the rule into a return you can
-# measure. It buys the stocks at one end of the sort, sells short the stocks at
-# the other end, and records what the pair earns each day. SurgeFlow defines
-# seven of them per market, from **ERP** (the market itself) to **LIQ**
-# (liquidity), and publishes the returns and holdings of each one only after it
-# passes a set of statistical tests (its **gates**). This notebook downloads
-# them, reads the gates, cleans the data, checks it against the API's own
-# statistics, and measures growth, risk, tail losses and holdings.
+# A **style** (also called a factor) is a stock characteristic that many stocks
+# share and that tends to move their prices together: company size, value (how
+# cheap a stock looks), momentum (how it did recently), profitability,
+# investment (how fast a company grows its assets) and liquidity (how easily it
+# trades). SurgeFlow publishes one weekly **long-only pure factor portfolio**
+# per style, plus a MARKET portfolio. We call each one a **book**. A book only
+# buys stocks (no short selling), is fully invested (its weights sum to 1) and
+# is rebuilt every week so that its **exposure** is about 1 to its own style
+# and about 0 to the other styles.
 #
-# Everything here is **descriptive and in-sample**. It shows what these rules
-# earned over the last trading year, before costs. It does not forecast what
-# they will earn next.
+# There is one consequence to learn before anything else. Every long-only,
+# fully invested book also has a **market exposure of 1**, by construction. So
+# all seven books rise and fall with the market, and their raw returns look
+# alike. The style shows up in the **difference**: a style book's weekly return
+# minus the MARKET book's return. Both carry the market once, so the market
+# cancels, and what is left is about one unit of the style (plus the noise of
+# holding different stocks). This notebook reads the publication metadata,
+# downloads the books, checks their exposures and holdings, cleans the weekly
+# return series, and measures those style-minus-MARKET spreads.
 #
-# **Empty is normal here.** When this notebook was last checked against the
-# live API (7 October 2026), every factor in all four markets was withheld, so
-# the API sent gate reasons but no returns or holdings. If that is still true
-# when you run it, sections 3.1, 3.2 and 4 tell the story, and the return and
-# holdings sections print a short note instead of a chart. They fill in by
-# themselves on a day when a factor is published.
+# Everything here is **research and education**: a retrospective, in-sample
+# measurement, gross of costs. In the API's own words: *"Model candidates, not
+# recommendations; no accuracy or performance claim is made."*
 #
 # **What you will learn**
 #
-# - What the seven pure factors buy and sell, and what a **signed weight** means.
-# - Why SurgeFlow **discloses** each factor's publication gate instead of hiding
-#   withheld factors, and how to tell a failed test from a test that has not
-#   run yet.
-# - How to turn nested return lists into one aligned date × factor table, what
-#   to do about gaps, and why you never forward-fill a return.
-# - How to reproduce the API's statistics (volatility, Sharpe-like ratio,
-#   maximum drawdown, value at risk, expected shortfall) from the raw series.
-# - How to chart growth of 100, drawdowns, rolling volatility, correlations,
-#   tail losses and holdings honestly.
-# - How much one year of data can tell you: a confidence interval for a
-#   Sharpe-like ratio, and an autocorrelation-robust (HAC) t-statistic.
-# - Which factors pass their gates in each of the four markets, how one factor
-#   behaves across them, and why another market's holiday is not a gap.
+# - What a pure long-only factor book is, and why its market exposure is 1 by
+#   construction.
+# - How to read the publication metadata first: publications, universe size,
+#   hold-out, cost basis, and the freshness block exactly as the API reports it.
+# - How to tell an **empty state** (HTTP 200, `data.status` = `"empty"`, with a
+#   `reason_code` and a `message`) from an **error** (HTTP 400 or 503), with Hong
+#   Kong as the example.
+# - How to check a book: its exposure matrix, the API's own checks, and its
+#   holdings, whose weights sum to 1.
+# - How to turn the `returns` dictionary into one tidy table, handle week
+#   statuses (ok, degraded, unavailable, no holdings) and calendar gaps, and
+#   count everything you drop.
+# - Why raw long-only returns all move together, and how each style appears as
+#   **book minus MARKET**: growth, drawdowns, annualised mean and volatility with
+#   honest error bars, and correlations.
+# - How a long-only spread compares with SurgeFlow's Fama-French 2×3
+#   long-short **measurement twin**.
+# - How the query parameters work: `factor`, `formation_date`, `weeks`,
+#   `holdings` and `measurement`, and what each error code means.
+# - PCA both ways: on raw returns (one market component dominates) and on the
+#   style-minus-MARKET spreads.
 #
-# **Endpoint used**
+# **Endpoints used**
 #
 # | Method | Path | What it returns |
 # |---|---|---|
-# | GET | `/api/v1/markets/{market}/factor-portfolios` | The seven canonical pure-factor portfolios (ERP, SMB, HML, WML, RMW, CMA, LIQ) for one market: each factor's gate state, statistics, signed holdings preview and daily return series, plus aligned correlations and an equal-weight mix. No query parameters |
+# | GET | `/api/v1/markets/{market}/factor-portfolios/meta` | Publication metadata: the publications, each model's state, the universe size, the hold-out, the cost basis and its label, the freshness block, caveats and the return basis. No query parameters |
+# | GET | `/api/v1/markets/{market}/factor-portfolios` | The seven weekly long-only books for one market: each book's exposures, checks and largest holdings, the weekly return series of every book, status counts, labels, caveats, freshness and (optionally) the Fama-French 2×3 measurement twins. Query parameters below |
 #
-# Markets: `us`, `cn`, `jp`, `hk`. The notebook makes 1 request for your market
-# plus 3 for the four-market comparison in section 4 (4 in total; the free plan
-# allows 2,000 a day). It runs in under a minute.
+# | Query parameter | Allowed values | Default | What it does |
+# |---|---|---|---|
+# | `factor` | `MARKET`, `SIZE`, `VALUE`, `MOMENTUM`, `PROFITABILITY`, `INVESTMENT`, `LIQUIDITY` | all seven | Return one book only |
+# | `formation_date` | `YYYY-MM-DD` | the latest | The week whose books you want |
+# | `weeks` | 1 to 1000 | 52 | How many weeks of returns to include |
+# | `holdings` | 0 to 5000 | 25 | Largest holdings to include per book (0 = none) |
+# | `measurement` | `true`, `false` | `true` | Include the Fama-French 2×3 measurement twins |
 #
-# **The seven factors**
+# Markets: `us`, `cn`, `jp`, `hk`. The notebook makes about 8 requests (the
+# free plan allows 2,000 a day and 180 a minute): 1 for the metadata, 1 for the
+# books, 1 for Hong Kong's empty state, 3 to show the query parameters and up
+# to 3 for the four-market comparison. It runs in about a minute.
 #
-# | Code | Name | Long leg (bought) | Short leg (sold short) | Usual ranking signal |
-# |---|---|---|---|---|
-# | ERP | Market: the equity risk premium | The market's main index (S&P 500, CSI 300, Nikkei 225 or Hang Seng) | Cash at the risk-free rate | None: index weights |
-# | SMB | Size: Small Minus Big | The smallest companies | The largest companies | Market cap |
-# | HML | Value: High Minus Low | High book-to-price ("cheap") | Low book-to-price ("expensive") | Book-to-price |
-# | WML | Momentum: Winners Minus Losers | Best 12-month return, skipping the last month | Worst 12-month return | 12-month-minus-1-month return |
-# | RMW | Profitability: Robust Minus Weak | Highly profitable companies | Weakly profitable companies | Profitability, such as profit margin |
-# | CMA | Investment: Conservative Minus Aggressive | Slow growers | Fast growers | Asset or revenue growth |
-# | LIQ | Liquidity | Less liquid stocks | More liquid stocks | Illiquidity, such as price impact per unit traded |
+# **The seven books**
 #
-# These are the **textbook** directions. The API names the factors and their
-# legs, but describes the signal only as "canonical factor signal" (in
-# `research_passport.ranking_variable`). So section 3.11 checks each direction
-# against the `signal_value` of the holdings, and you do not have to take this
-# table on trust.
+# | Book | Exposure key | What the style measures |
+# |---|---|---|
+# | MARKET | `market` | The whole universe: exposure 1 to the market and about 0 to every style. It is the reference for the other six |
+# | SIZE | `size` | Company size |
+# | VALUE | `value` | How cheap a stock looks against its fundamentals |
+# | MOMENTUM | `momentum` | How a stock's price has moved over the past months |
+# | PROFITABILITY | `profitability` | How profitable the company is |
+# | INVESTMENT | `investment` | How fast the company grows its assets |
+# | LIQUIDITY | `liquidity` | How easily the stock trades |
+#
+# In the textbook versions of these styles, SIZE favours small companies, VALUE
+# cheap ones, MOMENTUM recent winners, PROFITABILITY profitable ones and
+# INVESTMENT slow growers. The API names the styles but does not document which
+# end of each score is positive, so treat those directions as a reading to
+# check (Next steps), not as a fact the API states.
 #
 # **Words used in this notebook**
 #
 # | Word | Meaning |
 # |---|---|
-# | long / short | Long: you buy a stock and gain when it rises. Short: you borrow a stock, sell it, and gain when it falls |
-# | leg | One side of a long-short portfolio: the long leg or the short leg |
-# | signed weight | A holding's share of capital, with a sign: +0.94% is bought, −0.94% is sold short |
-# | pure factor | A portfolio built to track one rule. Here: 50% of capital long, 50% short, equal weights inside each leg, so the market's overall move largely cancels out |
-# | excess return | A return minus the risk-free rate (what cash would have earned). ERP is an excess return |
+# | book | One of the seven weekly portfolios |
+# | long-only | The book only buys stocks: every weight is 0 or more |
+# | exposure | How strongly a book leans on a style, in units of the style's score: about 0 is the MARKET book's level, 1 is one unit of tilt. Section 5 checks whether it equals the weighted average of the holdings' scores |
+# | formation date | The date that names a week's formation: the first session of the holding week. The holdings are formed at the close of the session before it (`labels.timing`) |
+# | `week_start` | The Monday that names a holding week |
+# | spread | A style book's weekly return minus the MARKET book's return |
+# | measurement twin | A Fama-French 2×3 long-short portfolio for the same style, served as a yardstick for comparison. It is not one of the books |
 # | index = 100 | A cumulative return drawn as the value of 100 invested at the start |
-# | drawdown | How far a portfolio sits below its previous peak |
-# | volatility | How much daily returns swing: their standard deviation × √252, in % a year |
-# | Sharpe-like ratio | Average yearly return ÷ yearly volatility: return per unit of risk |
-# | VaR 95% | Value at risk: the daily loss that only the worst 5% of days exceed |
-# | expected shortfall (ES) 95% | The average loss on those worst 5% of days. It describes the tail that VaR ignores |
-# | gate | A statistical test that a factor must pass before SurgeFlow publishes its returns and holdings |
-# | blocked / published | A factor's `publish_state`. Blocked factors are still listed, with the reason, but carry no returns or holdings |
+# | drawdown | How far a book sits below its previous peak |
+# | annualised | A weekly figure scaled to a year: the mean × 52, the volatility × √52 |
+# | degraded week | A week in which too much of a book could not be measured cleanly (the API's degraded rule, quoted in section 4.2). It keeps its label and is left out of statistics |
 
 # %% [markdown]
 # ## 1. Connect
@@ -100,159 +117,103 @@
 # 3. a hidden prompt where you paste the key.
 #
 # The key is never printed or saved. The cell also defines the shared helpers
-# (`sf_get`, `records`, `dig`, `show_freshness`, ...) and the chart theme. You
-# can run it without reading it.
+# (`sf_get`, `sf_try`, `records`, `to_frame`, `dig`, `show_freshness`, ...) and
+# the chart theme. You can run it without reading it.
 
 # %% [helpers]
 
 # %% [markdown]
 # ## 2. Parameters
 #
-# Change `MARKET` and run the notebook again to study another market.
-# `FOCUS_FACTOR` picks the factor for the holdings chart (section 3.11) and for
-# the four-market comparison (section 4).
+# Change `MARKET` and run the notebook again to study another market. `FOCUS`
+# picks the book for the holdings chart, the measurement-twin comparison and
+# the four-market panel. The other values keep the downloads small and set the
+# rules for the statistics.
 
 # %%
-MARKET = "us"            # one of "us", "cn", "jp", "hk"
-FOCUS_FACTOR = "wml"     # one of "erp", "smb", "hml", "wml", "rmw", "cma", "liq"
-COMPARE_MARKETS = True   # section 4 fetches the other three markets (3 more requests); False skips it
-ROLL_DAYS = 63           # rolling-volatility window in trading days (63 ≈ 3 months, 21 ≈ 1 month)
-TAIL = 0.95              # confidence level for VaR and expected shortfall (the API uses 0.95)
-TRADING_DAYS = 252       # trading days in a year, used to annualise
-MAX_ABS_DAILY = 0.5      # a factor return beyond ±50% in one day is treated as a data error
-MAX_TYPICAL_DAILY = 0.02 # a median absolute daily return above 2% means the API sent percent: the units check stops
+MARKET = "us"              # one of "us", "cn", "jp", "hk" ("hk" has no publication yet: you will see its empty state)
+FOCUS = "MOMENTUM"         # "MARKET", "SIZE", "VALUE", "MOMENTUM", "PROFITABILITY", "INVESTMENT" or "LIQUIDITY"
+WEEKS = 156                # weeks of returns to request: 1-1000 (API default 52). 156 weeks is about 3 years
+HOLDINGS = 25              # largest holdings per book: 0-5000 (API default 25; 0 = no holdings)
+MEASUREMENT = True         # also fetch the Fama-French 2x3 measurement twins (API default true)
+TWIN = "s3b_ff_2x3_ew"     # twin for section 4.12: "s3b_ff_2x3_ew" (equal weight) or "s3b_ff_2x3_rp126"
+COMPARE_MARKETS = True     # section 6 fetches the other markets (up to 3 more requests); False skips it
+COVERAGE_MIN = 0.9         # a book enters the growth, drawdown, correlation and PCA charts only when at least
+                           # 90% of its served weeks are "ok"; the others are listed, never silently dropped
+MIN_WEEKS = 26             # a series needs at least 26 clean weeks (half a year) for statistics
+WEEKS_PER_YEAR = 52        # annualising: mean x 52, volatility x sqrt(52)
+MAX_ABS_WEEKLY = 0.5       # a book return beyond ±50% in one week is treated as a data error
 
-# Facts the API does not send with this endpoint.
-CURRENCY = {"us": "USD", "cn": "CNY", "jp": "JPY", "hk": "HKD"}
-SYMBOL = {"USD": "$", "CNY": "CN¥", "JPY": "¥", "HKD": "HK$"}
+FACTORS = ["MARKET", "SIZE", "VALUE", "MOMENTUM", "PROFITABILITY", "INVESTMENT", "LIQUIDITY"]  # contract order
 
 assert MARKET in MARKETS, f"MARKET must be one of {MARKETS}"
-FOCUS_FACTOR = FOCUS_FACTOR.lower()
-CCY = CURRENCY[MARKET]
-TODAY = pd.Timestamp.now(tz="UTC").normalize()     # ages below are measured against today (UTC)
-print(f"Studying {MARKET_NAMES[MARKET]} ({MARKET}); focus factor {FOCUS_FACTOR.upper()}; "
-      f"today is {TODAY:%Y-%m-%d} UTC.")
+FOCUS = FOCUS.upper()
+assert FOCUS in FACTORS, f"FOCUS must be one of {FACTORS}"
+assert 1 <= WEEKS <= 1000, "WEEKS must be between 1 and 1000."
+assert 0 <= HOLDINGS <= 5000, "HOLDINGS must be between 0 and 5000."
+assert TWIN in ("s3b_ff_2x3_ew", "s3b_ff_2x3_rp126"), "TWIN must be 's3b_ff_2x3_ew' or 's3b_ff_2x3_rp126'."
+print(f"Studying {MARKET_NAMES[MARKET]} ({MARKET}); focus book {FOCUS}; "
+      f"{WEEKS} weeks of returns and up to {HOLDINGS} holdings per book.")
 
 # %% [markdown]
 # A few small utilities keep the later cells short. They are plain code, so read
 # them once:
 #
-# - `FACTOR_COLORS` gives each factor a fixed colour, in the API's contract
-#   order (ERP first, LIQ last). It is used only where several factors share
-#   one chart as lines (growth of 100), so a factor keeps its colour even when
-#   another factor is withheld. Charts that name each factor on an axis or in a
-#   panel title use one neutral colour instead: the same palette also colours
-#   the markets and the long and short legs, and one hue should not mean two
-#   things side by side.
-# - `GATE_CODES` translates the gate codes in `gate_reason` into plain English.
-#   It also records which test (or tests) each code belongs to, and whether the
-#   code means the test **failed** or is still **pending** (not run yet, or too
-#   little history to run it). `verdict` sums up a factor in one phrase, such
-#   as "failed a test". `GATE_STYLE` gives each outcome a fixed colour *and* a
-#   symbol, so the gate charts never rely on colour alone.
-# - `risk_stats` recomputes the API's `stats` block from a daily return series
-#   (section 3.4 lists the definitions).
-# - `sharpe_interval` and `hac_test` say how precise a Sharpe-like ratio and an
-#   average return are (section 3.10 explains both).
-# - `add_end_labels` writes each line's name at its right end. It nudges the
-#   labels apart so they never overlap, and ties each one to its line with a
-#   thin leader in the line's colour.
-# - `chart_title` breaks a long chart title and subtitle onto several lines
-#   and returns the top margin they need. Plotly never wraps a title, so a long
-#   one would run off the right edge of a narrow output (for example Colab with
-#   the Secrets sidebar open). Notebook 05 uses the same helper.
-# - `pick`, `pct`, `money`, `shorten`, `plural`, `rgba`, `grid_shape` and
-#   `hide_unused_panels` are small formatting helpers. `note` prints a friendly
-#   sentence when there is nothing to show.
+# - `STYLES` are the exposure keys (`market`, `size`, ...), in the same order as
+#   `FACTORS`, so the book on row *i* of a matrix has its own style in column *i*.
+# - `FACTOR_COLORS` gives each book a fixed colour: MARKET is drawn in ink as
+#   the reference line, and the six style books take the theme's categorical
+#   colours in contract order. A book keeps its colour even when another book is
+#   missing. Charts that name each book on an axis or in a panel title use one
+#   neutral colour instead.
+# - `CHECKS` lists the API's five per-book checks with this notebook's reading
+#   of each name.
+# - `state_of` and `show_state` read `data.status`, `data.reason_code` and
+#   `data.message`: the empty state is data, not an error.
+# - `freshness_frame` and `styled_freshness` show a freshness block exactly as
+#   the API sends it. The only formatting is that a `state` of `behind` is
+#   printed in bold.
+# - `quote` prints one of the API's labels verbatim, with the field it came
+#   from, so you read SurgeFlow's wording instead of a paraphrase.
+# - `growth_index` compounds weekly returns into the value of 100;
+#   `annual_stats` annualises a weekly series and adds a 95% interval with
+#   autocorrelation-robust (HAC) standard errors; `pca_fit` runs a standardised
+#   PCA inside a scikit-learn `Pipeline`.
+# - `chart_title` wraps a long chart title and subtitle and returns the top
+#   margin they need (Plotly never wraps a title). `add_end_labels` writes each
+#   line's name at its right end without overlaps. `corr_trace` draws the lower
+#   half of a correlation matrix on the diverging scale.
 #
-# The chart subtitles need Plotly 5.23 or newer (Colab already has it). The
-# cell checks the version first, so an older local install stops here with
-# a one-line fix instead of failing in the middle of the notebook.
+# The chart subtitles need Plotly 5.23 or newer (Colab already has it). The cell
+# checks the version first, so an older local install stops here with a
+# one-line fix instead of failing in the middle of the notebook.
 
 # %%
 import re
 import textwrap
-from itertools import combinations
 
 import plotly
 import statsmodels.api as sm
 from plotly.subplots import make_subplots
-from scipy import stats
+from sklearn.decomposition import PCA
+from sklearn.pipeline import Pipeline
+from sklearn.preprocessing import StandardScaler
 
 if tuple(int(p) for p in re.findall(r"\d+", plotly.__version__)[:2]) < (5, 23):
     raise ImportError(f"The charts here need plotly 5.23 or newer (title subtitles); you have {plotly.__version__}. "
                       "Run  pip install -U 'plotly>=5.23'  and restart the kernel.")
 
-CANONICAL = ["erp", "smb", "hml", "wml", "rmw", "cma", "liq"]      # the API's contract order: ERP .. LIQ
-FACTOR_COLORS = dict(zip(CANONICAL, SERIES))                        # colour follows the factor, never its rank
-SIDE = {"long": "LONG", "short": "SHORT", "index": "LONG"}           # ERP's "index" leg is a long position
+STYLES = [f.lower() for f in FACTORS]                    # exposure keys, same order as FACTORS
+STYLE_BOOKS = FACTORS[1:]                                # the six style books; MARKET is the reference
+FACTOR_COLORS = {"MARKET": INK, **dict(zip(STYLE_BOOKS, SERIES))}   # colour follows the book, never its rank
+CHECKS = {   # data.portfolios[].checks: the API's names, and this notebook's reading of them
+    "sum_ok": "weights sum to 1",
+    "own_ok": "own-style exposure is about 1",
+    "others_ok": "other-style exposures are about 0",
+    "bounds_ok": "every weight is inside its bounds",
+    "matches_published": "served exposures match the published ones",
+}
 BOTTOM_LEGEND = dict(orientation="h", x=0, xanchor="left", y=0.01, yref="container", yanchor="bottom")
-TEXTBOOK_LONG_HIGH = {"smb": False, "hml": True, "wml": True, "rmw": True, "cma": False, "liq": True}
-STAT_KEYS = ["n_obs", "mean_annual", "vol_annual", "sharpe", "max_dd", "var_95_252d", "es_95_252d"]
-
-SIGNALS = {   # top_holdings[].signal_value: the API does not name its unit, so labels stay generic. Label, format, noun
-    "smb": ("Size signal (unit not documented)", ".3g", "size signals"),   # section 3.11 checks its scale
-    "hml": ("Value signal (book-to-price)", ".2f", "book-to-price signals"),
-    "wml": ("Momentum signal (12-1 month return)", ".2f", "momentum signals"),
-    "rmw": ("Profitability signal", ".2f", "profitability signals"),
-    "cma": ("Growth signal", ".2f", "growth signals"),
-    "liq": ("Illiquidity signal", ".2f", "illiquidity signals"),
-}
-TEXTBOOK_LEGS = {   # the textbook long and short legs (the notebook's reading of each code, not sent by the API)
-    "erp": ("the market's main index", "cash at the risk-free rate"),
-    "smb": ("small companies", "large companies"),
-    "hml": ("cheap stocks (high book-to-price)", "expensive stocks (low book-to-price)"),
-    "wml": ("past winners (12-1 month return)", "past losers"),
-    "rmw": ("highly profitable companies", "weakly profitable companies"),
-    "cma": ("slow growers (conservative)", "fast growers (aggressive)"),
-    "liq": ("less liquid stocks", "more liquid stocks"),
-}
-EVIDENCE = {  # evidence_status codes seen live, in plain English. "pit" = point-in-time: no look-ahead.
-    "official_index_and_governed_risk_free": "official index returns minus a risk-free rate",
-    "governed_pit": "point-in-time company fundamentals",
-    "governed_pit_assets": "point-in-time balance-sheet (asset) data",
-    "governed_market_data": "price history",
-    "governed_turnover_history": "trading-turnover history",
-}
-
-GATE_TESTS = ["1 year of history", "Premium (HAC t-test)", "Spanning alpha", "Not redundant",
-              "Correlation triangle", "Stock residuals"]
-GATE_CODES = {   # gate code seen in gate_reason -> (the test or tests it covers, outcome, plain English)
-    "factor_sample_below_252": (("1 year of history",), "pending",
-                                "fewer than 252 daily returns (one trading year) so far"),
-    "premium_hac_not_tested": (("Premium (HAC t-test)",), "pending",
-                               "average return not yet tested with autocorrelation-robust (HAC) errors"),
-    "premium_not_significant_5pct": (("Premium (HAC t-test)",), "failed",
-                                     "average return not significantly different from zero (5% level)"),
-    # The redundancy verdict comes out of the same spanning regression (live payloads send factor_redundant_5pct
-    # only together with spanning_alpha_not_significant_5pct), so an untested spanning test leaves both pending.
-    "spanning_not_tested": (("Spanning alpha", "Not redundant"), "pending",
-                            "not yet tested against the other factors (can they explain it? is it redundant?)"),
-    "spanning_alpha_not_significant_5pct": (("Spanning alpha",), "failed",
-                                            "adds no significant return beyond the other factors (5% level)"),
-    "factor_redundant_5pct": (("Not redundant",), "failed",
-                              "redundant: the other factors already explain it (5% level)"),
-    "correlation_triangle_not_tested": (("Correlation triangle",), "pending",
-                                        "consistency of its correlations with the other factors not yet checked"),
-    "stock_residual_diagnostics_not_tested": (("Stock residuals",), "pending",
-                                              "stock-level residual diagnostics not yet run"),
-}
-VERDICTS = ["published", "failed a test", "under a year of history", "checks not yet run", "withheld, reason unknown"]
-GATE_STYLE = {   # outcome -> legend text, marker symbol, colour, size. Status colours: never reused for a series.
-    "failed": ("Failed", "x", "#d03b3b", 16),
-    "pending": ("Pending: not run yet, or too little history", "circle-open", MUTED, 16),
-    "unreported": ("No code reported (not necessarily run)", "circle", MUTED, 7),
-    "passed": ("No blocking code (the factor is published)", "circle", "#0ca30c", 10),
-}
-GATE_MARK = {"failed": "✕ failed", "pending": "○ pending", "unreported": "· not reported",
-             "passed": "✓ no blocking code (published)"}
-VERDICT_STYLE = {   # the same visual language for whole factors (section 4)
-    "published": ("Published", "circle", "#0ca30c"),
-    "failed a test": ("Withheld: failed a test", "x", "#d03b3b"),
-    "under a year of history": ("Withheld: under a year of history", "hourglass", MUTED),
-    "checks not yet run": ("Withheld: checks not yet run", "circle-open", MUTED),
-    "withheld, reason unknown": ("Withheld: reason unknown", "square-open", MUTED),
-}
 
 
 def pick(raw: pd.DataFrame, columns: list) -> pd.DataFrame:
@@ -274,33 +235,118 @@ def signed(value, digits: int = 2) -> str:
     return f"{round(float(value), digits) + 0.0:+.{digits}f}"
 
 
-def money(value, ccy: str = "USD", digits: int = 2) -> str:
-    """4621704856204 -> '$4.62T' (a big number with its currency symbol)."""
-    if value is None or pd.isna(value):
-        return "n/a"
-    sign, value = ("-" if value < 0 else ""), abs(float(value))
-    for size, unit in ((1e12, "T"), (1e9, "B"), (1e6, "M"), (1e3, "K")):
-        if value >= size:
-            return f"{sign}{SYMBOL[ccy]}{value / size:,.{digits}f}{unit}"
-    return f"{sign}{SYMBOL[ccy]}{value:,.0f}"
-
-
-def shorten(text, width: int = 24) -> str:
-    """Cut a long name to `width` characters, with an ellipsis."""
-    text = str(text)
-    return text if len(text) <= width else text[: width - 1] + "…"
-
-
 def plural(n, word: str, many: str = None) -> str:
-    """plural(1, 'day') -> '1 day'; plural(3, 'day') -> '3 days'."""
+    """plural(1, 'week') -> '1 week'; plural(3, 'week') -> '3 weeks'."""
     n = int(n)
     return f"{n:,} {word if n == 1 else (many or word + 's')}"
 
 
-def rgba(hex_color: str, alpha: float) -> str:
-    """'#2a78d6', 0.12 -> 'rgba(42,120,214,0.12)': a light wash of a series colour for area fills."""
-    h = hex_color.lstrip("#")
-    return "rgba({},{},{},{})".format(*(int(h[i:i + 2], 16) for i in (0, 2, 4)), alpha)
+def and_list(items) -> str:
+    """['SIZE', 'VALUE', 'MOMENTUM'] -> 'SIZE, VALUE and MOMENTUM'."""
+    items = [str(i) for i in items]
+    if not items:
+        return "none"
+    return items[0] if len(items) == 1 else ", ".join(items[:-1]) + " and " + items[-1]
+
+
+def note(text: str) -> None:
+    """A friendly one-line note in place of a chart or table (empty is normal)."""
+    display(Markdown(f"> {text}"))
+
+
+def quote(field: str, text) -> None:
+    """Show one of the API's labels verbatim, with the field it came from."""
+    display(Markdown(f"**`{field}`**\n\n> {text if text else '(not sent in this response)'}"))
+
+
+def state_of(payload: dict) -> tuple:
+    """(status, reason_code, message) from payload.data. 'available' or 'empty'; empty is HTTP 200, not an error."""
+    data = payload.get("data") if isinstance(payload.get("data"), dict) else {}
+    return data.get("status"), data.get("reason_code"), data.get("message")
+
+
+def show_state(payload: dict, label: str) -> None:
+    """One line for an available response; the reason code and the API's own message for an empty one."""
+    status, code, message = state_of(payload)
+    if status == "available":
+        display(Markdown(f"**{label}:** `data.status` = `available`"))
+    else:
+        display(Markdown(f"**{label}:** `data.status` = `{status}` · `reason_code` = `{code}`\n\n> {message}"))
+
+
+def freshness_frame(block: dict, label: str) -> pd.DataFrame:
+    """A freshness block as a one-row table, values exactly as the API sent them."""
+    return pd.DataFrame([{"source": label, **(block or {})}])
+
+
+def styled_freshness(frame: pd.DataFrame):
+    """Print a 'behind' state in bold. Nothing else is changed or added."""
+    columns = [c for c in frame.columns if c == "state" or c.endswith("freshness.state")]
+    mark = lambda value: "font-weight: 700; color: #b3261e" if value == "behind" else ""
+    return frame.style.map(mark, subset=columns).hide(axis="index") if columns else frame.style.hide(axis="index")
+
+
+def newey_west_lags(n: int) -> int:
+    """The usual rule of thumb for how many lags a HAC (Newey-West) standard error should allow."""
+    return int(np.floor(4 * (n / 100) ** (2 / 9)))
+
+
+def annual_stats(r: pd.Series) -> dict:
+    """Weekly returns (fractions) -> weeks used, years, annualised mean and volatility, a 95% interval for the
+    annualised mean and a t-statistic, both from HAC standard errors (they allow for autocorrelation)."""
+    r = r.dropna()
+    n = len(r)
+    out = {"weeks": n, "years": n / WEEKS_PER_YEAR}
+    if n < 3:
+        return out | {k: np.nan for k in ("mean / year", "vol / year", "95% low", "95% high", "t (HAC)")}
+    fit = sm.OLS(r.to_numpy(), np.ones(n)).fit(cov_type="HAC", cov_kwds={"maxlags": newey_west_lags(n)})
+    mean, se = float(fit.params[0]), float(fit.bse[0])
+    return out | {"mean / year": mean * WEEKS_PER_YEAR, "vol / year": r.std(ddof=1) * np.sqrt(WEEKS_PER_YEAR),
+                  "95% low": (mean - 1.96 * se) * WEEKS_PER_YEAR, "95% high": (mean + 1.96 * se) * WEEKS_PER_YEAR,
+                  "t (HAC)": mean / se if se > 0 else np.nan}
+
+
+def growth_index(weekly: pd.DataFrame) -> pd.DataFrame:
+    """Weekly returns (rows = week_start) -> the value of 100 at the start of each week.
+
+    The first row is 100 at the start of the first week; the value after week t is placed at the start of
+    week t + 1. A missing week stays missing (a break in the line) and adds nothing to the product."""
+    level = 100 * (1 + weekly).cumprod()
+    level.index = level.index + pd.Timedelta(weeks=1)
+    start = pd.DataFrame(100.0, index=weekly.index[:1], columns=weekly.columns)
+    return pd.concat([start, level])
+
+
+def pca_fit(frame: pd.DataFrame) -> tuple:
+    """Standardised PCA in a Pipeline. Returns explained-variance shares, loadings and scores.
+    A component's sign is arbitrary, so each is flipped to make the sum of its loadings positive."""
+    pipe = Pipeline([("scale", StandardScaler()), ("pca", PCA(random_state=0))]).fit(frame)
+    pca = pipe.named_steps["pca"]
+    names = [f"PC{i + 1}" for i in range(pca.n_components_)]
+    flip = np.where(pca.components_.sum(axis=1) < 0, -1.0, 1.0)
+    loadings = pd.DataFrame((pca.components_ * flip[:, None]).T, index=frame.columns, columns=names)
+    scores = pd.DataFrame(pipe.transform(frame) * flip, index=frame.index, columns=names)
+    return pd.Series(pca.explained_variance_ratio_, index=names), loadings, scores
+
+
+def mean_pair(corr: pd.DataFrame) -> float:
+    """Average correlation over the distinct pairs (the lower triangle, without the diagonal)."""
+    values = corr.to_numpy()
+    return float(values[np.tril_indices_from(values, k=-1)].mean())
+
+
+def corr_trace(corr: pd.DataFrame, showscale: bool = True) -> go.Heatmap:
+    """The lower half of a correlation matrix (no diagonal) on the diverging scale, centred at 0, from -1 to 1."""
+    names = list(corr.columns)
+    z = corr.to_numpy().copy()
+    z[np.triu_indices_from(z)] = np.nan
+    z = z[1:, :-1]
+    text = [["" if np.isnan(v) else signed(v) for v in row] for row in z]
+    return go.Heatmap(z=z, x=names[:-1], y=names[1:], text=text, texttemplate="%{text}", textfont=dict(size=12),
+                      colorscale=DIVERGING, zmin=-1, zmax=1, zmid=0, xgap=2, ygap=2, hoverongaps=False,
+                      hovertemplate="%{y} vs %{x}: %{z:+.2f}<extra></extra>", showscale=showscale,
+                      colorbar=dict(title=dict(text="Correlation"), tickvals=[-1, -0.5, 0, 0.5, 1], len=0.85,
+                                    thickness=14))
 
 
 def grid_shape(n: int, max_cols: int = 3) -> tuple:
@@ -310,32 +356,17 @@ def grid_shape(n: int, max_cols: int = 3) -> tuple:
 
 
 def hide_unused_panels(fig, n_panels: int, rows: int, cols: int) -> None:
-    """A grid of 7 panels has 9 cells: hide the axes of the cells that hold no panel, so they draw nothing."""
+    """A grid of 7 panels has 9 cells: hide the axes of the cells that hold no panel."""
     for k in range(n_panels, rows * cols):
-        r, c = k // cols + 1, k % cols + 1
-        fig.update_xaxes(visible=False, row=r, col=c)
-        fig.update_yaxes(visible=False, row=r, col=c)
-
-
-def label_lowest_panels(fig, filled: list, rows: int, cols: int) -> None:
-    """Shared x-axes are labelled on the bottom row only. If a column's bottom panel is empty,
-    label the lowest filled panel instead. `filled` lists the (row, col) panels that hold data."""
-    for c in range(1, cols + 1):
-        rows_with_data = [r for r, cc in filled if cc == c]
-        if rows_with_data and max(rows_with_data) < rows:
-            fig.update_xaxes(showticklabels=True, row=max(rows_with_data), col=c)
-
-
-def note(text: str) -> None:
-    """A friendly one-line note in place of a chart or table (empty is normal)."""
-    display(Markdown(f"> {text}"))
+        fig.update_xaxes(visible=False, row=k // cols + 1, col=k % cols + 1)
+        fig.update_yaxes(visible=False, row=k // cols + 1, col=k % cols + 1)
 
 
 def chart_title(title: str, subtitle: str = "", extra_top: int = 0, width: int = 80) -> tuple:
     """Wrap a long title (about `width` characters a line) and subtitle (about 1.45 × `width`, broken at its
     ' · ' separators where possible; '<br>' still forces a new line), pin them to the top of the figure, and
     return Plotly's title dict plus the top margin in pixels that keeps them clear of the plot. `extra_top`
-    reserves room for anything else above the plot area, such as panel titles or a top x-axis."""
+    reserves room for anything else above the plot area, such as panel titles."""
     def pack(line: str, limit: int) -> list:
         lines = []
         for piece in line.split(" · "):
@@ -352,102 +383,8 @@ def chart_title(title: str, subtitle: str = "", extra_top: int = 0, width: int =
                 yanchor="top", pad=dict(t=12 + 22 * (len(head) > 1))), top
 
 
-def gate_codes(reason) -> list:
-    """'factor_sample_below_252; spanning_not_tested' -> ['factor_sample_below_252', 'spanning_not_tested']."""
-    if reason is None or (isinstance(reason, float) and np.isnan(reason)):
-        return []
-    return [code.strip() for code in str(reason).split(";") if code.strip()]
-
-
-def gate_outcome(code: str) -> tuple:
-    """(tests, 'failed' or 'pending', plain English) for one gate code. A code the notebook does not know yet
-    is shown under 'Other': pending if it ends in _not_tested or mentions 'below', otherwise failed."""
-    if code in GATE_CODES:
-        return GATE_CODES[code]
-    pending = code.endswith("_not_tested") or "below" in code
-    return ("Other",), "pending" if pending else "failed", code.replace("_", " ")
-
-
-def explain_gates(reason) -> str:
-    """Plain English for every code in gate_reason. An empty reason means no failed gate is reported."""
-    codes = gate_codes(reason)
-    return "; ".join(gate_outcome(c)[2] for c in codes) if codes else "none reported"
-
-
-def verdict(state, reason) -> str:
-    """One phrase per factor: published, failed a test, under a year of history, or checks not yet run."""
-    codes = gate_codes(reason)
-    if state == "published":
-        return "published"
-    if any(gate_outcome(c)[1] == "failed" for c in codes):
-        return "failed a test"
-    if "factor_sample_below_252" in codes:
-        return "under a year of history"
-    return "checks not yet run" if codes else "withheld, reason unknown"
-
-
-def main_reason(reason) -> str:
-    """The most decisive gate in plain English: a failed test first, then missing history, then a pending check."""
-    codes = gate_codes(reason)
-    rank = {"failed": 0, "pending": 2}
-    codes = sorted(codes, key=lambda c: 1 if c == "factor_sample_below_252" else rank[gate_outcome(c)[1]])
-    return gate_outcome(codes[0])[2] if codes else "no reason given"
-
-
-def and_list(items) -> str:
-    """['HML', 'RMW', 'CMA'] -> 'HML, RMW and CMA'."""
-    items = list(items)
-    return items[0] if len(items) == 1 else ", ".join(items[:-1]) + " and " + items[-1] if items else "none"
-
-
-def risk_stats(r: pd.Series, level: float = TAIL) -> dict:
-    """The API's `stats` block, recomputed from daily returns (decimals). Missing days are dropped first."""
-    r = r.dropna()
-    if r.empty:
-        return {key: (0 if key == "n_obs" else np.nan) for key in STAT_KEYS}
-    wealth = (1 + r).cumprod()                         # value of 1 invested, compounded daily
-    drawdown = wealth / wealth.cummax() - 1            # distance below the running peak (always <= 0)
-    cutoff = r.quantile(1 - level)                     # the 5th-percentile day
-    vol = r.std(ddof=1) * np.sqrt(TRADING_DAYS)        # yearly volatility
-    mean = r.mean() * TRADING_DAYS                     # yearly arithmetic mean
-    return {"n_obs": len(r), "mean_annual": mean, "vol_annual": vol,
-            "sharpe": mean / vol if vol > 0 else np.nan, "max_dd": drawdown.min(),
-            "var_95_252d": -cutoff, "es_95_252d": -r[r <= cutoff].mean()}
-
-
-def sharpe_interval(r: pd.Series, z: float = 1.96) -> tuple:
-    """Yearly Sharpe-like ratio, its standard error and a 95% interval.
-
-    Uses the Mertens (2002) standard error, which allows for skew and fat tails but
-    assumes that days are independent. As a rule of thumb it is 1 / sqrt(years of data).
-    """
-    r = r.dropna()
-    daily = r.mean() / r.std(ddof=1)
-    skew, excess_kurt = stats.skew(r, bias=False), stats.kurtosis(r, fisher=True, bias=False)
-    se = np.sqrt((1 + 0.5 * daily**2 - skew * daily + excess_kurt / 4 * daily**2) / len(r))
-    k = np.sqrt(TRADING_DAYS)                          # daily -> yearly
-    return daily * k, se * k, (daily - z * se) * k, (daily + z * se) * k
-
-
-def newey_west_lags(n: int) -> int:
-    """The usual rule of thumb for how many lags a HAC (Newey-West) standard error should allow."""
-    return int(np.floor(4 * (n / 100) ** (2 / 9)))
-
-
-def hac_test(r: pd.Series) -> dict:
-    """Is the average daily return different from zero? OLS on a constant with Newey-West (HAC) errors."""
-    r = r.dropna()
-    lags = newey_west_lags(len(r))
-    fit = sm.OLS(r.to_numpy(), np.ones(len(r))).fit(cov_type="HAC", cov_kwds={"maxlags": lags})
-    return {"t": float(fit.tvalues[0]), "p": float(fit.pvalues[0]), "lags": lags}
-
-
 def spread_labels(values, min_gap: float) -> np.ndarray:
-    """Move label positions apart until neighbours are at least `min_gap` apart, keeping their order.
-
-    Labels that would collide are merged into a cluster, and each cluster is centred on the
-    average of its own lines, so a label moves only as far as it has to.
-    """
+    """Move label positions apart until neighbours are at least `min_gap` apart, keeping their order."""
     v = np.asarray(values, dtype=float)
     clusters = [[i] for i in np.argsort(v)]
 
@@ -469,1988 +406,1494 @@ def spread_labels(values, min_gap: float) -> np.ndarray:
 
 
 def add_end_labels(fig, ends: pd.DataFrame, y_range: list, plot_px: float, min_px: float = 17) -> None:
-    """Label each line at its right end, at least `min_px` pixels apart, with a thin leader to the line.
-
-    `ends` has one row per line: x and y (the line's last point), text and color. `plot_px` is the
-    height of the plot area in pixels, so we can convert pixels into data units. The text stays in
-    ink; only the leader carries the series colour.
-    """
+    """Label each line at its right end, at least `min_px` pixels apart, with a thin leader in the line's colour.
+    `ends` has one row per line: x, y (the line's last point), text and color. The text stays in ink."""
     gap = min_px * (y_range[1] - y_range[0]) / plot_px
-    label_y = spread_labels(ends["y"].to_numpy(dtype=float), gap)
-    for (_, end), y_label in zip(ends.iterrows(), label_y):
+    for (_, end), y_label in zip(ends.iterrows(), spread_labels(ends["y"].to_numpy(dtype=float), gap)):
         fig.add_annotation(x=end["x"], y=end["y"], ax=26, ay=y_label, axref="pixel", ayref="y",
                            text=end["text"], showarrow=True, arrowhead=0, arrowwidth=1.2,
                            arrowcolor=end["color"], standoff=2, xanchor="left", yanchor="middle",
                            font=dict(size=12, color=INK_2))
 
-# %% [markdown]
-# ## 3. Factor portfolios: `/api/v1/markets/{market}/factor-portfolios`
-#
-# **What it is for.** SurgeFlow builds seven "canonical" factor portfolios per
-# market (the `release_id` starts with `factor_daily_`, which suggests a daily
-# build). For each factor that passes its gates it publishes the daily returns
-# over the last trading year, risk statistics and a preview of the holdings;
-# for the others it publishes the reasons. You use them to see
-# which investment styles have been paying, how risky each one is, how they move
-# together and which stocks sit on each side.
-#
-# The records live at **`data.data.factors`**. The API wraps its internal
-# response (`{ok, data}`) in its own envelope, so `data` appears twice. The
-# helper's `RESPONSE_SHAPES["factor_portfolios"]` already knows this path. Next
-# to the factors you find:
-#
-# | Part | What it holds |
-# |---|---|
-# | `data.data.as_of`, `.release_id`, `.n_active`, `.n_risk_ready` | Which session the data describes, which build produced it, how many factors are published |
-# | `data.data.contract_factors[]`, `.factor_contract_sha256` | The seven factor ids in their fixed order, and a fingerprint of the factor contract (equal across markets built from one contract) |
-# | `data.data.research_passport` | Provenance: how the portfolios are built, weighted, rebalanced and costed, and whether results are in-sample |
-# | `data.data.factors[]` | One record per factor, always all seven: gate state, `stats`, `holdings_metrics`, `top_holdings[]`, `return_series[]` |
-# | `data.data.raw_survivors_summary[]` | A compact second listing of each factor's state, used below as a cross-check |
-# | `data.data.aggregate` | The equal-weight mix of the published factors, their correlation matrix and the aligned date window |
-# | `data.data.disclosure` | A one-paragraph construction note |
-# | `data.data.word_cloud[]`, `.narrative_coverage` | Text features for the holdings (empty when nothing is published) |
-#
-# **Gate state is disclosed, not filtered.** A factor that fails SurgeFlow's
-# publication tests still appears. It has `publish_state = "blocked"`, the
-# reasons in `gate_reason`, `stats` full of nulls, and empty
-# `return_series` and `top_holdings`. You always see all seven rows, and you
-# always see *why* one is missing. **Empty is normal:** on some days every
-# factor in a market is blocked. Then `as_of` is null, and the charts below
-# print a note instead.
-#
-# **Freshness lives in `data.data`.** `show_freshness` reads only the top level
-# and the first `data` level, so here it finds just `market`. We print
-# `as_of`, `release_id` and the counts ourselves.
-#
-# This is the notebook's only endpoint, so we fetch it with `sf_try`: if it is
-# temporarily down (an HTTP 500, or an error wrapped inside a 200 response),
-# you get a short note and the notebook stops here instead of a long traceback.
-# Try again a little later.
 
-# %%
-fp_payload = sf_try(f"/api/v1/markets/{MARKET}/factor-portfolios")
-if fp_payload is None:
-    raise SystemExit("Factor portfolios are unavailable right now, so the rest of the notebook has nothing to show. "
-                     "Try again later.")
-show_freshness(fp_payload, "Factor portfolios:")
-fp = fp_payload["data"]["data"]          # a missing key here is a contract change: let it raise
-agg = fp["aggregate"]
+def date_axis(index) -> dict:
+    """An x-axis for weekly dates: the data's own range with a few days of padding, dates in the hover."""
+    lo, hi = pd.Timestamp(index.min()), pd.Timestamp(index.max())
+    return dict(range=[lo - pd.Timedelta(days=5), hi + pd.Timedelta(days=5)], hoverformat="%b %d, %Y",
+                title="Start of week")
 
-as_of = pd.to_datetime(fp["as_of"], utc=True) if fp["as_of"] else None
-stamp = re.search(r"(\d{8}t\d{6})", str(fp["release_id"]))          # the id appears to encode its build time
-built = pd.to_datetime(stamp.group(1), format="%Y%m%dt%H%M%S", utc=True) if stamp else None
 
-as_of_text = (f"{as_of:%Y-%m-%d} ({plural((TODAY - as_of).days, 'day')} before today)"
-              if as_of is not None else "**null**: no factor is published today")
-built_text = f"{built:%Y-%m-%d %H:%M} UTC" if built is not None else "time not encoded"
-window_text = (f"{agg['correlation_start']} to {agg['correlation_as_of']}, {agg['n_aligned_dates']} dates"
-               if agg["n_aligned_dates"] else "none: no factor is published")
-facts = [
-    ("market", f"`{fp['market']}`"),
-    ("as_of: the last session in the data", as_of_text),
-    ("release_id", f"`{fp['release_id']}` (built {built_text})"),
-    ("factor contract", f"{len(fp['contract_factors'])} factors, fingerprint `{str(fp['factor_contract_sha256'])[:12]}…`"),
-    ("published factors (`n_active`)", f"{fp['n_active']} of {len(fp['factors'])}"),
-    ("risk-ready factors (`n_risk_ready`)", str(fp["n_risk_ready"])),
-    ("aligned window (`aggregate`)", window_text),
-]
-display(Markdown("| Field | Value |\n|---|---|\n" + "\n".join(f"| {k} | {v} |" for k, v in facts)))
-
-passport = fp["research_passport"]
-cost = passport["cost_model"]
-provenance = pd.DataFrame([
-    ("Weighting", passport["weighting_method"]),
-    ("Rebalancing", passport["rebalance_rule"]),
-    ("Costs", f"returns are {cost['gross_or_net']} of costs (cost model `{cost['cost_model_version']}`)"),
-    ("Test type", passport["test_type"]),
-    ("Point in time", passport["point_in_time_status"]),
-    ("Out-of-sample status", f"evidence: {passport['source_evidence_oos_status']}; this surface: "
-                             f"{passport['surface_oos_status']}"),
-    ("Benchmark", passport["benchmark_id"]),
-    ("Universe version", passport["universe_version"]),
-], columns=["research passport", "value"])
-display(provenance.style.hide(axis="index"))
-display(Markdown(f"> *{fp['disclosure']}*"))
+def padded_range(values, pad_share: float = 0.06) -> list:
+    """A y-range around the data with a little room above and below."""
+    values = np.asarray(values, dtype=float)
+    lo, hi = float(np.nanmin(values)), float(np.nanmax(values))
+    pad = (hi - lo) * pad_share + 0.5
+    return [lo - pad, hi + pad]
 
 # %% [markdown]
-# **Raw preview.** `to_frame` flattens each factor record. The nested `stats`
-# and `holdings_metrics` objects become dotted columns such as `stats.sharpe`.
-# Three columns still hold lists: `return_series`, `top_holdings` and
-# `distribution_series`. We show their lengths here and unpack them below.
-# (`distribution_series` has been an empty list in every response seen so
-# far; the daily returns are in `return_series`.)
-
-# %%
-factors_raw = to_frame(fp_payload, "factor_portfolios")
-LIST_COLS = ["return_series", "top_holdings", "distribution_series"]
-preview = factors_raw.copy()
-for col in LIST_COLS:
-    if col in preview:
-        preview[col] = preview[col].map(lambda v: f"[{len(v)} items]" if isinstance(v, list) else v)
-print(f"{len(factors_raw)} factor records, {factors_raw.shape[1]} columns after flattening.")
-preview.head(7)
-
-# %% [markdown]
-# ### 3.1 Cleaning the factor records, and what each factor is
+# ## 3. Publication metadata: `/api/v1/markets/{market}/factor-portfolios/meta`
 #
-# 1. **Keep the documented columns.** `pick` raises a `KeyError` if one is
-#    missing, because that would be a contract change.
-# 2. **Coerce numbers** with `pd.to_numeric(errors="coerce")`: the statistics,
-#    the counts and the scores.
-# 3. **De-duplicate on `factor_id`**, the natural key.
-# 4. **Order the factors** as the API's `contract_factors` list does, so every
-#    table and chart reads ERP → LIQ.
-# 5. **Name them.** `factor_name_published` is `SMB_FF3` for size (the
-#    Fama–French three-factor version), so we keep the part before `_` as a
-#    short code.
-# 6. **Check `effective_sign`.** 1 means the factor runs in its usual
-#    direction. The API does not document −1, but it would most likely mean
-#    SurgeFlow flipped the factor (the legs swapped), so you would read its
-#    returns with the opposite meaning. Every factor showed 1 when this
-#    notebook was written.
-# 7. **Sum up the gates.** `verdict` turns `publish_state` and `gate_reason`
-#    into one phrase per factor (section 3.2 explains the gates).
+# **What it is for.** Read this small response before you download any
+# returns. It tells you whether the market has a publication at all, which
+# formation weeks the publication covers, how many stocks are in the universe,
+# whether part of the history is a hold-out, what the returns include and what
+# they leave out (the cost basis), and how current the latest formation is.
+#
+# **State lives at `data.status`.** It is `"available"` or `"empty"`. An empty
+# state still answers HTTP 200 with `"ok": true`, plus a `data.reason_code`
+# and a `data.message` that you should show as they are. It is not an error.
 
 # %%
-IDENTITY = ["factor_id", "factor_label", "factor_name_published", "side_displayed", "effective_sign",
-            "semantic_label"]
-GATE_COLS = ["publish_state", "evidence_status", "gate_reason", "agreement_score", "is_risk_ready",
-             "risk_ready_reason"]
-HOLDING_META = ["n_holdings_active_leg", "holdings_as_of", "holdings_weighting", "holdings_preview_count",
-                "holdings_complete", "benchmark_id", "benchmark_name", "constituent_source", "return_construction"]
-HOLDING_METRICS = [f"holdings_metrics.{k}" for k in ("ep_mcap_weighted", "dy_mcap_weighted", "tot_market_cap",
-                                                     "n_constituents_total", "n_constituents_with_mcap",
-                                                     "n_constituents_with_ep", "n_constituents_with_dy")]
-STAT_COLS = [f"stats.{k}" for k in STAT_KEYS]
+meta = sf_get(f"/api/v1/markets/{MARKET}/factor-portfolios/meta")
+show_freshness(meta, "Metadata response:")
+mdata = meta["data"]
+META_AVAILABLE = mdata["status"] == "available"
+print(f"schema_version: {meta['schema_version']}")
+show_state(meta, f"{MARKET_NAMES[MARKET]} metadata")
 
-factors = pick(factors_raw, IDENTITY + GATE_COLS + HOLDING_META + HOLDING_METRICS + STAT_COLS + LIST_COLS)
-for col in STAT_COLS + HOLDING_METRICS + ["agreement_score", "effective_sign", "n_holdings_active_leg",
-                                         "holdings_preview_count"]:
-    factors[col] = pd.to_numeric(factors[col], errors="coerce")
-n_before = len(factors)
-factors = factors.drop_duplicates(subset="factor_id", keep="first")
-contract_order = {fid: i for i, fid in enumerate(fp["contract_factors"])}
-factors = (factors.assign(order=factors["factor_id"].map(contract_order))
-           .sort_values("order", na_position="last").drop(columns="order").reset_index(drop=True))
-factors["code"] = factors["factor_name_published"].str.split("_").str[0]
-factors["name"] = factors["code"] + " · " + factors["factor_label"]
-factors["n_returns"] = factors["return_series"].map(lambda v: len(v) if isinstance(v, list) else 0)
-factors["verdict"] = [verdict(s, r) for s, r in zip(factors["publish_state"], factors["gate_reason"])]
-
-NAME = dict(zip(factors["factor_id"], factors["name"]))      # 'smb' -> 'SMB · Size'
-CODE = dict(zip(factors["factor_id"], factors["code"]))      # 'smb' -> 'SMB'
-for fid in factors["factor_id"]:                             # a factor added to the contract gets the next free slot
-    FACTOR_COLORS.setdefault(fid, SERIES[min(len(FACTOR_COLORS), len(SERIES) - 1)])
-
-flipped = factors.loc[factors["effective_sign"] == -1, "code"].tolist()
-print(f"De-duplication: {n_before} factor records -> {len(factors)}.")
-print(f"Order: {' → '.join(factors['code'])}.")
-print(f"Flipped factors (effective_sign = -1): {', '.join(flipped) if flipped else 'none'}.")
-
-# %% [markdown]
-# **Definitions: what the payload says each factor is.** Every factor record
-# describes itself, published or not: a label, a published name, how it is
-# built (`side_displayed`), its direction (`effective_sign`) and the data it
-# rests on (`evidence_status`). Published factors also say how their return is
-# constructed and weighted; blocked factors leave those fields null. The table
-# puts the API's own fields next to the textbook legs from the introduction,
-# which come from this notebook, not from the API.
-
-# %%
-definitions = pd.DataFrame({
-    "code": factors["code"],
-    "name (factor_label)": factors["factor_label"],
-    "published as": factors["factor_name_published"],
-    "built as (side_displayed)": factors["side_displayed"],
-    "sign": factors["effective_sign"].map(lambda v: "–" if pd.isna(v) else f"{v:+.0f}"),
-    "rests on (evidence_status)": factors["evidence_status"].map(lambda v: EVIDENCE.get(v, v)),
-    "return construction": factors["return_construction"].fillna("– (withheld)"),
-    "long leg (textbook)": factors["factor_id"].map(lambda f: TEXTBOOK_LEGS.get(f, ("?", "?"))[0]),
-    "short leg (textbook)": factors["factor_id"].map(lambda f: TEXTBOOK_LEGS.get(f, ("?", "?"))[1]),
-})
-display(definitions.style.hide(axis="index"))
-
-passport_defs = passport.get("factor_definitions") or []
-if passport_defs:
-    display(Markdown("The research passport also sends its own `factor_definitions`:"))
-    display(pd.json_normalize(passport_defs))
+pubs_raw = to_frame(meta, "factor_portfolios_meta")       # data.publications, one row per publication
+if pubs_raw.empty:
+    note(f"No publication is listed for {MARKET_NAMES[MARKET]}. The rest of the metadata section has nothing "
+         "to show; the books section below shows the same empty state.")
 else:
-    print("research_passport.factor_definitions is empty in this release, so the factor records above "
-          "are the API's definitions.")
-print(f"Ranking variable (research_passport): {passport['ranking_variable']}.")
+    display(pubs_raw.head())
 
 # %% [markdown]
-# ### 3.2 Gate state: disclosed, not filtered
+# ### 3.1 Cleaning the publication list
 #
-# Before SurgeFlow publishes a factor's returns and holdings, the factor must
-# pass a set of statistical **gates**. Six kinds appear in `gate_reason`. The
-# API sends only the codes; the questions below are our reading of the code
-# names, not SurgeFlow documentation.
-#
-# | Test | Question it asks |
-# |---|---|
-# | 1 year of history | Are there at least 252 daily returns (one trading year)? |
-# | Premium (HAC t-test) | Is the average return reliably different from zero, with errors that allow both for days of different size and for returns that are correlated from one day to the next (HAC)? |
-# | Spanning alpha | Does it earn something the *other* factors cannot explain? |
-# | Not redundant | Or do the other factors already explain it? |
-# | Correlation triangle | Are its correlations with the other factors mutually consistent? |
-# | Stock residuals | Do stock-level diagnostics look sane? |
-#
-# Each code in `gate_reason` names one test and one of two outcomes:
-#
-# - **failed**: the test ran and the factor did not pass (for example
-#   `premium_not_significant_5pct`);
-# - **pending**: the test has not run yet (`..._not_tested`), or there is not
-#   yet enough history to run it (`factor_sample_below_252`). One code can
-#   cover two tests: the redundancy check comes out of the same spanning
-#   regression, so `spanning_not_tested` leaves both pending.
-#
-# Any code at all blocks the factor. The tables keep all seven rows: a factor
-# missing from a chart below is missing *for the reason shown here*, not
-# because of a bug.
+# The publication rows are small, but the same cleaning habits apply. We keep
+# the documented columns (a missing one raises a `KeyError`, because that would
+# be a contract change), parse `published_at` as a UTC timestamp and the
+# formation dates as plain calendar dates (they are exchange sessions, with no
+# time of day), turn the `kinds` list into text, and de-duplicate on the
+# natural key, `publication_id`.
 
 # %%
-gate_table = pd.DataFrame({
-    "factor": factors["name"],
-    "state": factors["publish_state"],
-    "verdict": factors["verdict"],
-    "risk-ready": factors["is_risk_ready"].map({True: "yes", False: "no"}),
-    "agreement score": factors["agreement_score"],
-    "return days": factors["n_returns"],
-    "every gate reason, in plain English": factors["gate_reason"].map(explain_gates),
-})
-display(gate_table.style.format({"agreement score": "{:.2f}"}, na_rep="–").hide(axis="index")
-        .set_properties(subset=["every gate reason, in plain English"],
-                        **{"white-space": "normal", "min-width": "340px"}))
-
-N_PUBLISHED = int((factors["n_returns"] > 0).sum())
-states = ", ".join(f"{n} {state}" for state, n in factors["publish_state"].value_counts().items())
-print(f"States: {states}. {N_PUBLISHED} of {len(factors)} factors carry a return series.")
-counts = {"n_active": (fp["n_active"], int((factors["publish_state"] == "published").sum()), "published rows"),
-          "n_risk_ready": (fp["n_risk_ready"], int(factors["is_risk_ready"].eq(True).sum()), "rows with is_risk_ready")}
-for field, (sent, counted, rows_word) in counts.items():
-    print(f"{field} = {sent}; {rows_word} above: {counted} -> "
-          f"{'consistent' if sent == counted else 'DIFFERENT: read the counts with care'}.")
-
-# Cross-check: raw_survivors_summary lists each factor's state a second time, keyed by its short code.
-survivors = pick(pd.DataFrame(fp["raw_survivors_summary"]),
-                 ["factor_name", "publish_state", "evidence_status", "effective_sign"])
-both = factors[["code", "publish_state", "evidence_status", "effective_sign"]].merge(
-    survivors, left_on="code", right_on="factor_name", how="outer", suffixes=("", " (summary)"), indicator=True)
-mismatch = both[(both["_merge"] != "both")
-                | (both["publish_state"] != both["publish_state (summary)"])
-                | (both["evidence_status"] != both["evidence_status (summary)"])
-                | (both["effective_sign"] != pd.to_numeric(both["effective_sign (summary)"], errors="coerce"))]
-if mismatch.empty:
-    print(f"raw_survivors_summary agrees with factors[] on state, evidence and sign for all {len(both)} factors.")
-else:
-    print(f"raw_survivors_summary disagrees with factors[] on {len(mismatch)} factors; factors[] is used below:")
-    display(mismatch.drop(columns="_merge"))
-if N_PUBLISHED == 0:
-    note(f"All {len(factors)} factors are withheld in {MARKET_NAMES[MARKET]} today, so sections 3.3–3.11 "
-         "print notes instead of charts. Section 4 shows whether another market publishes; set `MARKET` "
-         "to that market and run the notebook again.")
+PUB_COLS = ["publication_id", "phase", "kinds", "published_at", "first_formation", "last_formation",
+            "data_through_session"]
+pubs = pick(pubs_raw, PUB_COLS)
+pubs["published_at"] = pd.to_datetime(pubs["published_at"], utc=True, errors="coerce")
+for col in ["first_formation", "last_formation", "data_through_session"]:
+    pubs[col] = pd.to_datetime(pubs[col], format="%Y-%m-%d", errors="coerce")
+pubs["kinds"] = pubs["kinds"].map(lambda k: ", ".join(k) if isinstance(k, list) else k)
+before = len(pubs)
+pubs = pubs.drop_duplicates("publication_id", keep="last").sort_values("published_at").reset_index(drop=True)
+print(f"{plural(len(pubs), 'publication')} after de-duplication ({before - len(pubs)} duplicate rows removed); "
+      f"unparseable dates: {int(pubs[['published_at', 'first_formation', 'last_formation']].isna().sum().sum())}.")
+if not pubs.empty:
+    display(pubs.style.format({"published_at": "{:%Y-%m-%d %H:%M} UTC", "first_formation": "{:%Y-%m-%d}",
+                               "last_formation": "{:%Y-%m-%d}", "data_through_session": "{:%Y-%m-%d}"},
+                              na_rep="–").hide(axis="index"))
 
 # %% [markdown]
-# **Chart: the gate checklist.** One row per factor and one column per test.
-# A red ✕ is a failed test and a grey ○ a pending one. A green dot (✓ in the
-# table) appears only for a **published** factor: SurgeFlow reports no
-# blocking code for it and released its data. That is SurgeFlow's verdict on
-# its own evidence, not a check this notebook makes. Section 3.10 re-runs the
-# premium test on the one-year series the API sends, and the two can
-# disagree. For a withheld factor, a test with no code gets a small grey dot
-# ("· not reported" in the table): the API listed no problem with it, but it
-# does not say that the test ran. Each mark has its own symbol, so the chart
-# still reads in black and white.
+# ### 3.2 The fact sheet, the labels and the freshness block
+#
+# Here a table beats a chart: the metadata is a handful of facts, not a series.
+# The cell builds a short fact sheet (model states, universe, hold-out, cost
+# basis), then quotes the API's own labels verbatim, then shows the freshness
+# block.
+#
+# Publications are weekly, and the API reports how many weeks the latest
+# formation is behind the current week, together with a state (it counts one
+# week behind as `current`).
 
 # %%
-cells = []
-for _, f in factors.iterrows():
-    found = {}                                          # test -> (outcome, text); a failure outranks a pending check
-    for code in gate_codes(f["gate_reason"]):
-        tests_hit, outcome, text = gate_outcome(code)
-        for test in tests_hit:
-            if found.get(test, ("", ""))[0] != "failed":
-                found[test] = (outcome, text)
-    for test, (outcome, text) in found.items():
-        cells.append({"factor_id": f["factor_id"], "factor": f["name"], "test": test, "outcome": outcome,
-                      "detail": text})
-    published = f["publish_state"] == "published"
-    for test in GATE_TESTS:                             # no code for this test: "passed" only if the factor is published
-        if test not in found:
-            cells.append({"factor_id": f["factor_id"], "factor": f["name"], "test": test,
-                          "outcome": "passed" if published else "unreported",
-                          "detail": "no blocking code: SurgeFlow published the factor" if published else
-                                    "no code reported; the API does not say whether this test ran"})
-checklist = pd.DataFrame(cells)
-tests = GATE_TESTS + sorted(set(checklist["test"]) - set(GATE_TESTS))      # 'Other' only for codes not seen before
-rows = [f"{n}  ({v})" for n, v in zip(factors["name"], factors["verdict"])]
-row_of = dict(zip(factors["name"], rows))
-
-
-def wrap(text: str, width: int = 12) -> str:
-    """Break a column label onto short lines for a Plotly axis."""
-    return textwrap.fill(text, width).replace("\n", "<br>")
-
-
-fig = go.Figure()
-for outcome, (label, symbol, color, size) in GATE_STYLE.items():
-    part = checklist[checklist["outcome"] == outcome]
-    if part.empty:
-        continue
-    fig.add_trace(go.Scatter(
-        x=part["test"].map(wrap), y=part["factor"].map(row_of), mode="markers", name=label,
-        marker=dict(symbol=symbol, color=color, size=size,
-                    line=dict(width=2.5 if outcome == "pending" else 0, color=color)),
-        customdata=part[["detail", "test"]].to_numpy(),            # the unwrapped test name, for the hover
-        hovertemplate="<b>%{y}</b><br>%{customdata[1]}: %{customdata[0]}<extra></extra>"))
-
-groups = {v: [CODE[f] for f in factors.loc[factors["verdict"] == v, "factor_id"]] for v in VERDICTS}
-n_f, n_pub = len(factors), len(groups["published"])
-withheld = [c for v in VERDICTS[1:] for c in groups[v]]
-n_fail = len(groups["failed a test"])
-if n_pub == n_f:
-    title = f"{MARKET_NAMES[MARKET]}: all {n_f} factors cleared SurgeFlow's gates and are published"
-elif n_pub == 0:
-    title = (f"{MARKET_NAMES[MARKET]}: all {n_f} factors are withheld; "
-             + (f"{n_fail} failed a test, the other {n_f - n_fail} are pending" if 0 < n_fail < n_f else
-                "every one failed at least one test" if n_fail == n_f else "none failed a test, all are pending"))
+if not META_AVAILABLE:
+    note(f"{MARKET_NAMES[MARKET]}: `{mdata.get('reason_code')}`. {mdata.get('message')}")
 else:
-    title = (f"{MARKET_NAMES[MARKET]}: {n_pub} of {n_f} factors are published; "
-             f"{and_list(withheld)} {'is' if len(withheld) == 1 else 'are'} withheld")
-subtitle = " · ".join(f"{v.capitalize()}: {and_list(groups[v])}" for v in VERDICTS if groups[v])
-heading, top = chart_title(title, subtitle, extra_top=40)          # room for the test names above the grid
-fig.update_layout(
-    title=heading, height=top + 80 + 46 * n_f, margin=dict(t=top, b=80, l=270, r=30), legend=BOTTOM_LEGEND,
-    hovermode="closest",
-    xaxis=dict(categoryorder="array", categoryarray=[wrap(t) for t in tests], side="top", showgrid=False,
-               ticks="", tickangle=0, tickfont=dict(size=12, color=INK_2), range=[-0.6, len(tests) - 0.4]),
-    yaxis=dict(categoryorder="array", categoryarray=rows, autorange="reversed", gridcolor=GRID, ticks="",
-               range=[n_f - 0.5, -0.5]))
-fig.show()
+    universe = mdata["universe"]
+    hold = dig(mdata, "holdout", "portfolios", default={}) or {}
+    facts = pd.DataFrame([
+        ("Model states (portfolios / pick / product)",
+         " / ".join(str(dig(mdata, "models", m, "state")) for m in ("portfolios", "pick", "product"))),
+        ("Publications", mdata["n_publications"]),
+        ("Universe: stocks in / evaluated",
+         f"{universe['n_in_universe']:,} of {universe['n_evaluated']:,} "
+         f"({universe['n_in_universe'] / universe['n_evaluated']:.0%})"),
+        ("Universe rule and state", f"{universe['rule']} · {universe['measured_state']}"),
+        ("Hold-out start", hold.get("start") or "none set (see the rule below)"),
+        ("Cost basis", ", ".join(mdata["cost_basis"])),
+    ], columns=["item", "value"])
+    display(facts.style.hide(axis="index"))
 
-twin = (checklist.assign(mark=checklist["outcome"].map(GATE_MARK))
-        .pivot(index="factor", columns="test", values="mark").reindex(index=factors["name"], columns=tests))
-display(twin.rename_axis(index="factor", columns=None))
+    quote("meta: data.cost_label", mdata["cost_label"])
+    quote("meta: data.return_basis.returns_label", dig(mdata, "return_basis", "returns_label"))
+    quote("meta: data.holdout_label", mdata.get("holdout_label"))
+    quote("meta: data.holdout.portfolios.rule", hold.get("rule"))
+    quote("meta: data.labels.universe", dig(mdata, "labels", "universe"))
+    quote("meta: data.survivorship.estimate_label", dig(mdata, "survivorship", "estimate_label"))
+
+    fresh = {k: v for k, v in (mdata.get("freshness") or {}).items() if v}   # one block per published model
+    if fresh:
+        display(styled_freshness(pd.concat([freshness_frame(block, f"meta · freshness.{model}")
+                                            for model, block in fresh.items()], ignore_index=True)))
+    else:
+        note("The metadata carries no freshness block for this market.")
 
 # %% [markdown]
-# **How to read this.** The first table has one row per factor. `verdict`
-# sums up its gates: *published*, *failed a test* (at least one test ran and
-# failed), *under a year of history* (it cannot be tested yet), or *checks not
-# yet run*. `return days` is how many daily returns the payload carries (0
-# when withheld), and the last column spells out every code in `gate_reason`.
-# The printed lines check the counts `n_active` and `n_risk_ready`, and the
-# second listing in `raw_survivors_summary`, against those rows.
-#
-# In the checklist chart, read across a row to see what stands between that
-# factor and publication. A row of grey circles and no red crosses is a factor
-# that is waiting, not one that failed. A column full of grey circles is a test
-# that SurgeFlow has not run for any factor yet. The table under the chart is
-# the same grid in text.
+# **How to read this.** The fact sheet says which models are published (only
+# the `portfolios` model is used in this notebook), how many stocks passed the
+# universe rule out of those evaluated, and whether a hold-out start is set.
+# The quoted labels are SurgeFlow's own wording: the cost label tells you what
+# the returns leave out, the returns label says what one weekly number
+# measures, and the survivorship label gives a first-order estimate of how
+# much the history may be flattered by companies that survived. The freshness
+# table repeats the API's block unchanged: `state` and `weeks_behind` are the
+# fields to read.
 #
 # **Caveats.**
 #
-# - A blocked factor is not a "bad" factor. Often it simply has less than one
-#   trading year of history so far, or a check has not run yet.
-# - "No code reported" is not the same as "passed". For a blocked factor the
-#   API lists the reasons it is blocked; it does not say which other tests were
-#   run. That is why only published factors get a green ✓.
-# - A published factor cleared SurgeFlow's gates on in-sample evidence. That
-#   makes it worth studying; it does not make it profitable in future. The
-#   API sends no per-test results for a published factor, only the absence of
-#   a blocking code, so the ✓ is SurgeFlow's word, not a test you can see.
-# - `agreement_score` (0–1) is part of the gate evidence, but its exact formula
-#   is not documented. Use it only to compare factors within one release.
+# - The metadata describes the latest publication. How current it is, is what
+#   the freshness block reports.
+# - The return basis can differ between markets (for example a price return in
+#   one market and a total return in another). Compare markets only after you
+#   have read each one's label.
+# - "Gross of costs" means no trading cost, spread or tax is deducted. Any real
+#   portfolio would earn less than these measurements.
 
 # %% [markdown]
-# ### 3.3 Cleaning the return series: from nested lists to one aligned table
+# ## 4. The books: `/api/v1/markets/{market}/factor-portfolios`
 #
-# Each published factor carries `return_series`: a list of `{date, ret}`
-# points, one per trading day. `ret` should be a **decimal** (0.01 = +1%), like
-# every return fraction in this API. Live responses have carried empty lists
-# so far (every factor was blocked), so the shape of these points and their
-# unit are **not yet confirmed live**. The same is true of `top_holdings`
-# (section 3.11) and `aggregate.factor_correlation` (section 3.8). The units
-# check below is there to catch a surprise. We turn the lists into one **long**
-# table (factor, date, ret) and then into one **wide** table: one row per
-# date, one column per factor.
+# **What it is for.** This is the main response: for each of the seven books,
+# its latest exposures, the API's checks, its largest holdings, and its weekly
+# return series. We ask for `WEEKS` weeks of returns, `HOLDINGS` holdings per
+# book and, with `MEASUREMENT`, the Fama-French 2×3 measurement twins. Ask only
+# for what you need: the full history with every holding is a large download.
 #
-# Cleaning, in the open:
+# **Errors versus empty.** A market without a publication answers HTTP 200 with
+# `data.status` = `"empty"` (section 4.3). A bad parameter answers HTTP 400
+# (`INVALID_FACTOR`, `INVALID_DATE` or `INVALID_MARKET`), and HTTP 503 means
+# the data could not be read. `sf_get` retries a 503 a few times, then raises
+# `SurgeFlowError`; `sf_try` prints a note and returns `None` instead (section
+# 5 shows both kinds of answer).
 #
-# 1. `pd.to_numeric(errors="coerce")` on `ret`: unreadable values become NaN.
-# 2. UTC parsing of `date`. These are trading-session dates, not instants, so
-#    we drop the time-zone label after parsing (Plotly draws plain dates more
-#    reliably).
-# 3. Drop rows whose date or return is missing, and count them.
-# 4. **Units check, on the raw values.** For a factor, the typical (median)
-#    absolute daily move should be well under 1% (0.01). If it is above 2%,
-#    the API has almost certainly switched to percent (0.3 meaning 0.3%), and
-#    the cell stops with a clear error. It must run *before* step 5: otherwise
-#    the ±50% filter would quietly cut every percent-sized day and leave a
-#    truncated series.
-# 5. Flag impossible values. A daily factor return beyond ±`MAX_ABS_DAILY`
-#    (50%) is almost certainly a data error, such as 5 (meaning 5%) sent where
-#    0.05 was expected. We drop and count them.
-# 6. De-duplicate on the natural key **(factor_id, date)**, keeping the last copy.
-# 7. Pivot to the wide table. The pivot is an **outer join**: its rows are all
-#    dates on which *any* factor has a return. A factor with no return on such
-#    a date gets NaN. That NaN is a **gap**.
+# ### 4.1 The call, the publication and the freshness block
 
 # %%
-points = pd.DataFrame(
-    [{"factor_id": fid, "date": p["date"], "ret": p["ret"]}       # p["ret"] raises if the key disappears
-     for fid, series in zip(factors["factor_id"], factors["return_series"]) for p in (series or [])],
-    columns=["factor_id", "date", "ret"])
-n_raw = len(points)
-points["ret"] = pd.to_numeric(points["ret"], errors="coerce")
-points["date"] = pd.to_datetime(points["date"], utc=True, errors="coerce").dt.tz_localize(None)
-missing = points["ret"].isna() | points["date"].isna()
-points = points[~missing]
-
-
-def units_check(ret: pd.Series, where: str) -> float:
-    """Median absolute daily return of the raw values. Above MAX_TYPICAL_DAILY it is percent, not decimals: stop."""
-    typical = float(ret.abs().median()) if len(ret) else np.nan
-    if typical > MAX_TYPICAL_DAILY:
-        raise ValueError(f"{where}: the typical (median) absolute daily return is {typical:.4g}. That looks like "
-                         "percent (0.3 = 0.3%), not decimals (0.003 = 0.3%): the API's unit has changed. Check the "
-                         "API docs before going on; the ±50% filter would otherwise cut the series.")
-    return typical
-
-
-typical = units_check(points["ret"], f"{MARKET_NAMES[MARKET]} return_series")      # before the ±50% filter
-wild = points["ret"].abs() > MAX_ABS_DAILY
-points = points[~wild]
-n_dupes = int(points.duplicated(subset=["factor_id", "date"]).sum())
-points = points.drop_duplicates(subset=["factor_id", "date"], keep="last").sort_values(["factor_id", "date"])
-
-IDS = [fid for fid in factors["factor_id"] if fid in set(points["factor_id"])]     # published, in contract order
-returns = points.pivot(index="date", columns="factor_id", values="ret").reindex(columns=IDS)
-returns.columns.name = None
-HAVE_RETURNS = len(IDS) > 0
-
-print(f"{n_raw:,} return points from {plural(N_PUBLISHED, 'factor')}.")
-print(f"Dropped: {int(missing.sum())} with a missing or unreadable date/return, {int(wild.sum())} beyond "
-      f"±{MAX_ABS_DAILY:.0%} in one day, {n_dupes} duplicate (factor, date) rows.")
-print(f"Wide table: {returns.shape[0]} dates × {returns.shape[1]} factors.")
-if HAVE_RETURNS:
-    print(f"Units check (raw values, before the ±{MAX_ABS_DAILY:.0%} filter): the typical (median) absolute daily "
-          f"return is {typical:.2%}, below the {MAX_TYPICAL_DAILY:.0%} that would mean percent, so `ret` is a decimal.")
-returns.head()
+fp = sf_get(f"/api/v1/markets/{MARKET}/factor-portfolios", weeks=WEEKS, holdings=HOLDINGS,
+            measurement=str(MEASUREMENT).lower())
+show_freshness(fp, "Factor-portfolios response:")
+data = fp["data"]
+AVAILABLE = data["status"] == "available"
+print(f"schema_version: {fp['schema_version']}")
+show_state(fp, MARKET_NAMES[MARKET])
+if AVAILABLE:
+    publication = data["publication"]
+    display(pd.DataFrame([{k: publication[k] for k in ("publication_id", "phase", "published_at",
+                                                          "first_formation", "last_formation",
+                                                          "data_through_session")}]).style.hide(axis="index"))
+    display(styled_freshness(freshness_frame(data["freshness"], "data.freshness")))
+    window = {k: data[k] for k in ("formation_date", "week_start", "week_state", "return_state", "open_week",
+                                   "n_weeks", "in_holdout", "holdout_start")}
+    display(pd.DataFrame([window]).style.hide(axis="index"))
 
 # %% [markdown]
-# **Gaps and the NaN policy.** Two different things can make a date look
-# "missing":
+# **How to read this.** The first table names the publication these books come
+# from. The second is the response's own freshness block, unchanged. The third
+# describes the latest formation week: `formation_date` and `week_start` name
+# it, `week_state` and `return_state` say whether its return is realised, and
+# `open_week` is filled only when the coming week's candidates are already
+# formed. `n_weeks` counts every week in the publication's history, while the
+# return series below holds only the `WEEKS` you asked for.
+
+# %% [markdown]
+# ### 4.2 Before any number: the API's labels and caveats
 #
-# - **A market holiday.** No factor has a return because the market was
-#   closed. That is not a gap. The date has no row at all, and we must not
-#   invent one: a zero-return row on a holiday would make the factor look
-#   calmer than it is.
-# - **A real gap.** Other factors have a return on that date and this one does
-#   not, or a factor starts later or stops earlier than the others.
-#
-# Our policy, counted below:
-#
-# - **Never fill a missing return with 0, and never forward-fill a return.** A 0
-#   claims the factor did not move. Forward-filling repeats yesterday's move
-#   (section 4.1 shows how much damage that does). Forward-filling an index
-#   *level* over a holiday is fine, because the value really did not change.
-# - **Each factor's own statistics use all of its own days**, as the API does.
-# - **Comparisons between factors** (correlations, the equal-weight mix, the
-#   regressions) use only the dates on which **every** published factor has a
-#   return: the "complete-case" window. The API reports the same idea as
-#   `aggregate.n_aligned_dates`.
+# Every served history comes with its own fine print. We print it verbatim,
+# before looking at a single return: what a book is (`labels.product`), what
+# one weekly return measures (`return_basis.returns_label`), what is left out
+# (the metadata's `cost_label`), what the numbers are not (`labels.candidates`),
+# when the books are formed, how degraded weeks and calendar gaps are handled,
+# and the market's served caveats with the survivorship estimate.
 
 # %%
-if not HAVE_RETURNS:
-    aligned = returns.copy()
-    note("No published factor has a return series today, so there are no gaps to count.")
+if not AVAILABLE:
+    note(f"No labels or caveats to show: {MARKET_NAMES[MARKET]} has no publication "
+         f"(`{data.get('reason_code')}`).")
 else:
-    gap_rows = []
-    for fid in IDS:
-        s = returns[fid]
-        first, last = s.first_valid_index(), s.last_valid_index()
-        inside = s.loc[first:last]
-        gap_rows.append({"factor": NAME[fid], "first date": f"{first:%Y-%m-%d}", "last date": f"{last:%Y-%m-%d}",
-                         "days with a return": int(s.notna().sum()),
-                         "gaps inside its span": int(inside.isna().sum()),
-                         "dates before its start or after its end": int(s.isna().sum() - inside.isna().sum())})
-    display(pd.DataFrame(gap_rows).style.hide(axis="index"))
+    labels = data["labels"]
+    RETURNS_LABEL = data["return_basis"]["returns_label"]
+    COST_LABEL = mdata["cost_label"] if META_AVAILABLE else labels["cost"]
+    quote("data.labels.product", labels["product"])
+    quote("data.return_basis.returns_label", RETURNS_LABEL)
+    quote("meta: data.cost_label", COST_LABEL)
+    quote("data.labels.candidates", labels["candidates"])
+    quote("data.labels.timing", labels["timing"])
+    quote("data.labels.holdout", labels["holdout"])
+    quote("data.degraded_rule.label", data["degraded_rule"]["label"])
+    quote("data.calendar_grid.label", data["calendar_grid"]["label"])
 
-    aligned = returns.dropna(how="any")              # the complete-case window
-    print(f"Union calendar: {len(returns)} dates. Complete-case window: {len(aligned)} dates "
-          f"({len(returns) - len(aligned)} dropped because at least one factor had no return).")
-    print(f"The API's aggregate.n_aligned_dates is {agg['n_aligned_dates']}: "
-          f"{'the same' if agg['n_aligned_dates'] == len(aligned) else 'different, so read comparisons with care'}.")
-    breaks = returns.index.to_series().diff().dt.days.iloc[1:]
-    if not breaks.empty:
-        after = breaks.idxmax()
-        before = returns.index[returns.index.get_loc(after) - 1]
-        print(f"Longest break between sessions: {int(breaks.max())} calendar days ({before:%Y-%m-%d} → "
-              f"{after:%Y-%m-%d}). Weekends give 3; more means a holiday, which is not a gap.")
+    caveats = data["served_caveats"]
+    items = caveats.get("items") or []
+    lines = [f"- **{item['key']}** (`{item['state']}`): {item['text']}" for item in items]
+    display(Markdown(f"**`data.served_caveats`** ({plural(len(items), 'item')}): {caveats.get('label') or ''}"
+                     "\n\n" + ("\n".join(lines) if lines else "> No caveat items in this response.")))
+    surv = data["survivorship"]
+    display(Markdown(f"**`data.survivorship`**: state `{surv['state']}`, bound `{surv.get('bound')}`, "
+                     f"`points_per_year` = {surv.get('points_per_year')}\n\n> {surv['estimate_label']}"))
 
 # %% [markdown]
-# **Winsorising: shown, not applied.** For heavy-tailed data, a common
-# cleaning step is quantile clipping (winsorising). It pulls every value below
-# the 1st percentile up to that percentile, and every value above the 99th
-# down to it. Here the extreme days are not noise: they *are* the risk we want
-# to measure. So we keep the raw returns everywhere, and use winsorising only as
-# a **sensitivity check**: how much do the most extreme 2% of days drive each
-# number?
+# **How to read this.** `labels.product` is the definition this whole notebook
+# builds on: exposure 1 to the book's own style, 0 to the other styles, and
+# market exposure 1 by construction. The returns label and the cost label say
+# exactly what a weekly number includes, so you never have to guess whether
+# dividends or costs are in it. The served caveats are specific to this
+# market's history (data vintages, coverage, which books could not always be
+# formed); read them before you trust any one week. The survivorship estimate
+# is a lower bound on how much an equal-weight universe is flattered per year.
+#
+# **Caveats.**
+#
+# - These labels are part of the data. If a label changes, the meaning of the
+#   numbers changed with it: re-read them whenever the `publication_id` does.
+# - The survivorship estimate is for an equal-weight universe, not for any one
+#   book: a small-company book can be affected more than the average.
+
+# %% [markdown]
+# ### 4.3 The empty state: Hong Kong
+#
+# Hong Kong had no publication when this notebook was written, which makes it
+# the clean example of an empty state. The request is the same; the answer is
+# HTTP 200 with `"ok": true`, `data.status` = `"empty"`, a machine-readable
+# `data.reason_code` and a sentence for people in `data.message`. Your code
+# should show the message and carry on, not raise. (If Hong Kong has published
+# by the time you run this, the cell says so.)
 
 # %%
-if not HAVE_RETURNS:
-    note("No returns to winsorise today.")
+EMPTY_DEMO = "hk"
+hk = fp if MARKET == EMPTY_DEMO else sf_get(f"/api/v1/markets/{EMPTY_DEMO}/factor-portfolios", weeks=1,
+                                            holdings=0, measurement="false")
+show_freshness(hk, "Hong Kong response:")
+hk_status, hk_code, hk_message = state_of(hk)
+print(f"ok: {hk['ok']} | data.status: {hk_status!r} | data.reason_code: {hk_code!r}")
+if hk_status == "empty":
+    display(Markdown(f"> **{MARKET_NAMES[EMPTY_DEMO]}:** {hk_message}"))
 else:
-    low, high = returns.quantile(0.01), returns.quantile(0.99)            # per factor
-    clipped = returns.clip(lower=low, upper=high, axis=1)
-    k = np.sqrt(TRADING_DAYS)
-    sensitivity = pd.DataFrame({
-        "factor": [NAME[f] for f in IDS],
-        "days clipped": [int(((returns[f] < low[f]) | (returns[f] > high[f])).sum()) for f in IDS],
-        "volatility, raw": (returns.std() * k).to_numpy(),
-        "volatility, winsorised": (clipped.std() * k).to_numpy(),
-        "mean a year, raw": (returns.mean() * TRADING_DAYS).to_numpy(),
-        "mean a year, winsorised": (clipped.mean() * TRADING_DAYS).to_numpy(),
-    })
-    cut = 1 - sensitivity["volatility, winsorised"] / sensitivity["volatility, raw"]
-    display(sensitivity.style.format({c: "{:.1%}" for c in sensitivity.columns[2:]}).hide(axis="index"))
-    n_lo, n_hi = int(sensitivity["days clipped"].min()), int(sensitivity["days clipped"].max())
-    days = plural(n_hi, "day") if n_lo == n_hi else f"{n_lo} to {n_hi} days"
-    by = f"{cut.min():.0%}" if f"{cut.min():.0%}" == f"{cut.max():.0%}" else f"{cut.min():.0%} to {cut.max():.0%}"
-    print(f"Clipping {days} per factor lowers volatility by {by}"
-          + (": a handful of extreme days carries a visible share of the risk." if cut.max() > 0.05 else
-             ": the extreme days do not drive the volatility much."))
+    print(f"{MARKET_NAMES[EMPTY_DEMO]} now reports data.status = {hk_status!r}; section 6 includes its books.")
+PAYLOADS = {MARKET: fp}                        # reused by the four-market comparison in section 6
+if hk_status != "available":                   # (an available Hong Kong is fetched again there, with its weeks)
+    PAYLOADS[EMPTY_DEMO] = hk
 
 # %% [markdown]
-# ### 3.4 Check: can we reproduce the API's statistics?
+# Two `reason_code` values are worth knowing: `no_publication_for_market` (the
+# market has no publication at all, as here) and `formation_date_not_published`
+# (you asked for a `formation_date` that has no published books; section 5
+# shows it). In both cases print `data.message` and move on.
+
+# %% [markdown]
+# ### 4.4 The books: raw preview and cleaning
 #
-# The `stats` block summarises `return_series`, so we should be able to
-# recompute every number from the series. The field names say what each one
-# is; `risk_stats` uses the standard definitions:
-#
-# | Field | Definition |
-# |---|---|
-# | `mean_annual` | Average daily return × 252 (an arithmetic mean) |
-# | `vol_annual` | Standard deviation of daily returns (with n − 1) × √252 |
-# | `sharpe` | `mean_annual` ÷ `vol_annual`. No risk-free rate is subtracted: ERP is already an excess return, and a 50/50 long-short portfolio pays for its longs with its shorts |
-# | `max_dd` | The lowest value of (value ÷ running peak − 1); always ≤ 0 |
-# | `var_95_252d` | Minus the 5th percentile of daily returns: a positive loss |
-# | `es_95_252d` | Minus the average of the returns at or below that percentile |
-#
-# Small differences are expected if `ret` arrives rounded while `stats` is
-# computed before rounding. (No live response has carried a return series yet,
-# so how many decimals `ret` keeps is not confirmed.) A difference far beyond
-# the tolerance means a definition differs: for example a different quantile
-# rule for VaR, or a risk-free rate subtracted in `sharpe`.
+# `data.portfolios` holds one record per book. `to_frame` flattens the nested
+# objects into dotted columns: `exposures.size`, `checks.sum_ok`, and so on. A
+# book that could not be formed this week (for example because its exposure
+# targets could not all be met) is still listed, with `status` = `"infeasible"`,
+# the constraint that failed in `infeasible_constraint`, and no exposures or
+# holdings. We keep it in the table, so the gap is visible instead of silently
+# missing.
 
 # %%
-TOLERANCE = {"n_obs": 0, "mean_annual": 5e-4, "vol_annual": 5e-4, "sharpe": 5e-3, "max_dd": 5e-4,
-             "var_95_252d": 5e-4, "es_95_252d": 5e-4}
-if not HAVE_RETURNS:
-    note("No published factor today, so there are no statistics to check.")
+books_raw = to_frame(fp, "factor_portfolios")
+if books_raw.empty:
+    note(f"No books in this response: {MARKET_NAMES[MARKET]} is `{data['status']}`.")
 else:
-    ours = pd.DataFrame({fid: risk_stats(returns[fid], level=0.95) for fid in IDS}).T.astype(float)  # API: 95%
-    api = factors.set_index("factor_id").loc[IDS, STAT_COLS].set_axis(STAT_KEYS, axis=1)
-    check = pd.DataFrame({"statistic": STAT_KEYS,
-                          "largest |API − ours|": [float((api[k] - ours[k]).abs().max()) for k in STAT_KEYS],
-                          "tolerance": [TOLERANCE[k] for k in STAT_KEYS]})
-    check["ok"] = check["largest |API − ours|"] <= check["tolerance"]
-    display(check.style.format({"largest |API − ours|": "{:.6f}", "tolerance": "{:g}"}).hide(axis="index"))
-    print("Every statistic reproduces." if check["ok"].all() else
-          "Some statistics differ beyond rounding: the API may have changed a definition. Compare before you rely on them.")
+    display(books_raw.drop(columns=["holdings"], errors="ignore").head(7))
 
 # %% [markdown]
-# ### 3.5 Chart: growth of 100
+# **Cleaning.**
 #
-# To compare returns over time, we **compound** each factor's daily returns
+# 1. Keep the documented columns. The core ones are always there; the
+#    exposure, check and holding fields exist only on a formed book, so they
+#    may be absent when no book is formed, but a formed book without them raises.
+# 2. Coerce the numbers with `pd.to_numeric(errors="coerce")`. `week_return` is
+#    a **fraction** (0.01 = 1%).
+# 3. De-duplicate on the natural key, `factor`, and sort the books in the
+#    contract order (MARKET first).
+# 4. Count what is missing and say why: a book that was not formed has no
+#    exposures, and that is the API telling us something, not a hole to fill.
+
+# %%
+CORE = ["factor", "status", "state", "n_holdings", "universe_n", "week_return"]
+FORMED_FIELDS = (["own_exposure", "max_abs_other_style", "sum_weight", "turnover_one_way", "holdings_truncated",
+                  "infeasible_constraint"] + [f"exposures.{s}" for s in STYLES] + [f"checks.{c}" for c in CHECKS])
+books = pick(books_raw, CORE)
+if not books_raw.empty and books_raw["status"].eq("available").any():
+    missing = [c for c in FORMED_FIELDS if c not in books_raw.columns]
+    if missing:
+        raise KeyError(f"Formed books are missing documented fields: {missing}")
+books = books.join(books_raw.reindex(columns=FORMED_FIELDS))      # absent only when no book is formed
+NUMERIC = (["n_holdings", "universe_n", "week_return", "own_exposure", "max_abs_other_style", "sum_weight",
+            "turnover_one_way"] + [f"exposures.{s}" for s in STYLES])
+for col in NUMERIC:
+    books[col] = pd.to_numeric(books[col], errors="coerce")
+before = len(books)
+books = books.drop_duplicates("factor", keep="last")
+rank = {f: i for i, f in enumerate(FACTORS)}
+books = books.sort_values("factor", key=lambda s: s.map(rank).fillna(len(FACTORS))).reset_index(drop=True)
+books["held_share"] = books["n_holdings"] / books["universe_n"]
+
+FORMED = books.loc[books["status"].eq("available"), "factor"].tolist()
+NOT_FORMED = books.loc[~books["status"].eq("available"), ["factor", "status", "infeasible_constraint"]]
+print(f"{plural(len(books), 'book')} ({before - len(books)} duplicates removed); formed: {and_list(FORMED)}.")
+for _, row in NOT_FORMED.iterrows():
+    print(f"  {row['factor']}: status {row['status']!r}, failed constraint {row['infeasible_constraint']!r} "
+          "- no exposures, holdings or return this week.")
+if not books.empty:
+    display(books[["factor", "status", "n_holdings", "universe_n", "held_share", "week_return", "own_exposure",
+                   "max_abs_other_style", "sum_weight", "turnover_one_way"]].style.format(
+        {"n_holdings": "{:,.0f}", "universe_n": "{:,.0f}", "held_share": "{:.1%}", "week_return": "{:+.2%}",
+         "own_exposure": "{:.4f}", "max_abs_other_style": "{:.2e}", "sum_weight": "{:.4f}",
+         "turnover_one_way": "{:.1%}"}, na_rep="–").hide(axis="index"))
+
+# %% [markdown]
+# **How to read this.** Each row is one book in its latest formation week.
+# `n_holdings` is how many stocks it holds out of `universe_n`, and
+# `held_share` is that ratio. `week_return` is the book's return in that week
+# (a fraction, shown in %). `own_exposure` should be about 1 and
+# `max_abs_other_style` (the largest absolute exposure to any other style)
+# about 0. `sum_weight` should be 1: a long-only book is fully invested.
+# `turnover_one_way` is the share of the book that changed hands at the latest
+# rebalance (a dash where the API reports none).
+
+# %% [markdown]
+# ### 4.5 Chart: the exposure matrix, and the API's checks
+#
+# The matrix below has one row per book and one column per style, in the same
+# order, so each book's own style sits on the **diagonal** (outlined). Read it
+# against `labels.product`: the diagonal should be about 1, every other style
+# cell about 0, and the whole `market` column exactly 1, because a long-only
+# book whose weights sum to 1 always carries the market once. The colours use
+# the diverging scale: blue is positive, red is negative, grey is about 0.
+
+# %%
+if not FORMED:
+    note("No formed book in this response, so there is no exposure matrix to draw.")
+else:
+    shown = books["factor"].tolist()
+    exposure = books.set_index("factor")[[f"exposures.{s}" for s in STYLES]]
+    exposure.columns = STYLES
+    z = exposure.to_numpy(dtype=float)
+    text = [["" if np.isnan(v) else signed(v) for v in row] for row in z]
+    fig = go.Figure(go.Heatmap(
+        z=z, x=[s.capitalize() for s in STYLES], y=shown, text=text, texttemplate="%{text}",
+        textfont=dict(size=12), colorscale=DIVERGING, zmin=-1, zmax=1, zmid=0, xgap=2, ygap=2,
+        hoverongaps=False, hovertemplate="%{y} book · exposure to %{x}: %{z:+.4f}<extra></extra>",
+        colorbar=dict(title=dict(text="Exposure"), tickvals=[-1, -0.5, 0, 0.5, 1], len=0.85, thickness=14)))
+    for i, book in enumerate(shown):
+        if book in FORMED and book in FACTORS:             # outline each formed book's own style
+            j = FACTORS.index(book)
+            fig.add_shape(type="rect", x0=j - 0.5, x1=j + 0.5, y0=i - 0.5, y1=i + 0.5,
+                          line=dict(color=INK, width=2))
+        elif book not in FORMED:                           # a book that was not formed: say so across its row
+            why = books.loc[books["factor"].eq(book), "infeasible_constraint"].iloc[0]
+            fig.add_annotation(x=(len(STYLES) - 1) / 2, y=i, showarrow=False, font=dict(size=12, color=MUTED),
+                               text="not formed this week"
+                               + (f" (failed constraint: {why})" if isinstance(why, str) else ""))
+    formed = books[books["factor"].isin(FORMED)]
+    passed = formed["checks.own_ok"].eq(True) & formed["checks.others_ok"].eq(True)
+    market_one = bool((formed["exposures.market"] - 1).abs().max() < 0.01)
+    title = (f"{int(passed.sum())} of {len(formed)} formed books pass the API's own-style and other-style checks"
+             + ("; every one is 1 on the market" if market_one else ""))
+    missing_note = (f" · not formed this week: {and_list(NOT_FORMED['factor'])}" if len(NOT_FORMED) else "")
+    heading, top = chart_title(title, "Exposure of each book (row) to each style (column) · outlined: the book's "
+                                      "own style · market column = 1 by construction (weights sum to 1) · "
+                                      f"blue = positive, red = negative, grey ≈ 0{missing_note}")
+    fig.update_layout(title=heading, height=top + 70 + 52 * len(shown), margin=dict(t=top, l=120, r=40, b=70),
+                      xaxis=dict(side="bottom", showgrid=False, ticks="", title="Style"),
+                      yaxis=dict(autorange="reversed", showgrid=False, ticks="", title="Book"))
+    fig.show()
+
+    check_table = books[["factor", "status"] + [f"checks.{c}" for c in CHECKS]
+                        + ["exposures.market", "own_exposure", "max_abs_other_style", "sum_weight"]].copy()
+    for c in CHECKS:
+        check_table[f"checks.{c}"] = check_table[f"checks.{c}"].map({True: "✓", False: "✗"}).fillna("–")
+    display(check_table.style.format({"exposures.market": "{:.4f}", "own_exposure": "{:.4f}",
+                                      "max_abs_other_style": "{:.2e}", "sum_weight": "{:.4f}"},
+                                     na_rep="–").hide(axis="index"))
+    display(Markdown("Check names, as this notebook reads them: "
+                     + "; ".join(f"`{k}` = {v}" for k, v in CHECKS.items()) + "."))
+
+# %% [markdown]
+# **How to read this.** Follow the outlined diagonal: each book is close to 1
+# on its own style. Everything else in its row is grey, close to 0, except the
+# `Market` column, which is 1 for every book. That last column is the reason the
+# books' raw returns move together (section 4.8). The table below the chart is
+# the table twin: ✓ means the API's check passed, ✗ that it failed, and – that
+# the book was not formed.
+#
+# **Caveats.**
+#
+# - The exposures describe the latest formation week only. Each week's book is
+#   built again from that week's scores.
+# - "About 0" is not exactly 0, and the API states its own tolerances through
+#   the checks. A book can pass its checks and still carry small tilts.
+# - An exposure is a model quantity, built from style scores. It says what a
+#   book leans on, not what it will earn.
+
+# %% [markdown]
+# ### 4.6 Chart: what the books hold
+#
+# Each formed book lists its `HOLDINGS` largest positions: `ticker`, `sector`,
+# `weight` (a fraction of the book) and the holding's own style scores in
+# `exposures`. The list is a preview: `holdings_truncated` is true when the
+# book holds more stocks than were sent. The book's full weights sum to 1
+# (`sum_weight`); section 5 downloads one complete book, so you can check that
+# sum yourself.
+#
+# The bar chart shows the `FOCUS` book. Each bar is one holding's weight, and
+# its colour is that holding's score on the book's own style (blue = a positive
+# score, red = a negative one). The heatmap underneath shows, for every book,
+# how much of its weight its listed holdings put in each sector.
+
+# %%
+hold_rows = [{"factor": b["factor"], **h} for b in records(fp, "factor_portfolios") for h in (b.get("holdings") or [])]
+holds_raw = pd.json_normalize(hold_rows) if hold_rows else pd.DataFrame()
+if holds_raw.empty:
+    holds = pd.DataFrame(columns=["factor", "ticker", "sector", "weight"])
+    note("No holdings in this response (HOLDINGS = 0, or no book was formed).")
+else:
+    display(holds_raw.head())
+    holds = pick(holds_raw, ["factor", "ticker", "sector", "weight"]).join(holds_raw.filter(like="exposures."))
+    holds["weight"] = pd.to_numeric(holds["weight"], errors="coerce")
+    no_sector = int(holds["sector"].isna().sum())
+    holds["sector"] = holds["sector"].fillna("Unknown")
+    before = len(holds)
+    holds = holds.drop_duplicates(["factor", "ticker"], keep="last")
+    print(f"{len(holds):,} holdings rows ({before - len(holds)} duplicates removed); "
+          f"{no_sector} without a sector, labelled 'Unknown'; {int(holds['weight'].isna().sum())} without a weight.")
+    listed = holds.groupby("factor").agg(listed=("ticker", "size"), listed_weight=("weight", "sum"),
+                                         largest=("weight", "max"))
+    summary = books.set_index("factor")[["n_holdings", "sum_weight", "holdings_truncated"]].join(listed)
+    display(summary.reset_index().style.format({"n_holdings": "{:,.0f}", "sum_weight": "{:.4f}",
+                                                "listed": "{:,.0f}", "listed_weight": "{:.1%}",
+                                                "largest": "{:.2%}"}, na_rep="–").hide(axis="index"))
+
+# %%
+focus_holds = holds[holds["factor"].eq(FOCUS)].sort_values("weight", ascending=False)
+if focus_holds.empty:
+    note(f"The {FOCUS} book has no holdings in this response (not formed, or HOLDINGS = 0).")
+else:
+    focus_book = books.set_index("factor").loc[FOCUS]
+    own_key = f"exposures.{FOCUS.lower()}"
+    if own_key in focus_holds.columns:                     # the MARKET book has no style score of its own
+        score = pd.to_numeric(focus_holds[own_key], errors="coerce")
+        limit = float(np.nanmax(np.abs(score))) if score.notna().any() else 1.0
+        marker = dict(color=score, colorscale=DIVERGING, cmin=-limit, cmax=limit, cmid=0,
+                      colorbar=dict(title=dict(text=f"{FOCUS.capitalize()}<br>score"), thickness=14, len=0.8))
+        legend_text = f"colour = the holding's {FOCUS.lower()} score (blue = positive, red = negative)"
+    else:
+        score, marker = pd.Series(np.nan, index=focus_holds.index), dict(color=FACTOR_COLORS[FOCUS])
+        legend_text = "the MARKET book has no own-style score"
+    y_labels = [f"{t} · {s}" for t, s in zip(focus_holds["ticker"], focus_holds["sector"])]
+    fig = go.Figure(go.Bar(
+        x=focus_holds["weight"], y=y_labels, orientation="h", marker=marker,
+        customdata=np.column_stack([score.to_numpy(dtype=float)]),
+        hovertemplate="%{y}<br>weight %{x:.2%}<br>own-style score %{customdata[0]:+.2f}<extra></extra>"))
+    share = float(focus_holds["weight"].sum())
+    top_row = focus_holds.iloc[0]
+    heading, top = chart_title(
+        f"The {len(focus_holds)} largest of {focus_book['n_holdings']:,.0f} {FOCUS} holdings make up "
+        f"{share:.0%} of the book; the largest, {top_row['ticker']}, holds {top_row['weight']:.1%}",
+        f"Weight of each listed holding in the {FOCUS} book · {legend_text} · the whole book's weights sum to "
+        f"{focus_book['sum_weight']:.4f} (sum_weight)")
+    fig.update_layout(title=heading, height=top + 90 + 19 * len(focus_holds), margin=dict(t=top, l=230, b=60),
+                      xaxis=dict(title="Weight in the book (%)", tickformat=".1%", rangemode="tozero"),
+                      yaxis=dict(autorange="reversed", ticks="", title=None), bargap=0.3)
+    fig.show()
+    by_sector = (focus_holds.groupby("sector")["weight"].agg(["size", "sum"])
+                 .rename(columns={"size": "listed holdings", "sum": "weight"})
+                 .sort_values("weight", ascending=False))
+    by_sector["share of listed weight"] = by_sector["weight"] / share
+    display(by_sector.reset_index().style.format({"weight": "{:.2%}", "share of listed weight": "{:.0%}"})
+            .hide(axis="index"))
+
+# %%
+if holds.empty:
+    note("No holdings, so there is no sector map.")
+else:
+    sector_weight = holds.pivot_table(index="factor", columns="sector", values="weight", aggfunc="sum", fill_value=0)
+    sector_weight = sector_weight.reindex([f for f in books["factor"] if f in sector_weight.index])
+    sector_weight = sector_weight[sector_weight.sum().sort_values(ascending=False).index]
+    z = sector_weight.where(sector_weight > 0).to_numpy(dtype=float)     # no listed holding = blank, not 0
+    fig = go.Figure(go.Heatmap(
+        z=z, x=sector_weight.columns.tolist(), y=sector_weight.index.tolist(),
+        text=[["" if np.isnan(v) or v < 0.005 else f"{v:.0%}" for v in row] for row in z], texttemplate="%{text}",
+        textfont=dict(size=11), colorscale=[[i / 6, c] for i, c in enumerate(SEQUENTIAL)], zmin=0,
+        xgap=2, ygap=2, hoverongaps=False, hovertemplate="%{y} book · %{x}: %{z:.1%} of the book<extra></extra>",
+        colorbar=dict(title=dict(text="Share of<br>the book"), tickformat=".0%", thickness=14, len=0.85)))
+    heavy = sector_weight.stack().idxmax()
+    heading, top = chart_title(
+        f"The heaviest sector block among the listed holdings: {heavy[1]} in the {heavy[0]} book "
+        f"({sector_weight.loc[heavy]:.0%} of the book)",
+        f"Weight of each book's {HOLDINGS} largest listed holdings, summed by sector · darker = more weight · "
+        "blank = no listed holding in that sector · the rest of each book (not listed) is not shown")
+    fig.update_layout(title=heading, height=top + 150 + 40 * len(sector_weight), margin=dict(t=top, l=120, b=140),
+                      xaxis=dict(tickangle=-35, showgrid=False, ticks="", title=None),
+                      yaxis=dict(autorange="reversed", showgrid=False, ticks="", title="Book"))
+    fig.show()
+    display(sector_weight.style.format("{:.1%}"))
+
+# %% [markdown]
+# **How to read this.** In the bar chart, the longest bars are the book's
+# largest positions; the title says how much of the book they cover together.
+# A style book built to lean on one style should mostly show blue bars: its
+# largest holdings have positive scores on that style. The sector
+# heatmap shows where each book's listed weight sits, so you can spot a style
+# book that is, in practice, also a sector tilt. Both tables underneath are the
+# table twins.
+#
+# **Caveats.**
+#
+# - The holdings are a preview of the largest positions, not the whole book.
+#   Many books hold hundreds of stocks with small weights each.
+# - These are the holdings formed for the latest formation week, not trades
+#   that anybody executed (`labels.timing` says so).
+# - A sector label is a current classification; the served caveats say when
+#   it was not point-in-time.
+
+# %% [markdown]
+# ### 4.7 Weekly returns: from a dictionary to one tidy table
+#
+# `data.returns` is a **dictionary keyed by book**: `{"MARKET": [...],
+# "SIZE": [...], ...}`. Each list holds one row per week with `week_start`,
+# `formation_date`, `week_end_session`, `week_return` (a **fraction**), the
+# week's `status` and its plain-English `status_label`, `in_inference`, the
+# carried, invalid and exit weight shares, and the `return_basis_label`. We
+# stack the lists into one long table with a `factor` column, which is the
+# shape pandas likes best.
+
+# %%
+RETURNS = (data.get("returns") or {}) if AVAILABLE else {}
+ret_raw = pd.DataFrame([{"factor": book, **row} for book, rows in RETURNS.items() for row in rows])
+if ret_raw.empty:
+    note(f"No return series in this response ({MARKET_NAMES[MARKET]} is `{data['status']}`).")
+else:
+    print(f"{len(ret_raw):,} rows: {len(RETURNS)} books × up to {ret_raw.groupby('factor').size().max()} weeks.")
+    display(ret_raw.head())
+
+# %% [markdown]
+# **Cleaning.** Each step is printed, so nothing happens out of sight.
+#
+# 1. **Types.** `week_start`, `formation_date` and `week_end_session` are
+#    exchange-calendar dates, parsed with an explicit format; the return and
+#    the weight shares are coerced to numbers.
+# 2. **De-duplication** on the natural key, (`factor`, `week_start`).
+# 3. **Units.** The typical absolute weekly return should be well under 0.2 if
+#    the API sends fractions. A single week beyond ±`MAX_ABS_WEEKLY` is treated
+#    as a data error and counted.
+# 4. **Status policy.** Only `status` = `"ok"` weeks carry a usable return.
+#    A `degraded` week has a number, but the API labels it and excludes it from
+#    inference, so we do the same. `unavailable`, `no_holdings` and
+#    `return_not_yet_realised` weeks have no return at all. We count every
+#    status per book and compare the counts with the API's own `data.counts`.
+#    We never fill a missing return: a forward-filled return would invent a
+#    week that nobody measured.
+# 5. **Calendar gaps.** A calendar week in which the market was closed has no
+#    formation. The API lists those weeks in `calendar_grid.gap_weeks` and keeps
+#    them as gaps instead of squeezing the series together. We rebuild the full
+#    grid of Mondays, so a gap stays a gap, and compare what we find with the
+#    API's list.
+
+# %%
+RET_COLS = ["factor", "week_start", "formation_date", "week_end_session", "week_return", "status",
+            "return_status", "in_inference", "in_holdout", "carried_weight_share", "invalid_weight_share",
+            "exit_weight_share"]
+ret = pick(ret_raw, RET_COLS)
+for col in ["week_start", "formation_date", "week_end_session"]:
+    ret[col] = pd.to_datetime(ret[col], format="%Y-%m-%d", errors="coerce")
+for col in ["week_return", "carried_weight_share", "invalid_weight_share", "exit_weight_share"]:
+    ret[col] = pd.to_numeric(ret[col], errors="coerce")
+before = len(ret)
+ret = ret.drop_duplicates(["factor", "week_start"], keep="last").sort_values(["factor", "week_start"])
+ok = ret["status"].eq("ok")
+typical = ret.loc[ok, "week_return"].abs().median()
+extreme = ok & ret["week_return"].abs().gt(MAX_ABS_WEEKLY)
+ret["r"] = ret["week_return"].where(ok & ~extreme)          # the clean weekly return: ok weeks only
+mismatch = int((ret["in_inference"].eq(True) != ok).sum())
+
+print(f"1. Types parsed; unparseable week_start values: {int(ret['week_start'].isna().sum())}.")
+print(f"2. {before - len(ret)} duplicate (factor, week_start) rows removed.")
+if ret.empty:
+    print("3. No rows to check.")
+elif pd.isna(typical) or typical < 0.2:
+    print(f"3. Typical |weekly return| on ok weeks: {pct(typical, 2)} - consistent with fractions. "
+          f"Weeks beyond ±{MAX_ABS_WEEKLY:.0%} set aside: {int(extreme.sum())}.")
+else:
+    raise ValueError(f"Typical |weekly return| is {typical:.2f}: the API seems to send percent, not fractions.")
+print(f"4. Weeks with status 'ok': {int(ok.sum()):,} of {len(ret):,}. "
+      f"Rows where in_inference disagrees with status == 'ok': {mismatch}.")
+if AVAILABLE:
+    print(f"   Rows inside the hold-out (in_holdout true): {int(ret['in_holdout'].eq(True).sum())}; "
+          f"the response's holdout_start is {data.get('holdout_start')!r}.")
+
+status_counts = pd.crosstab(ret["factor"], ret["status"]) if not ret.empty else pd.DataFrame()
+api_counts = pd.DataFrame(data.get("counts") or {}).T if AVAILABLE else pd.DataFrame()
+if not api_counts.empty:
+    api_counts = api_counts.apply(pd.to_numeric, errors="coerce").fillna(0).astype(int)
+    mine = status_counts.reindex(index=api_counts.index, columns=api_counts.columns, fill_value=0)
+    same = bool((mine.to_numpy() == api_counts.to_numpy()).all())
+    print(f"   Our status counts {'match' if same else 'DIFFER FROM'} data.counts for every book and status.")
+
+if ret.empty:
+    wide, gaps_found, api_gaps = pd.DataFrame(), pd.DatetimeIndex([]), pd.DatetimeIndex([])
+else:
+    wide = ret.pivot(index="week_start", columns="factor", values="r")
+    order = [f for f in FACTORS if f in wide.columns] + sorted(set(wide.columns) - set(FACTORS))
+    wide = wide[order]
+    api_gaps = pd.DatetimeIndex(pd.to_datetime(data["calendar_grid"]["gap_weeks"], format="%Y-%m-%d"))
+    if (wide.index.dayofweek == 0).all():
+        grid = pd.date_range(wide.index.min(), wide.index.max(), freq="W-MON")
+        gaps_found = grid.difference(wide.index)
+        wide = wide.reindex(grid)
+        in_window = api_gaps[(api_gaps >= grid.min()) & (api_gaps <= grid.max())]
+        print(f"5. {plural(len(gaps_found), 'calendar week')} without a formation inside the window; "
+              f"calendar_grid.gap_weeks lists {len(in_window)} there; same weeks: "
+              f"{set(gaps_found) == set(in_window)}.")
+    else:
+        gaps_found = pd.DatetimeIndex([])
+        print("5. Some week_start values are not Mondays, so the calendar grid is not rebuilt.")
+    wide.index.name = "week_start"
+
+if status_counts.empty:
+    USE, coverage = [], pd.Series(dtype=float)
+else:
+    served = ret.groupby("factor").size()
+    coverage = ret.groupby("factor")["r"].count() / served
+    USE = [f for f in wide.columns if coverage[f] >= COVERAGE_MIN]
+    table = status_counts.reindex(wide.columns).fillna(0).astype(int)
+    table.insert(0, "weeks served", served.reindex(wide.columns))
+    table["clean weeks (ok)"] = ret.groupby("factor")["r"].count().reindex(wide.columns)
+    table["coverage"] = coverage.reindex(wide.columns)
+    table["in charts"] = ["yes" if f in USE else f"no (< {COVERAGE_MIN:.0%})" for f in wide.columns]
+    display(table.reset_index().style.format({"coverage": "{:.0%}"}).hide(axis="index"))
+    left_out = [f for f in wide.columns if f not in USE]
+    if left_out:
+        print(f"Left out of the growth, drawdown, correlation and PCA charts: {and_list(left_out)} "
+              f"(fewer than {COVERAGE_MIN:.0%} clean weeks). Their statistics still appear where they have "
+              f"at least {MIN_WEEKS} clean weeks.")
+HAVE_RETURNS = bool(USE)
+NOTHING = (f"{MARKET_NAMES[MARKET]} sent no return series: `data.status` is `{data['status']}`"
+           if ret.empty else "see the status table above")     # the reason the later notes give
+
+# %% [markdown]
+# **How to read this.** The table counts, for every book, how many weeks were
+# served, how many had each status, and how many clean weeks remain. Coverage is
+# the clean share. A book below `COVERAGE_MIN` is left out of the charts that
+# compound or align weeks, because a long run of missing weeks would make its
+# line meaningless; it is named, not hidden. The line above the table compares
+# our counts with the API's own `data.counts`, a quick check that nothing was
+# lost on the way.
+#
+# **Caveats.**
+#
+# - Dropping degraded weeks follows the API's own rule, but it is still a
+#   choice: the weeks that are hard to measure are often the turbulent ones.
+# - A clean week is clean by the API's degraded rule (quoted in section 4.2),
+#   not perfect: a small share of a book can still be carried at its last price.
+
+# %% [markdown]
+# ### 4.8 Chart: growth of 100, raw long-only books
+#
+# To compare the books over time, we **compound** each book's weekly returns
 # into the value of 100 invested at the start:
-# value = 100 × (1 + r₁) × (1 + r₂) × … Each line starts at exactly 100 on the
-# session before its first return, so a loss on the very first day shows up
-# (in the chart and in the drawdowns of section 3.6). All the factors then
-# share **one axis** in the same unit. A line at 110 means +10% since the
-# start. If the factors start or end on different dates, the title ranks them
-# over the window they all share, not on final values from different windows.
+# value = 100 × (1 + r₁) × (1 + r₂) × … All books share **one axis** in one
+# unit. A missing week leaves a break in the line and adds nothing to the
+# product. MARKET is the thick ink line; the six style books keep their fixed
+# colours.
 
 # %%
 if not HAVE_RETURNS:
-    level = returns.copy()
-    note("No published factor has a return series today, so there is nothing to chart.")
+    level = pd.DataFrame()
+    note(f"No book has enough clean weeks for this chart ({NOTHING}).")
 else:
-    level = 100 * (1 + returns).cumprod()       # cumprod skips NaN, so a gap leaves a break in the line
-    # A base row of 100 on the session before each factor's first return, so a first-day loss is visible.
-    # (risk_stats, like the API's max_dd, starts from the first day's close; it is left unchanged.)
-    level = level.reindex(level.index.insert(0, returns.index[0] - pd.offsets.BDay(1)))
-    for fid in IDS:
-        level.loc[level.index[level.index.get_loc(returns[fid].first_valid_index()) - 1], fid] = 100.0
-    final = level.ffill().iloc[-1]              # each factor's last level (carrying a level forward is fine)
-    firsts = pd.Series({f: returns[f].first_valid_index() for f in IDS})
-    lasts = pd.Series({f: returns[f].last_valid_index() for f in IDS})
-    shared_from, shared_to = firsts.max(), lasts.min()
-    same_window = firsts.nunique() == 1 and lasts.nunique() == 1
-    if same_window or shared_from >= shared_to:
-        rank = final                            # one window for all (or no overlap: then the title says so)
-    else:                                       # rebase to the window every factor covers before ranking
-        rank = 100 * (1 + returns.loc[shared_from:shared_to, IDS]).prod()
-    best, worst = rank.idxmax(), rank.idxmin()
-    lo_y, hi_y = float(np.nanmin(level.to_numpy())), float(np.nanmax(level.to_numpy()))
-    pad = (hi_y - lo_y) * 0.06 + 0.5
-    y_range = [lo_y - pad, hi_y + pad]
-    PLOT_PX, BOTTOM = 325, 100                   # plot-area height and bottom margin (pixels); the top fits the title
+    level = growth_index(wide[USE])
+    final = level.ffill().iloc[-1]
+    aligned = wide[USE].dropna()                            # complete-case window: every book has a clean week
+    others = [f for f in USE if f != "MARKET"]
+    if "MARKET" in USE and others and len(aligned) >= MIN_WEEKS:
+        avg = float(aligned[others].corrwith(aligned["MARKET"]).mean())
+        title = (f"All {len(USE)} books rise and fall together: their weekly returns correlate {avg:+.2f} with "
+                 "the MARKET book on average" if avg >= 0.7 else
+                 f"The books' weekly returns correlate {avg:+.2f} with the MARKET book on average")
+    else:
+        title = f"Value of 100 invested in each of {plural(len(USE), 'book')}"
+    y_range = padded_range(level.to_numpy())
+    PLOT_PX, BOTTOM = 340, 130
 
     fig = go.Figure()
     fig.add_hline(y=100, line=dict(color=AXIS, width=1), layer="below")
-    for fid in IDS:
-        fig.add_trace(go.Scatter(x=level.index, y=level[fid], mode="lines", name=NAME[fid],
-                                 line=dict(color=FACTOR_COLORS[fid], width=2),
-                                 hovertemplate=f"{CODE[fid]}: %{{y:.1f}}<extra></extra>"))
-    ends = pd.DataFrame({"x": [level[f].last_valid_index() for f in IDS], "y": [final[f] for f in IDS],
-                         "text": [f"{CODE[f]} {final[f]:.0f}" for f in IDS],
-                         "color": [FACTOR_COLORS[f] for f in IDS]})
+    for book in USE:
+        fig.add_trace(go.Scatter(x=level.index, y=level[book], mode="lines", name=book,
+                                 line=dict(color=FACTOR_COLORS.get(book, MUTED), width=3 if book == "MARKET" else 1.8),
+                                 hovertemplate=f"{book}: %{{y:.1f}}<extra></extra>"))
+    ends = pd.DataFrame({"x": [level[b].last_valid_index() for b in USE], "y": [final[b] for b in USE],
+                         "text": [f"{b.capitalize()} {final[b]:.0f}" for b in USE],
+                         "color": [FACTOR_COLORS.get(b, MUTED) for b in USE]})
     add_end_labels(fig, ends, y_range, PLOT_PX)
-
-    above = int((rank > 100).sum())
-    start, end = level.index.min(), returns.index.max()
-    if len(IDS) == 1:
-        title = f"{NAME[best]} finished at {final[best]:.0f}"
-    elif same_window:
-        title = (f"{above} of {len(IDS)} factors finished above 100: {CODE[best]} led at {final[best]:.0f}, "
-                 f"{CODE[worst]} trailed at {final[worst]:.0f}")
-    elif shared_from < shared_to:
-        title = (f"Over the window all {len(IDS)} share, {above} gained: {CODE[best]} led at {rank[best]:.0f}, "
-                 f"{CODE[worst]} trailed at {rank[worst]:.0f}")
-    else:
-        title = f"The {len(IDS)} factors cover different windows, so their final values are not ranked"
-    window = ("" if same_window else       # a second subtitle line when the windows differ
-              f"<br>The factors start or end on different dates (section 3.3): the title ranks 100 invested over "
-              f"{shared_from:%b %d, %Y} to {shared_to:%b %d, %Y}, the window all share; end labels show each line's "
-              "own final value" if shared_from < shared_to else "<br>The factors' windows do not overlap")
-    heading, top = chart_title(
-        title, f"Value of 100 invested in each published factor, {start:%b %d, %Y} to {end:%b %d, %Y} · "
-               f"daily compounding, before costs · ERP is measured in excess of cash{window}")
-    fig.update_layout(
-        title=heading, height=top + PLOT_PX + BOTTOM, margin=dict(t=top, b=BOTTOM, r=105),
-        hovermode="x unified",
-        legend=dict(BOTTOM_LEGEND, itemclick=False, itemdoubleclick=False),   # the end labels cannot hide with a line
-        xaxis=dict(hoverformat="%b %d, %Y", range=[start - pd.Timedelta(days=2), end + pd.Timedelta(days=2)]),
-        yaxis=dict(title="Value of 100 invested (index)", range=y_range))
+    heading, top = chart_title(title, f"Value of 100 invested at the start of each book, compounded weekly over "
+                                      f"{plural(len(wide), 'week')} · gross of costs · a break = a week without "
+                                      "a clean return · MARKET = thick ink line")
+    fig.update_layout(title=heading, height=top + PLOT_PX + BOTTOM, margin=dict(t=top, b=BOTTOM, r=130),
+                      hovermode="x unified", legend=dict(BOTTOM_LEGEND, itemclick=False, itemdoubleclick=False),
+                      xaxis=date_axis(level.index), yaxis=dict(title="Value of 100 invested (index)", range=y_range))
     fig.show()
-    monthly = level.groupby(level.index.to_period("M")).last().rename(columns=CODE)
-    monthly.index = monthly.index.strftime("%Y-%m")
-    display(monthly.rename_axis("month-end level").style.format("{:.1f}", na_rep="–"))
+    quarterly = level.groupby(level.index.to_period("Q")).last()
+    quarterly.index = quarterly.index.astype(str)
+    display(quarterly.rename_axis("quarter-end level").style.format("{:.1f}", na_rep="–"))
 
 # %% [markdown]
-# **How to read this.** Each line is one factor, in its fixed colour. The label
-# at its right end gives its final value; the grey horizontal line marks 100
-# (break-even). Hover to see every factor's value on one date. (The legend is
-# for reference only: clicking it would hide a line but leave its end label
-# behind, so it is switched off.) A steady climb
-# means steady gains; a jagged line means large daily swings (section 3.7
-# measures them). The table gives each factor's value at the end of each month.
+# **How to read this.** Each line is one book. The grey horizontal line marks
+# 100 (break-even) and the label at a line's right end is its final value.
+# Hover to see every book on one date. The lines climb and fall together: that
+# is the market exposure of 1 that every book shares. The differences between
+# the lines are much smaller than their common swings, and section 4.10
+# isolates exactly those differences. The table gives the level at the end of
+# each quarter.
 #
 # **Caveats.**
 #
-# - **Before costs.** The research passport says the returns are gross. A real
-#   long-short portfolio pays trading costs and a fee to borrow the stocks it
-#   sells short, so its returns would be lower, especially for factors that
-#   trade a lot, such as momentum.
-# - **Daily compounding** assumes the portfolio is reset to its weights every
-#   day. The real rebalancing calendar is "factor-specific" (see the passport).
-# - A long-short line at 105 means the *spread* between the two legs earned 5%
-#   on the capital behind the position. ERP is the index minus cash, so a line
-#   at 105 means the index beat cash by 5%.
-# - One year is a short window. A different start date can change the ranking.
+# - **Gross of costs**, and the return basis is the one in the quoted
+#   `returns_label` (section 4.2). Weekly rebuilding has trading costs that are
+#   not deducted.
+# - "Value of 100" assumes the book is rebuilt every week exactly as
+#   published. It is a retrospective measurement, not a record of trades.
+# - The window is the `WEEKS` you requested. A different start can change
+#   which book ends highest.
 
 # %% [markdown]
-# ### 3.6 Chart: drawdowns
+# ### 4.9 Chart: drawdowns
 #
-# A **drawdown** is how far a portfolio sits below its own best value so far.
-# It answers the question investors feel most: "how much did I lose from the
-# top, and for how long?" We compute it from the same index levels:
+# A **drawdown** is how far a book sits below its own best value so far:
 # drawdown = level ÷ running peak − 1. Its lowest point is the **maximum
-# drawdown**. It equals the API's `max_dd` except when the first day was a
-# loss: the levels start from 100 the session before the first return, so they
-# count that loss, while `max_dd` (and `risk_stats`) start from the first
-# day's close. Each factor gets its own small panel, named in its title, and
-# all the panels share one y-axis, so depths compare directly.
+# drawdown**. Each book gets its own small panel, all panels share one y-axis,
+# so depths compare directly.
 
 # %%
 if not HAVE_RETURNS:
-    note("No published factor has a return series today, so there are no drawdowns to chart.")
+    note(f"No book has enough clean weeks for drawdowns ({NOTHING}).")
 else:
-    drawdown = level / level.cummax() - 1              # level includes the base row of 100 (section 3.5)
-    rows, cols = grid_shape(len(IDS))
-    fig = make_subplots(rows=rows, cols=cols, shared_xaxes="all", shared_yaxes="all",
-                        subplot_titles=[NAME[f] for f in IDS], horizontal_spacing=0.04, vertical_spacing=0.14)
+    drawdown = level / level.cummax() - 1
+    rows, cols = grid_shape(len(USE))
+    fig = make_subplots(rows=rows, cols=cols, shared_xaxes="all", shared_yaxes="all", subplot_titles=USE,
+                        horizontal_spacing=0.04, vertical_spacing=0.14)
     fig.update_annotations(font=dict(size=13, color=INK))
     dd_rows = []
-    for k, fid in enumerate(IDS):
+    for k, book in enumerate(USE):
         r, c = k // cols + 1, k % cols + 1
-        s, lv = drawdown[fid].dropna(), level[fid].dropna()
+        s, lv = drawdown[book].dropna(), level[book].dropna()
         trough = s.idxmin()
         peak = lv.loc[:trough].idxmax()
         back = lv.loc[trough:]
         recovered = back[back >= lv.loc[peak]].first_valid_index()
-        fig.add_trace(go.Scatter(x=s.index, y=s, mode="lines", name=NAME[fid], legendgroup=fid, showlegend=False,
-                                 fill="tozeroy", fillcolor=rgba(INK_2, 0.12), line=dict(color=INK_2, width=1.5),
-                                 hovertemplate=f"{CODE[fid]}: %{{y:.1%}} below its peak<extra></extra>"), row=r, col=c)
-        fig.add_trace(go.Scatter(x=[trough], y=[s.min()], mode="markers+text", legendgroup=fid, showlegend=False,
-                                 hoverinfo="skip", marker=dict(size=8, color=INK, line=dict(width=2, color=SURFACE)),
+        fig.add_trace(go.Scatter(x=s.index, y=s, mode="lines", name=book, showlegend=False, fill="tozeroy",
+                                 fillcolor="rgba(82,81,78,0.12)", line=dict(color=INK_2, width=1.5),
+                                 hovertemplate=f"{book}: %{{y:.1%}} below its peak<extra></extra>"), row=r, col=c)
+        fig.add_trace(go.Scatter(x=[trough], y=[s.min()], mode="markers+text", showlegend=False, hoverinfo="skip",
+                                 marker=dict(size=8, color=INK, line=dict(width=2, color=SURFACE)),
                                  text=[f"{s.min():.1%}"], textposition="bottom center", cliponaxis=False,
                                  textfont=dict(size=11, color=INK_2)), row=r, col=c)
-        dd_rows.append({"factor": NAME[fid], "peak": f"{peak:%Y-%m-%d}", "trough": f"{trough:%Y-%m-%d}",
-                        "max drawdown": s.min(), "trading days, peak to trough": int(lv.loc[peak:trough].size - 1),
-                        "recovered on": f"{recovered:%Y-%m-%d}" if recovered is not None else "not yet",
-                        "drawdown today": s.iloc[-1]})
+        dd_rows.append({"book": book, "peak (week start)": f"{peak:%Y-%m-%d}", "trough": f"{trough:%Y-%m-%d}",
+                        "max drawdown": s.min(), "weeks, peak to trough": int(round((trough - peak).days / 7)),
+                        "back at the peak by": (f"{recovered:%Y-%m-%d}" if recovered is not None
+                                                else "not within the window"),
+                        "drawdown at the end": s.iloc[-1]})
     dd_table = pd.DataFrame(dd_rows)
-    deep = dd_table.loc[dd_table["max drawdown"].idxmin()]
-    shallow = dd_table.loc[dd_table["max drawdown"].idxmax()]
-    title = (f"{deep['factor'].split(' · ')[0]} fell furthest from a peak ({deep['max drawdown']:.1%}); "
-             f"{shallow['factor'].split(' · ')[0]}'s worst fall was {shallow['max drawdown']:.1%}"
-             if len(IDS) > 1 else f"{deep['factor']}'s worst fall from a peak was {deep['max drawdown']:.1%}")
+    if "MARKET" in USE and len(USE) > 1:
+        rest = dd_table[dd_table["book"].ne("MARKET")]["max drawdown"]
+        mkt = float(dd_table.loc[dd_table["book"].eq("MARKET"), "max drawdown"].iloc[0])
+        title = (f"MARKET's deepest fall was {mkt:.1%}; the other books' deepest falls ranged from "
+                 f"{rest.min():.1%} to {rest.max():.1%}")
+    else:
+        deep = dd_table.loc[dd_table["max drawdown"].idxmin()]
+        title = f"{deep['book']} fell furthest from a peak: {deep['max drawdown']:.1%}"
     fig.update_yaxes(tickformat=".0%", range=[float(dd_table["max drawdown"].min()) * 1.3, 0.004])
     fig.update_yaxes(title_text="Below peak (%)", col=1)
-    label_lowest_panels(fig, [(k // cols + 1, k % cols + 1) for k in range(len(IDS))], rows, cols)
-    hide_unused_panels(fig, len(IDS), rows, cols)
-    heading, top = chart_title(title, "Distance below each factor's running peak · dot = maximum drawdown · "
-                                      "shared y-axis", extra_top=22)                 # + room for the panel titles
-    fig.update_layout(title=heading, height=top + 250 * rows + 80, margin=dict(t=top, b=70), showlegend=False,
+    hide_unused_panels(fig, len(USE), rows, cols)
+    heading, top = chart_title(title, "Distance below each book's running peak · dot = maximum drawdown · "
+                                      "shared y-axis", extra_top=22)
+    fig.update_layout(title=heading, height=top + 230 * rows + 80, margin=dict(t=top, b=70), showlegend=False,
                       hovermode="x")
     fig.show()
-    display(dd_table.style.format({"max drawdown": "{:.1%}", "drawdown today": "{:.1%}"}).hide(axis="index"))
+    display(dd_table.style.format({"max drawdown": "{:.1%}", "drawdown at the end": "{:.1%}"}).hide(axis="index"))
 
 # %% [markdown]
-# **How to read this.** Each panel is one factor. The shaded area shows how far
-# the factor sits below its best value so far: 0% means a new high, and deeper
-# means a bigger loss from the top. The dot marks the deepest point, the maximum
-# drawdown. The table adds when each fall started and ended, and whether the
-# factor has climbed back to its old peak.
+# **How to read this.** Each panel is one book. The shaded area is how far it
+# sits below its best value so far (0% = a new high), and the dot marks the
+# deepest point. Because every book carries the market once, the big falls tend
+# to happen in the same weeks in every panel. The table adds when each fall
+# started and ended and whether the book climbed back within the window.
 #
 # **Caveats.**
 #
-# - Maximum drawdown depends on the window. Over one year it can only see the
-#   falls inside that year.
-# - It comes from a single episode, so it is a noisy measure of risk. Two
-#   factors with the same volatility can show very different drawdowns by luck.
+# - A maximum drawdown comes from one episode, so it is a noisy measure of risk.
+# - It can only see falls inside the requested window. A longer `WEEKS` can
+#   reveal a deeper one.
 
 # %% [markdown]
-# ### 3.7 Chart: rolling volatility
+# ### 4.10 Style minus MARKET: where the style shows
 #
-# Volatility (the yearly size of daily swings) is not constant. A **rolling**
-# volatility recomputes it every day from only the last `ROLL_DAYS` trading days
-# (63 ≈ 3 months), so you can see calm and stormy stretches. We annualise it
-# with √252 so it reads in the same unit as `vol_annual`. The dashed line in
-# each panel is the whole-period figure, which is also printed in the panel
-# title.
+# Both a style book and the MARKET book have market exposure 1, and they differ
+# by about one unit of the style. So the weekly **spread**
+#
+#     spread = style book's return − MARKET book's return
+#
+# cancels the market and keeps about one unit of the style (plus the noise of
+# holding different stocks). A spread is computed only in weeks where **both**
+# books have a clean return. We then compound each spread into a value of 100,
+# and summarise it as an annualised mean (mean × 52) and volatility
+# (standard deviation × √52), with a 95% interval for the mean. The interval
+# uses HAC (Newey-West) standard errors, which allow for weeks that are not
+# independent of each other.
 
 # %%
-if not HAVE_RETURNS:
-    note("No published factor has a return series today, so there is no volatility to chart.")
+if wide.empty or "MARKET" not in wide.columns or wide["MARKET"].count() < MIN_WEEKS:
+    spreads, SPREADS, SPREAD_USE = pd.DataFrame(), [], []
+    note(f"The MARKET book has fewer than {MIN_WEEKS} clean weeks, so no style-minus-MARKET spread can be "
+         f"measured ({NOTHING}).")
 else:
-    roll = pd.DataFrame({fid: returns[fid].dropna().rolling(ROLL_DAYS, min_periods=ROLL_DAYS).std()
-                         * np.sqrt(TRADING_DAYS) for fid in IDS}).reindex(returns.index)
-    full = returns.std() * np.sqrt(TRADING_DAYS)
-    if roll.dropna(how="all").empty:
-        note(f"Every series is shorter than ROLL_DAYS = {ROLL_DAYS} trading days. Lower ROLL_DAYS and run again.")
-    else:
-        rows, cols = grid_shape(len(IDS))
-        fig = make_subplots(rows=rows, cols=cols, shared_xaxes="all", shared_yaxes="all",
-                            subplot_titles=[f"{NAME[f]} · whole period {full[f]:.1%}" for f in IDS],
-                            horizontal_spacing=0.04, vertical_spacing=0.14)
-        fig.update_annotations(font=dict(size=13, color=INK))
-        for k, fid in enumerate(IDS):
-            r, c = k // cols + 1, k % cols + 1
-            fig.add_trace(go.Scatter(x=roll.index, y=roll[fid], mode="lines", name=NAME[fid], showlegend=False,
-                                     line=dict(color=INK_2, width=2),
-                                     hovertemplate=f"{CODE[fid]}: %{{y:.1%}} a year<extra></extra>"), row=r, col=c)
-            fig.add_hline(y=full[fid], line=dict(color=MUTED, width=1.2, dash="dash"), layer="below", row=r, col=c)
-        swing = (roll.max() / roll.min()).dropna()
-        most = swing.idxmax()
-        title = (f"Risk is not constant: {CODE[most]}'s {ROLL_DAYS}-day volatility ranged from "
-                 f"{roll[most].min():.1%} to {roll[most].max():.1%} a year")
-        fig.update_yaxes(tickformat=".0%", rangemode="tozero")
-        fig.update_yaxes(title_text="Volatility (% a year)", col=1)
-        label_lowest_panels(fig, [(k // cols + 1, k % cols + 1) for k in range(len(IDS))], rows, cols)
-        hide_unused_panels(fig, len(IDS), rows, cols)
-        heading, top = chart_title(title, f"Standard deviation of the last {ROLL_DAYS} daily returns × √252 · "
-                                          "dashed line = whole-period volatility · shared y-axis", extra_top=22)
-        fig.update_layout(title=heading, height=top + 250 * rows + 80, margin=dict(t=top, b=70), showlegend=False,
-                          hovermode="x")
-        fig.show()
-        vol_table = pd.DataFrame({"factor": [NAME[f] for f in IDS], "whole period": full[IDS].to_numpy(),
-                                  "rolling low": roll[IDS].min().to_numpy(), "rolling high": roll[IDS].max().to_numpy(),
-                                  "latest": roll[IDS].ffill().iloc[-1].to_numpy()})
-        display(vol_table.style.format({c: "{:.1%}" for c in vol_table.columns[1:]}).hide(axis="index"))
-
-# %% [markdown]
-# **How to read this.** Each panel shows one factor's volatility over the
-# previous `ROLL_DAYS` trading days, expressed per year. The lines start late
-# because the first window needs `ROLL_DAYS` days to fill. When a line climbs
-# above its dashed whole-period line, the factor is in a stormier stretch than
-# usual. ERP (the whole market) usually swings more than the long-short
-# factors, because their two legs cancel much of the market's move.
-#
-# **Caveats.**
-#
-# - Neighbouring points share all but one day of their window, so the lines are
-#   smooth by construction. Do not count each wiggle as a separate event.
-# - Volatility treats a big gain as "risk" too. Section 3.9 looks only at losses.
-# - Multiplying by √252 assumes that days are independent of each other.
-
-# %% [markdown]
-# ### 3.8 Chart: how the factors move together
-#
-# A **correlation** measures how two return series move together, from −1
-# (always opposite) through 0 (unrelated) to +1 (always together). We compute
-# it on the complete-case window, so every pair uses the same dates. Low or
-# negative correlations are what make a mix of factors less risky than its
-# parts (section 5.1).
+    spreads = wide.drop(columns="MARKET").sub(wide["MARKET"], axis=0)
+    n_clean = spreads.count()
+    SPREADS = [f for f in spreads.columns if n_clean[f] >= MIN_WEEKS]
+    SPREAD_USE = [f for f in SPREADS if f in USE and "MARKET" in USE]
+    too_short = [f"{f} ({n_clean[f]} weeks)" for f in spreads.columns if f not in SPREADS]
+    print(f"Spreads with at least {MIN_WEEKS} clean weeks: {and_list(SPREADS)}."
+          + (f" Too short for statistics: {and_list(too_short)}." if too_short else ""))
+    display(spreads.dropna(how="all").head())
 
 # %%
-if len(IDS) < 2:
-    corr = pd.DataFrame()
-    note("Fewer than two published factors today, so there is no correlation matrix.")
+if not SPREAD_USE:
+    note("No style book has enough clean weeks for the spread chart.")
 else:
-    corr = aligned.corr()
-    n_al = len(aligned)
-    t_crit = stats.t.ppf(0.975, n_al - 2)
-    r_crit = t_crit / np.sqrt(n_al - 2 + t_crit**2)        # |r| above this is significant at the 5% level
-    codes = [CODE[f] for f in IDS]
-    lower = corr.to_numpy().copy()
-    lower[np.triu_indices_from(lower)] = np.nan             # keep the lower triangle, without the diagonal
-    z = lower[1:, :-1]
-    text = [["" if np.isnan(v) else signed(v) for v in row] for row in z]
-    below = np.tril_indices(len(IDS), k=-1)                 # every pair once: (row, column) below the diagonal
-    pairs = pd.Series(corr.to_numpy()[below], index=pd.MultiIndex.from_arrays([corr.index[below[0]],
-                                                                              corr.columns[below[1]]]))
-    strongest = pairs.abs().idxmax()
-    n_sig = int((pairs.abs() > r_crit).sum())
-
-    fig = go.Figure(go.Heatmap(
-        z=z, x=codes[:-1], y=codes[1:], text=text, texttemplate="%{text}", textfont=dict(size=13),
-        colorscale=DIVERGING, zmin=-1, zmax=1, zmid=0, xgap=2, ygap=2, hoverongaps=False,
-        hovertemplate="%{y} vs %{x}: %{z:+.2f}<extra></extra>",
-        colorbar=dict(title=dict(text="Correlation"), tickvals=[-1, -0.5, 0, 0.5, 1], len=0.85, thickness=14)))
-    heading, top = chart_title(
-        f"{CODE[strongest[0]]} and {CODE[strongest[1]]} are the most linked ({signed(pairs[strongest])}); "
-        f"{n_sig} of {len(pairs)} pairs lie outside the ±{r_crit:.2f} noise band",
-        f"Correlation of daily returns over {n_al} aligned days · blue = move together, red = move opposite, "
-        "grey ≈ unrelated")
-    fig.update_layout(
-        title=heading, height=top + 40 + 66 * len(codes), margin=dict(t=top, l=70, r=40, b=60),
-        xaxis=dict(side="bottom", showgrid=False, ticks="", constrain="domain"),
-        yaxis=dict(autorange="reversed", showgrid=False, ticks="", scaleanchor="x", constrain="domain"))
-    fig.show()
-    display(corr.rename(index=CODE, columns=CODE).style.format(signed))
-
-    api_corr = agg["factor_correlation"]
-    if api_corr:
-        api_c = pd.DataFrame(api_corr["values"], index=api_corr["factor_ids"], columns=api_corr["factor_ids"])
-        common = [f for f in IDS if f in api_c.index]
-        diff = float((api_c.loc[common, common] - corr.loc[common, common]).abs().to_numpy().max())
-        print(f"Largest difference from the API's aggregate.factor_correlation ({len(common)} factors): {diff:.4f}"
-              f"{' (rounding only)' if diff < 0.005 else ' - check the alignment window'}.")
-    else:
-        print("aggregate.factor_correlation is null today, so there is no API matrix to compare with.")
-
-# %% [markdown]
-# **How to read this.** Each cell is the correlation between the factor on its
-# row and the factor on its column. Blue cells move together, red cells move in
-# opposite directions, and pale grey cells are close to unrelated. The matrix is
-# symmetric (HML vs CMA equals CMA vs HML), so we show only the lower half. The
-# printed line checks our numbers against the API's own matrix.
-#
-# **Caveats.**
-#
-# - With about one year of data, any correlation inside the ±noise band in the
-#   title cannot be told apart from zero at the 5% level.
-# - Correlations drift over time, and they often jump towards ±1 in a crisis,
-#   just when diversification is needed most.
-# - A few extreme days can move a correlation a lot. A rank (Spearman)
-#   correlation is a useful robustness check: `aligned.corr(method="spearman")`.
-
-# %% [markdown]
-# ### 3.9 Chart: tail risk, value at risk and expected shortfall
-#
-# Volatility describes typical days. **Tail risk** describes the bad ones. Two
-# standard measures:
-#
-# - **VaR 95%** (value at risk): the loss that only the worst 5% of days exceed.
-#   It says where the tail *starts*.
-# - **ES 95%** (expected shortfall): the *average* loss on those worst 5% of
-#   days. It says how bad the tail is, which VaR ignores.
-#
-# Both are daily, positive loss fractions (0.02 = a 2% loss), like the API's
-# `var_95_252d` and `es_95_252d`. We also show the ES that a **normal** (bell
-# curve) distribution with the same mean and volatility would give, and the
-# ratio of the two (`ES ÷ normal ES`).
-#
-# That ratio **describes** the tail; it is **not a test for fat tails**. At the
-# 95% level, ES sits close enough to the middle of the distribution that it
-# barely reacts to fat tails. A Student-t distribution with 4 degrees of
-# freedom is a textbook fat-tailed case: its kurtosis is infinite. Yet its ES
-# is only about **1.10×** that of a normal curve with the same volatility. And
-# with one year of data the sample ratio is noisy, because it averages only
-# about 13 days. To ask whether the returns follow a bell curve, use the
-# table's **excess kurtosis** (above 0: fatter tails than normal) and the
-# **Jarque–Bera test** (a p-value below 0.05 rejects the bell curve). The bar
-# colour follows that test.
-
-# %%
-if not HAVE_RETURNS:
-    note("No published factor has a return series today, so there is no tail to measure.")
-else:
-    z_tail = stats.norm.ppf(1 - TAIL)                       # -1.645 at the 95% level
-    NORMALITY_P = 0.05                                      # a Jarque–Bera p-value below this rejects the bell curve
-    tail_rows = []
-    for fid in IDS:
-        r = returns[fid].dropna()
-        cutoff = r.quantile(1 - TAIL)
-        mu, sd = r.mean(), r.std(ddof=1)
-        tail_rows.append({"factor_id": fid, "factor": NAME[fid], "VaR": -cutoff, "ES": -r[r <= cutoff].mean(),
-                          "days in the tail": int((r <= cutoff).sum()),
-                          "VaR if normal": -(mu + z_tail * sd),
-                          "ES if normal": -(mu - sd * stats.norm.pdf(z_tail) / (1 - TAIL)),
-                          "skew": stats.skew(r, bias=False), "excess kurtosis": stats.kurtosis(r, bias=False),
-                          "Jarque–Bera p": stats.jarque_bera(r).pvalue})
-    tail = pd.DataFrame(tail_rows)
-    tail["ES ÷ normal ES"] = tail["ES"] / tail["ES if normal"]
-    tail = tail.sort_values("ES").reset_index(drop=True)            # biggest tail drawn at the top
-    worst = tail.iloc[-1]
-    not_normal = tail["Jarque–Bera p"] < NORMALITY_P                # colour = the normality test, not the ES ratio
-    n_not_normal = int(not_normal.sum())
-
+    spread_level = growth_index(spreads[SPREAD_USE])
+    spread_final = spread_level.ffill().iloc[-1]
+    best, worst = spread_final.idxmax(), spread_final.idxmin()
+    y_range = padded_range(spread_level.to_numpy())
+    PLOT_PX, BOTTOM = 320, 130
     fig = go.Figure()
-    for is_not_normal, label, color in (
-            (True, f"Returns fail a normality test (Jarque–Bera p < {NORMALITY_P})", rgba(SERIES[0], 0.55)),
-            (False, f"A normal curve is not rejected (p ≥ {NORMALITY_P})", AXIS)):
-        part = tail[not_normal == is_not_normal]
-        if part.empty:
-            continue
-        fig.add_trace(go.Bar(
-            x=part["ES"], y=part["factor"], orientation="h", name=label, width=0.56, marker=dict(color=color),
-            customdata=part[["days in the tail", "skew", "excess kurtosis", "ES ÷ normal ES",
-                             "Jarque–Bera p"]].to_numpy(),
-            hovertemplate=("<b>%{y}</b><br>Expected shortfall: %{x:.2%} a day (average of %{customdata[0]} worst "
-                           "days)<br>%{customdata[3]:.2f}× the normal-curve ES · skew %{customdata[1]:+.2f} · "
-                           "excess kurtosis %{customdata[2]:.1f} · Jarque–Bera p %{customdata[4]:.3f}"
-                           "<extra></extra>")))
-    fig.add_trace(go.Scatter(
-        x=tail["VaR"], y=tail["factor"], mode="markers", name=f"VaR {TAIL:.0%}: where the worst {1 - TAIL:.0%} of days begin",
-        marker=dict(symbol="line-ns", size=20, line=dict(width=3, color=INK)),
-        hovertemplate="VaR: %{x:.2%}<extra>%{y}</extra>"))
-    fig.add_trace(go.Scatter(
-        x=tail["ES if normal"], y=tail["factor"], mode="markers", name="ES if returns followed a normal curve",
-        marker=dict(symbol="diamond-open", size=11, color=INK_2, line=dict(width=2, color=INK_2)),
-        hovertemplate="Normal-curve ES: %{x:.2%}<extra>%{y}</extra>"))
-    fig.add_trace(go.Scatter(                                       # the ES value, just past the bar or the diamond
-        x=tail[["ES", "ES if normal"]].max(axis=1), y=tail["factor"], mode="text", showlegend=False,
-        text=["   " + pct(v, 2) for v in tail["ES"]], textposition="middle right", textfont=dict(size=12, color=INK_2),
-        hoverinfo="skip", cliponaxis=False))
-    if len(tail) == 1:
-        normality = ("its daily returns fail a normality test" if n_not_normal else
-                     "a normality test cannot reject a normal curve for it")
-    elif n_not_normal == 0:
-        normality = "no factor's daily returns fail a normality test"
-    else:
-        normality = (f"the daily returns of {'all' if n_not_normal == len(tail) else f'{n_not_normal} of'} "
-                     f"{len(tail)} factors fail a normality test")
-    heading, top = chart_title(
-        f"On its worst {1 - TAIL:.0%} of days, {worst['factor'].split(' · ')[0]} lost {worst['ES']:.2%} a day on "
-        f"average; {normality}",
-        f"Bars: expected shortfall ({TAIL:.0%}), the average daily loss on the worst {1 - TAIL:.0%} of days · "
-        f"tick: VaR · diamond: the normal-curve ES · colour: Jarque–Bera test of normality at {NORMALITY_P:.0%}")
-    fig.update_layout(
-        title=heading, height=top + 100 + 52 * len(tail), margin=dict(t=top, b=130, r=60), legend=BOTTOM_LEGEND,
-        xaxis=dict(title="Daily loss (% of capital)", tickformat=".1%", rangemode="tozero",
-                   range=[0, float(tail[["ES", "ES if normal"]].to_numpy().max()) * 1.2]),
-        yaxis=dict(ticks="", categoryorder="array", categoryarray=tail["factor"].tolist()))
+    fig.add_hline(y=100, line=dict(color=AXIS, width=1), layer="below")
+    for book in SPREAD_USE:
+        fig.add_trace(go.Scatter(x=spread_level.index, y=spread_level[book], mode="lines",
+                                 name=f"{book} − MARKET", line=dict(color=FACTOR_COLORS.get(book, MUTED), width=2),
+                                 hovertemplate=f"{book} − MARKET: %{{y:.1f}}<extra></extra>"))
+    ends = pd.DataFrame({"x": [spread_level[b].last_valid_index() for b in SPREAD_USE],
+                         "y": [spread_final[b] for b in SPREAD_USE],
+                         "text": [f"{b.capitalize()} {spread_final[b]:.0f}" for b in SPREAD_USE],
+                         "color": [FACTOR_COLORS.get(b, MUTED) for b in SPREAD_USE]})
+    add_end_labels(fig, ends, y_range, PLOT_PX)
+    title = (f"With the market taken out: {best.capitalize()} − MARKET ended at {spread_final[best]:.0f}, "
+             f"{worst.capitalize()} − MARKET at {spread_final[worst]:.0f}"
+             if len(SPREAD_USE) > 1 else f"With the market taken out: {best.capitalize()} − MARKET ended at "
+                                         f"{spread_final[best]:.0f}")
+    heading, top = chart_title(title, "Value of 100 in each weekly style-minus-MARKET spread, compounded "
+                                      f"weekly over {plural(len(spreads), 'week')} · gross of costs · "
+                                      "in-sample measurement, not a forecast")
+    fig.update_layout(title=heading, height=top + PLOT_PX + BOTTOM, margin=dict(t=top, b=BOTTOM, r=130),
+                      hovermode="x unified", legend=dict(BOTTOM_LEGEND, itemclick=False, itemdoubleclick=False),
+                      xaxis=date_axis(spread_level.index),
+                      yaxis=dict(title="Value of 100 in the spread (index)", range=y_range))
     fig.show()
-    display(tail.drop(columns="factor_id").style.format(
-        {"VaR": "{:.2%}", "ES": "{:.2%}", "VaR if normal": "{:.2%}", "ES if normal": "{:.2%}", "skew": "{:+.2f}",
-         "excess kurtosis": "{:.1f}", "Jarque–Bera p": "{:.3f}", "ES ÷ normal ES": "{:.2f}×"}).hide(axis="index"))
-
-# %% [markdown]
-# **How to read this.** Each bar is one factor's expected shortfall: its
-# average daily loss on its worst 5% of days, with the biggest at the top. The
-# black tick is the VaR, the loss at which that worst 5% begins, so the bar
-# always reaches past it. The open diamond is what a normal curve with the
-# same mean and volatility would predict, and the table's `ES ÷ normal ES`
-# column divides the bar by the diamond. The **colour** answers a different
-# question: is the bell curve a fair description of this factor's daily
-# returns at all? A blue bar means the Jarque–Bera test says no (p below 0.05),
-# so treat its diamond as a rough guide only. A grey bar means one year of
-# data cannot reject a bell curve. A bar can sit close to its diamond and
-# still be blue: at 95%, ES hardly separates fat tails from thin ones (see the
-# caveats). The table adds **skew** (negative: the big moves are mostly
-# losses), **excess kurtosis** (above 0: fat tails) and the **Jarque–Bera
-# p-value**.
-#
-# **Caveats.**
-#
-# - At 95% with one year of data, the ES averages only about 13 days. One more
-#   crash day would change it a lot.
-# - **A 95% ES ratio has low power as a fat-tail check.** For a Student-t with
-#   4 degrees of freedom the true ratio is only about 1.10, and in a one-year
-#   sample such a series shows a ratio above 1.1 less than half the time. So a
-#   ratio near 1 does not mean "bell-shaped": judge normality by the excess
-#   kurtosis and the Jarque–Bera p-value. Set `TAIL = 0.99` to look deeper
-#   into the tail, where fat tails do show (the same t gives about 1.39×), at
-#   the price of averaging only about 3 days.
-# - Jarque–Bera reacts to skew as well as kurtosis, and to big gains as well as
-#   big losses. A low p-value says the returns are not bell-shaped; it does not
-#   say that the loss tail in particular is fat. It also treats days as
-#   independent.
-# - These are one-day losses. A run of bad days (section 3.6) can lose far more.
-# - The numbers describe the past year, before costs. Tails in the next year
-#   can be fatter.
-
-# %% [markdown]
-# ### 3.10 Annualised return, volatility and a Sharpe-like ratio, with honest error bars
-#
-# Three yearly numbers summarise each factor:
-#
-# - **Mean (arithmetic)** = average daily return × 252. It is what the API
-#   calls `mean_annual`.
-# - **CAGR (compound annual growth rate)** = the yearly rate that turns 100
-#   into the factor's final value: what the factor actually earned per year.
-#   Two effects separate it from the arithmetic mean. Compounding (gains earn
-#   gains) pushes it up. **Volatility drag** pulls it down by about
-#   volatility² ÷ 2 a year, because a fall needs a bigger rise to recover
-#   (−10% then +10% leaves you at 99). A good approximation:
-#   CAGR ≈ e^(mean − volatility² ÷ 2) − 1.
-# - **Sharpe-like ratio** = mean ÷ volatility: return per unit of risk. We call
-#   it "Sharpe-*like*" because no risk-free rate is subtracted from the
-#   long-short factors and because the returns are before costs.
-#
-# **How precise is a Sharpe-like ratio?** Not very. Its standard error is about
-# 1 ÷ √(years of data), so with one year the 95% interval is roughly ±2. We
-# compute it with `sharpe_interval`, which also allows for skew and fat tails.
-# We also test whether the average return differs from zero with a **HAC
-# t-statistic**. HAC (heteroskedasticity- and autocorrelation-consistent,
-# Newey–West) standard errors stay honest in two situations: when some days
-# are bigger than others (including calm and stormy spells), and when returns
-# are correlated from one day to the next, a move that tends to carry on or to
-# reverse. The plain t-test assumes neither. SurgeFlow's own gates run the same
-# kind of test (see the gate code `premium_hac_not_tested`), so the table puts
-# SurgeFlow's premium verdict next to ours. The two can disagree: the API does
-# not say which sample, how many lags or what one- or two-sided rule its gate
-# uses, and it sends only the last year of returns. A t-statistic grows with
-# √years, so the `years for t ≈ 2` column says roughly how many years of data
-# you would need for t ≈ 2 at today's ratio.
 
 # %%
-if not HAVE_RETURNS:
-    note("No published factor has a return series today, so there is nothing to annualise.")
+if not SPREADS:
+    spread_stats = pd.DataFrame()
+    note("No spread has enough clean weeks for statistics.")
 else:
-    gate_rows = factors.set_index("factor_id")
-    score_rows = []
-    for fid in IDS:
-        r = returns[fid].dropna()
-        years = len(r) / TRADING_DAYS
-        s = risk_stats(r)
-        sr, se, lo, hi = sharpe_interval(r)
-        test = hac_test(r)
-        codes = gate_codes(gate_rows.at[fid, "gate_reason"])      # SurgeFlow's premium verdict, from its gate codes
-        gate = ("failed" if "premium_not_significant_5pct" in codes else
-                "not tested" if "premium_hac_not_tested" in codes else
-                "cleared" if gate_rows.at[fid, "publish_state"] == "published" else "no code reported")
-        score_rows.append({
-            "factor_id": fid, "factor": NAME[fid], "days": len(r),
-            "mean a year": s["mean_annual"], "CAGR": (1 + r).prod() ** (1 / years) - 1,
-            "volatility a year": s["vol_annual"], "volatility drag": s["vol_annual"] ** 2 / 2,
-            "Sharpe-like": sr, "standard error": se,
-            "95% low": lo, "95% high": hi, "HAC t": test["t"], "p-value": test["p"],
-            "our HAC test (5%)": "significant" if test["p"] < 0.05 else "not significant",
-            "premium gate (SurgeFlow)": gate,
-            "years for t ≈ 2": (2 / abs(sr)) ** 2 if sr != 0 else np.inf, "max drawdown": s["max_dd"]})
-    score = pd.DataFrame(score_rows)
-    years_used = score["days"].median() / TRADING_DAYS
-    clear = score[(score["95% low"] > 0) | (score["95% high"] < 0)]
-
+    spread_stats = pd.DataFrame({f: annual_stats(spreads[f]) for f in SPREADS}).T
+    paired = {f: spreads[f].dropna().index for f in SPREADS}          # the weeks each spread actually uses
+    spread_stats["book vol / year"] = [wide.loc[paired[f], f].std() * np.sqrt(WEEKS_PER_YEAR) for f in SPREADS]
+    spread_stats["MARKET vol / year"] = [wide.loc[paired[f], "MARKET"].std() * np.sqrt(WEEKS_PER_YEAR)
+                                         for f in SPREADS]
+    spread_stats = spread_stats.rename_axis("spread").reset_index()
+    spread_stats["spread"] = spread_stats["spread"] + " − MARKET"
+    clear = spread_stats[(spread_stats["95% low"] > 0) | (spread_stats["95% high"] < 0)]
+    title = (f"{len(clear)} of {len(spread_stats)} spreads have a 95% interval that excludes zero"
+             if len(clear) else
+             f"No spread's 95% interval excludes zero: with at most {int(spread_stats['weeks'].max())} clean "
+             "weeks, these averages cannot be told from zero")
+    colors = [MUTED if lo <= 0 <= hi else INK for lo, hi in zip(spread_stats["95% low"], spread_stats["95% high"])]
     fig = go.Figure()
     fig.add_vline(x=0, line=dict(color=AXIS, width=1), layer="below")
-    excludes = score["factor_id"].isin(clear["factor_id"])
-    for is_clear, label, color in ((True, "95% interval excludes 0", SERIES[0]),
-                                   (False, "Cannot be told from 0", INK_2)):
-        part = score[excludes == is_clear]
-        if part.empty:
-            continue
-        fig.add_trace(go.Scatter(
-            x=part["Sharpe-like"], y=part["factor"], mode="markers+text", name=label,
-            marker=dict(size=11, color=color, line=dict(width=2, color=SURFACE)),
-            error_x=dict(type="data", symmetric=False, array=part["95% high"] - part["Sharpe-like"],
-                         arrayminus=part["Sharpe-like"] - part["95% low"], color=color, thickness=2, width=0),
-            text=part["Sharpe-like"].map(signed), textposition="top center", textfont=dict(size=11, color=INK_2),
-            customdata=part[["95% low", "95% high", "HAC t", "p-value"]].to_numpy(),
-            hovertemplate=("<b>%{y}</b><br>Sharpe-like ratio %{x:+.2f}<br>95% interval %{customdata[0]:+.2f} to "
-                           "%{customdata[1]:+.2f}<br>HAC t %{customdata[2]:+.2f} (p = %{customdata[3]:.2f})"
-                           "<extra></extra>")))
-    span = "one year" if abs(years_used - 1) < 0.05 else f"{years_used:.1f} years"
-    title = (f"With {span} of data, no Sharpe-like ratio is clearly different from zero: every interval crosses 0"
-             if clear.empty else
-             f"With {span} of data, only {len(clear)} of {len(score)} Sharpe-like ratios are clearly different "
-             "from zero")
-    heading, top = chart_title(title, "Dot: yearly mean ÷ yearly volatility, before costs · whisker: 95% interval "
-                                      "(Mertens standard error, about ±2 ÷ √years)")
-    fig.update_layout(
-        title=heading, height=top + 80 + 58 * len(score), margin=dict(t=top, b=110, r=40), legend=BOTTOM_LEGEND,
-        showlegend=True,
-        xaxis=dict(title="Sharpe-like ratio (yearly)", zeroline=False),
-        yaxis=dict(ticks="", categoryorder="array", categoryarray=score["factor"].tolist()[::-1]))   # ERP at the top
+    fig.add_trace(go.Scatter(
+        x=spread_stats["mean / year"], y=spread_stats["spread"], mode="markers", showlegend=False,
+        marker=dict(size=11, color=colors, line=dict(width=2, color=SURFACE)),
+        error_x=dict(type="data", symmetric=False, thickness=2, width=0, color=INK_2,
+                     array=spread_stats["95% high"] - spread_stats["mean / year"],
+                     arrayminus=spread_stats["mean / year"] - spread_stats["95% low"]),
+        customdata=spread_stats[["95% low", "95% high", "weeks"]].to_numpy(dtype=float),
+        hovertemplate="%{y}: %{x:+.1%} a year<br>95% interval %{customdata[0]:+.1%} to %{customdata[1]:+.1%}"
+                      "<br>%{customdata[2]:.0f} clean weeks<extra></extra>"))
+    heading, top = chart_title(title, "Annualised mean of each weekly spread (mean × 52) with a 95% interval "
+                                      "from HAC standard errors · dark dot = the interval excludes zero, grey "
+                                      "dot = it crosses zero · in-sample, gross of costs")
+    fig.update_layout(title=heading, height=top + 90 + 46 * len(spread_stats), margin=dict(t=top, l=200, b=60),
+                      xaxis=dict(title="Annualised mean of the spread (% a year)", tickformat=".0%"),
+                      yaxis=dict(autorange="reversed", ticks="", title=None))
     fig.show()
-    display(score.drop(columns="factor_id").style.format({
-        "mean a year": "{:+.1%}", "CAGR": "{:+.1%}", "volatility a year": "{:.1%}", "volatility drag": "{:.2%}",
-        "Sharpe-like": "{:+.2f}",
-        "standard error": "{:.2f}", "95% low": "{:+.2f}", "95% high": "{:+.2f}", "HAC t": "{:+.2f}",
-        "p-value": "{:.2f}", "max drawdown": "{:.1%}",
-        "years for t ≈ 2": lambda v: "more than 100" if v > 100 else f"{v:.0f}"}).hide(axis="index"))
-    print(f"HAC t-statistics use {hac_test(returns[IDS[0]])['lags']} Newey-West lags.")
-
-    # SurgeFlow's premium gate vs our own HAC test on the series the API sends.
-    cleared = score[score["premium gate (SurgeFlow)"] == "cleared"]
-    differ = cleared[cleared["our HAC test (5%)"] == "not significant"]
-    if cleared.empty:
-        print("No factor here has cleared SurgeFlow's premium gate, so there is no verdict to compare with.")
-    elif differ.empty:
-        print(f"SurgeFlow's premium gate cleared {and_list(CODE[f] for f in cleared['factor_id'])}, and our HAC "
-              "test agrees: each average return is significant at 5% on the one-year series.")
-    else:
-        if len(differ) == len(cleared) > 1:
-            found = (f"none of them significant at 5% (p from {differ['p-value'].min():.2f} to "
-                     f"{differ['p-value'].max():.2f})")
-        else:
-            found = (f"{and_list(CODE[f] for f in differ['factor_id'])} not significant at 5% "
-                     f"(p = {and_list(f'{p:.2f}' for p in differ['p-value'])})")
-        display(Markdown(
-            f"**Two verdicts on the same premium.** SurgeFlow's premium gate cleared "
-            f"{and_list(CODE[f] for f in cleared['factor_id'])}, but on the one-year `return_series` our two-sided "
-            f"HAC test finds {found}. Both can be right, because the API does not "
-            "say how its gate runs the test. It may use a longer history than the last year the API sends, a "
-            "different number of Newey–West lags, or a one-sided test (which halves the p-value). Read the gate "
-            "as SurgeFlow's claim, and this table as what the data you can see supports."))
+    display(spread_stats.style.format({"weeks": "{:.0f}", "years": "{:.1f}", "mean / year": "{:+.1%}",
+                                       "vol / year": "{:.1%}", "95% low": "{:+.1%}", "95% high": "{:+.1%}",
+                                       "t (HAC)": "{:+.2f}", "book vol / year": "{:.1%}",
+                                       "MARKET vol / year": "{:.1%}"}).hide(axis="index"))
 
 # %% [markdown]
-# **How to read this.** Each dot is a factor's Sharpe-like ratio; the whisker
-# is its 95% interval. A grey whisker crosses the zero line: the data cannot
-# tell that factor's true ratio apart from zero. A blue one stays clear of it. The table adds the
-# arithmetic mean, the CAGR and the volatility drag between them (largest for
-# the most volatile factor), the HAC t-statistic and its p-value, and the years
-# of data you would need for t ≈ 2 at the current ratio. `our HAC test (5%)`
-# turns that p-value into a verdict. `premium gate (SurgeFlow)` is SurgeFlow's
-# own verdict, read from the gate codes: *cleared* for a published factor.
-# When the two disagree, a note under the table says so and why that can
-# happen. The ✓ in section 3.2 is SurgeFlow's claim; this is the check you can
-# run yourself.
+# **How to read this.** The first chart compounds each spread. A line that
+# climbs means the style book beat the MARKET book over those weeks; a line
+# that falls means it trailed. The dot chart turns each spread into one
+# annualised mean with a 95% interval. A whisker that crosses zero means the
+# window is too short to tell that average from zero. In the table, compare
+# `vol / year` of the spread with `book vol / year`: the spread swings far
+# less than the book itself, because subtracting MARKET removed the market's
+# swings, which are most of a long-only book's risk.
 #
 # **Caveats.**
 #
-# - **One year is very little.** Even a true Sharpe ratio of 0.5, which is good
-#   for a factor, needs about 16 years of data to reach t ≈ 2.
-# - **Before costs and before borrowing fees.** Real returns would be lower.
-# - **In-sample.** The passport says the evidence is in-sample: these
-#   portfolios were defined, gated and measured on the same history.
-# - **Selection.** Only factors that passed their gates carry data, and seven
-#   factors in four markets is 28 tries. By luck alone, some ratios look good.
-# - The interval assumes independent days. The HAC t-statistic relaxes that,
-#   so trust it when the two disagree.
+# - **Sample size.** `weeks` and `years` are in the table. A few years of weekly
+#   data give wide intervals; a mean that looks large can still be noise.
+# - **Many spreads, one window.** With six spreads, one can clear zero by luck.
+# - **In-sample, gross of costs, a measurement.** None of this is a forecast
+#   or a claim about what the books will return. The API itself states that no
+#   accuracy or performance claim is made.
+# - Compounding a spread treats it as a long-short position rebuilt every
+#   week: long the style book, short the MARKET book. Real short positions
+#   would add costs that are not measured here.
 
 # %% [markdown]
-# ### 3.11 Chart: what the focus factor holds, with signed weights
+# ### 4.11 Chart: correlations, raw books versus spreads
 #
-# `top_holdings` is a **preview** of a factor's portfolio, not the whole thing:
-# `holdings_preview_count` rows in total (split between the two legs), out of
-# `n_holdings_active_leg` names in each leg. Only published factors carry it;
-# a blocked factor's list is empty. Like `return_series`, its item shape has
-# not been confirmed live yet (every live list so far was empty). Each row has:
-#
-# - `weight`: the **signed** share of capital. The disclosure and the passport
-#   both say the long-short factors are "+50% convention-long and −50%
-#   convention-short with equal-weighted legs". So each long name gets
-#   +0.5 ÷ n and each short name −0.5 ÷ n, where n is the number of names per
-#   leg. The full long leg adds up to +50% of capital and the full short leg to
-#   −50%: the net exposure is zero and the gross exposure (longs plus shorts,
-#   ignoring signs) is 100%.
-# - `leg_weight`: the weight inside its own leg, 1 ÷ n.
-# - `signal_value`: the ranking signal that put the stock in its leg. The API
-#   does not state its unit, so we read only its direction (high or low). The
-#   chart switches to a log axis when a signal is positive and spans more than
-#   a factor of 100 (a size signal sent as raw market cap would).
-#
-# For ERP the "leg" is `index` and the weights are the index's own weights,
-# all positive. The cleaning cell checks every one of these rules.
+# A **correlation** runs from −1 (always opposite) through 0 (unrelated) to +1
+# (always together). We compute two matrices on complete-case windows (every
+# pair uses the same weeks): the raw books on the left, the style-minus-MARKET
+# spreads on the right. Both use the same diverging scale from −1 to 1, centred
+# at 0, so the colours compare directly.
 
 # %%
-by_id = factors.set_index("factor_id")
-with_holdings = [f for f in by_id.index if isinstance(by_id.at[f, "top_holdings"], list) and by_id.at[f, "top_holdings"]]
-if FOCUS_FACTOR in with_holdings:
-    focus = FOCUS_FACTOR
+raw_aligned = wide[USE].dropna() if HAVE_RETURNS else pd.DataFrame()
+spread_aligned = spreads[SPREAD_USE].dropna() if SPREAD_USE else pd.DataFrame()
+if raw_aligned.shape[1] < 2 or len(raw_aligned) < MIN_WEEKS:
+    note("Fewer than two books with enough aligned clean weeks, so there is no correlation matrix.")
 else:
-    focus = next((f for f in with_holdings if f != "erp"), with_holdings[0] if with_holdings else None)
-    state = by_id.at[FOCUS_FACTOR, "verdict"] if FOCUS_FACTOR in by_id.index else "not in the payload"
-    print(f"{FOCUS_FACTOR.upper()} has no holdings in {MARKET_NAMES[MARKET]} today ({state})."
-          + (f" Showing {CODE[focus]} instead." if focus else ""))
-
-if focus is None:
-    holdings_raw = pd.DataFrame()
-    note(f"No factor in {MARKET_NAMES[MARKET]} carries holdings today (every top_holdings list is empty), "
-         "so there is no portfolio to show.")
-else:
-    holdings_raw = pd.DataFrame(by_id.at[focus, "top_holdings"])
-    print(f"Raw preview of {NAME[focus]}: {len(holdings_raw)} rows.")
-holdings_raw.head() if not holdings_raw.empty else None
-
-# %% [markdown]
-# **Cleaning the holdings.** Keep the documented columns; keep `ticker` as a
-# string (Hong Kong codes such as `"00700"` lose their leading zeros as numbers);
-# coerce the numbers; de-duplicate on the natural key (leg, ticker); and map
-# each leg to the shared `SIDE_COLORS`. Then check the weights against the rules
-# above.
-
-# %%
-HOLD_COLS = ["leg", "ticker", "name", "sector", "market_cap", "latest_price", "weight", "leg_weight",
-             "signal_value", "weight_source"]
-hold = pick(holdings_raw, HOLD_COLS)
-long_is_high = None
-if focus is not None:
-    hold["ticker"] = hold["ticker"].astype(str)
-    for col in ["market_cap", "latest_price", "weight", "leg_weight", "signal_value"]:
-        hold[col] = pd.to_numeric(hold[col], errors="coerce")
-    n_before = len(hold)
-    hold = hold.drop_duplicates(subset=["leg", "ticker"], keep="first").reset_index(drop=True)
-    hold["side"] = hold["leg"].map(SIDE).fillna("HOLD")             # an unknown leg is shown in neutral grey
-    meta = by_id.loc[focus]
-    n_leg = int(meta["n_holdings_active_leg"])
-    is_index = bool((hold["leg"] == "index").all())
-    longs, shorts = hold[hold["leg"] == "long"], hold[hold["leg"] == "short"]
-    print(f"De-duplication: {n_before} -> {len(hold)} rows. Unknown legs: {int((hold['side'] == 'HOLD').sum())}.")
-
-    def yes(flag) -> str:
-        return "yes" if flag else "no"
-
-    checks = [("preview rows = holdings_preview_count", f"{meta['holdings_preview_count']:.0f}", f"{len(hold)}")]
-    if is_index:
-        checks += [("every weight = its leg_weight (index weights)", "yes",
-                    yes(np.allclose(hold["weight"], hold["leg_weight"])))]
-    else:
-        checks += [
-            ("leg_weight = 1 ÷ n_holdings_active_leg", f"{1 / n_leg:.6f}", f"{hold['leg_weight'].median():.6f}"),
-            ("every long weight = +0.5 × leg_weight", "yes",
-             yes(np.allclose(longs["weight"], 0.5 * longs["leg_weight"], atol=2e-6))),
-            ("every short weight = −0.5 × leg_weight", "yes",
-             yes(np.allclose(shorts["weight"], -0.5 * shorts["leg_weight"], atol=2e-6))),
-            ("full long leg = n × weight", "+50.0%", f"{n_leg * longs['weight'].mean():+.1%}"),
-            ("full short leg = n × weight", "-50.0%", f"{n_leg * shorts['weight'].mean():+.1%}"),
-        ]
-    checks = pd.DataFrame(checks, columns=["check", "expected", "found"])
-    checks["ok"] = checks["expected"] == checks["found"]
-    display(checks.style.hide(axis="index"))
-
-    sig_label, sig_fmt, sig_noun = SIGNALS.get(focus, ("Signal value", ".2f", "signal values"))
-    if not is_index and hold["signal_value"].notna().any():
-        med_long, med_short = longs["signal_value"].median(), shorts["signal_value"].median()
-        long_is_high = bool(med_long > med_short)
-        textbook = TEXTBOOK_LONG_HIGH.get(focus)
-        direction = ("" if textbook is None else " This matches the textbook direction." if long_is_high == textbook
-                     else " This is the opposite of the textbook direction: check effective_sign in section 3.1.")
-        print(f"Median signal ({sig_label}): long leg {format(med_long, sig_fmt)}, short leg "
-              f"{format(med_short, sig_fmt)}. The long leg holds the {'high' if long_is_high else 'low'} end.{direction}")
-    scope = "All index constituents" if is_index else "Both legs together"
-    hm = {k.split(".", 1)[1]: meta[k] for k in HOLDING_METRICS}           # holdings_metrics, cleaned in 3.1
-
-    def known(field: str) -> str:
-        """'(EP known for 372 of 400)': how many constituents a cap-weighted average actually covers."""
-        n_known, n_all = hm[f"n_constituents_with_{field}"], hm["n_constituents_total"]
-        return "" if pd.isna(n_known) else f" ({field.upper()} known for {n_known:,.0f} of {n_all:,.0f})"
-
-    print(f"{scope} ({hm['n_constituents_total']:,.0f} stocks): cap-weighted earnings yield "
-          f"{pct(hm['ep_mcap_weighted'])}{known('ep')}, dividend yield {pct(hm['dy_mcap_weighted'])}{known('dy')}, "
-          f"total market cap {money(hm['tot_market_cap'], CCY)} ({hm['n_constituents_with_mcap']:,.0f} with a cap).")
-    coverage = fp["narrative_coverage"]
-    print(f"narrative_coverage: {coverage['holdings_with_narrative']} of {coverage['holdings_total']} preview holdings "
-          f"in this market carry a text narrative (coverage_pct = {coverage['coverage_pct']}).")
-
-# %%
-if focus is None:
-    note("No holdings to chart today.")
-else:
-    has_signal = bool(hold["signal_value"].notna().any())
-    show = hold.sort_values(["weight", "signal_value"], ascending=False).reset_index(drop=True)
-    show["label"] = show["ticker"] + " · " + show["name"].map(lambda s: shorten(s, 24))
-    sig = show["signal_value"].dropna()
-    wide_signal = has_signal and bool((sig > 0).all()) and float(sig.max() / sig.min()) > 100   # log axis needed
-    axis_label = ("Size signal (looks like market cap, log scale)" if wide_signal and focus == "smb" else
-                  f"{sig_label}, log scale" if wide_signal else sig_label)
-    right_title = axis_label if has_signal else f"Market cap ({CCY}, log scale)"
-    money_dots = (wide_signal and focus == "smb") or not has_signal    # dots read as money: $ in hover and ticks
-
-    def money_ticks(values) -> tuple:
-        """Readable 1-2-5 ticks for a log axis of money values, such as $500B, $1T, $2T."""
-        v = pd.Series(values).dropna()
-        ticks = [m * 10.0**e for e in range(3, 16) for m in (1, 2, 5) if v.min() / 1.5 <= m * 10.0**e <= v.max() * 1.5]
-        return ticks, [money(t, CCY, 0) for t in ticks]
-
-    fig = make_subplots(rows=1, cols=2, shared_yaxes=True, column_widths=[0.56, 0.44], horizontal_spacing=0.04,
-                        subplot_titles=["Signed weight (% of capital)", right_title])
+    raw_corr = raw_aligned.corr()
+    have_spread_corr = spread_aligned.shape[1] >= 2 and len(spread_aligned) >= MIN_WEEKS
+    spread_corr = spread_aligned.corr() if have_spread_corr else pd.DataFrame()
+    titles = [f"Raw books · {len(raw_aligned)} weeks",
+              f"Style − MARKET spreads · {len(spread_aligned)} weeks" if have_spread_corr else "Spreads: too few"]
+    fig = make_subplots(rows=1, cols=2, subplot_titles=titles, horizontal_spacing=0.16)
     fig.update_annotations(font=dict(size=13, color=INK))
-    legend_name = {"LONG": "Long leg (bought)" if not is_index else "Index weight (bought)",
-                   "SHORT": "Short leg (sold short)", "HOLD": "Other leg"}
-    for side in ("LONG", "SHORT", "HOLD"):
-        part = show[show["side"] == side]
-        if part.empty:
-            continue
-        custom = np.column_stack([part["name"], part["sector"], part["market_cap"].map(lambda v: money(v, CCY)),
-                                  part["latest_price"], part["leg_weight"]])
-        fig.add_trace(go.Bar(
-            x=part["weight"], y=part["label"], orientation="h", name=legend_name[side], legendgroup=side,
-            marker=dict(color=SIDE_COLORS[side]), width=0.62, customdata=custom,
-            hovertemplate=("<b>%{customdata[0]}</b> · %{customdata[1]}<br>Signed weight %{x:+.2%} "
-                           "(%{customdata[4]:.2%} of its leg)<br>Market cap %{customdata[2]} · last price "
-                           f"{SYMBOL[CCY]}%{{customdata[3]:,.2f}}<extra></extra>")), row=1, col=1)
-        dot_x = part["signal_value"] if has_signal else part["market_cap"]
-        dot_name = (("Size signal (looks like market cap)" if money_dots else sig_label) if has_signal
-                    else "Market cap")
-        fig.add_trace(go.Scatter(
-            x=dot_x, y=part["label"], mode="markers", legendgroup=side, showlegend=False,
-            marker=dict(size=10, color=SIDE_COLORS[side], line=dict(width=2, color=SURFACE)),
-            customdata=dot_x.map(lambda v: money(v, CCY)).to_numpy()[:, None],
-            hovertemplate=(f"%{{y}}<br>{dot_name}: %{{customdata[0]}}<extra></extra>" if money_dots else
-                           f"%{{y}}<br>{dot_name}: %{{x:{sig_fmt}}}<extra></extra>")), row=1, col=2)
-    reach = float(show["weight"].abs().max()) * 1.18
-    fig.update_xaxes(tickformat=".1%", range=[0 if is_index else -reach, reach], zeroline=True,
-                     zerolinecolor=AXIS, row=1, col=1)
-    if money_dots:                              # market cap (or a size signal that is one): log axis, $ ticks
-        ticks, labels = money_ticks(show["signal_value"] if has_signal else show["market_cap"])
-        fig.update_xaxes(type="log", tickvals=ticks, ticktext=labels, row=1, col=2)
-    elif wide_signal:
-        fig.update_xaxes(type="log", row=1, col=2)
+    fig.add_trace(corr_trace(raw_corr, showscale=True), row=1, col=1)
+    if have_spread_corr:
+        fig.add_trace(corr_trace(spread_corr, showscale=False), row=1, col=2)
+        title = (f"Raw books correlate {mean_pair(raw_corr):+.2f} on average; after subtracting MARKET, the "
+                 f"spreads correlate {mean_pair(spread_corr):+.2f}")
     else:
-        fig.update_xaxes(tickformat=sig_fmt, row=1, col=2)
-    fig.update_yaxes(categoryorder="array", categoryarray=show["label"].tolist()[::-1], ticks="")
-
-    if is_index:
-        title = (f"{CODE[focus]} holds the {meta['benchmark_name']} at index weights; these {len(show)} names make "
-                 f"up {show['weight'].sum():.0%} of it")
-    else:
-        w = float(longs["weight"].mean())
-        if long_is_high is None:
-            title = f"{CODE[focus]} holds each name at ±{w:.2%} of capital"
-        else:
-            buy, sell = ("highest", "lowest") if long_is_high else ("lowest", "highest")
-            title = f"{CODE[focus]} buys the {buy} {sig_noun} and shorts the {sell}, at ±{w:.2%} of capital each"
-    heading, top = chart_title(
-        title, f"{NAME[focus]} · preview of {len(longs) or len(show)} of the {n_leg:,} names "
-               f"{'in the index' if is_index else 'in each leg'} · holdings as of {meta['holdings_as_of']} · "
-               f"bars: signed weight · dots: {'the ranking signal' if has_signal else 'market cap'}",
-        extra_top=22)                                     # + room for the two panel titles
-    fig.update_layout(
-        title=heading, height=top + 50 + 27 * len(show), margin=dict(t=top, b=90, l=230), legend=BOTTOM_LEGEND,
-        bargap=0.3,
-        showlegend=show["side"].nunique() > 1)            # one leg needs no legend: the title names it
+        title = f"Raw books correlate {mean_pair(raw_corr):+.2f} on average"
+    heading, top = chart_title(title, "Correlation of weekly returns on complete-case windows · blue = move "
+                                      "together, red = move opposite, grey ≈ unrelated · same scale in both "
+                                      "panels", extra_top=22)
+    fig.update_layout(title=heading, height=top + 120 + 46 * len(USE), margin=dict(t=top, l=110, r=40, b=110))
+    fig.update_xaxes(showgrid=False, ticks="", tickangle=-35)
+    fig.update_yaxes(showgrid=False, ticks="", autorange="reversed")
     fig.show()
-    display(show[["side", "ticker", "name", "sector", "weight", "leg_weight", "signal_value", "market_cap",
-                  "latest_price"]].style.format({"weight": "{:+.3%}", "leg_weight": "{:.3%}", "signal_value": "{:.4g}",
-                                                 "market_cap": lambda v: money(v, CCY),
-                                                 "latest_price": lambda v: f"{SYMBOL[CCY]}{v:,.2f}"},
-                                                na_rep="–").hide(axis="index"))
+    display(raw_corr.style.format(signed).set_caption("Raw books"))
+    if have_spread_corr:
+        display(spread_corr.style.format(signed).set_caption("Style − MARKET spreads"))
 
 # %% [markdown]
-# **How to read this.** Each row is one stock. In the left panel, bars to the
-# right (blue) are bought and bars to the left (red) are sold short. In a
-# long-short factor every bar has the same length, because each leg gives all
-# its names equal weight. The right panel shows *why* each stock is in its leg:
-# its ranking signal. The long dots and the short dots should sit at opposite
-# ends; if they do not, the factor is flipped or the signal is mislabelled.
+# **How to read this.** On the left, almost every cell is deep blue: raw
+# long-only books move together because they all carry the market. On the
+# right, with the market subtracted, the colours fade towards grey and some
+# turn red. These are the relationships between the styles themselves, the
+# ones that matter when you think about combining them. The tables are the
+# twins of the two panels.
 #
 # **Caveats.**
 #
-# - This is a **preview**: `holdings_preview_count` rows in total, split
-#   between the legs, out of `n_holdings_active_leg` names in each leg. Never
-#   rebuild a factor's returns from it.
-# - The holdings are the latest snapshot (`holdings_as_of`). The return series
-#   covers a whole year in which the membership changed at every rebalance.
-# - Equal weights give a tiny company the same weight as a giant, and small
-#   stocks cost more to trade. That is one reason real-world factor returns
-#   fall short of paper ones.
-# - Short-selling is restricted or expensive in some markets (mainland China in
-#   particular), so a short leg can be a research construct rather than
-#   something an investor could hold.
-# - The API does not state the unit of `signal_value`, and it differs by
-#   factor. Compare dots within one chart, never across factors.
-# - The cap-weighted yields in the printed line cover only the constituents
-#   whose earnings or dividends are known (the counts in brackets).
+# - A correlation from a few years of weekly data is noisy. As a rule of thumb,
+#   values within about ±2 / √(weeks) of zero cannot be told from zero.
+# - Correlations change over time and tend to rise in market stress.
 
 # %% [markdown]
-# ## 4. Four markets: who publishes what, and one factor across them
+# ### 4.12 Chart: the long-only spread versus its Fama-French 2×3 twin
 #
-# *This section calls the same endpoint for the other three markets (3 more
-# requests).* Each market builds its factors inside its own stock universe and
-# on its own trading calendar. Comparing markets answers two questions: which
-# factors pass their gates where, and whether one style paid everywhere or
-# only locally. It also shows a practical cleaning problem: **the calendars do
-# not line up**.
-#
-# The extra markets are optional, so we fetch them with `sf_try`: if one is
-# unavailable, it prints a note and the section carries on with the others.
-# The first table checks that all the markets come from the same build: the
-# same `release_id` and the same factor-contract fingerprint.
+# With `measurement=true` the response also carries **measurement twins** in
+# `data.measurement_twins`: Fama-French-style 2×3 long-short portfolios for the
+# same styles (`s3b_ff_2x3_ew` weights stocks equally inside each leg;
+# `s3b_ff_2x3_rp126` by inverse 126-session volatility). They follow the
+# classic academic recipe: buy one end of a sort, sell the other end short.
+# Their weekly returns sit in `returns[FACTOR]`, with the same row shape as the
+# books' returns. Comparing the `FOCUS` spread with its twin asks: does the
+# long-only book capture the same style as the academic long-short version?
 
 # %%
-fp_by_market = {MARKET: fp}
+twins = (data.get("measurement_twins") or {}) if AVAILABLE else {}
+if not MEASUREMENT or TWIN not in twins:
+    twin_r = pd.Series(dtype=float)
+    note(f"No measurement twin `{TWIN}` in this response (MEASUREMENT = {MEASUREMENT}).")
+else:
+    twin = twins[TWIN]
+    quote(f"data.measurement_twins.{TWIN}.label", twin.get("label"))
+    quote(f"data.measurement_twins.{TWIN}.returns_label", twin.get("returns_label"))
+    twin_raw = pd.DataFrame((twin.get("returns") or {}).get(FOCUS) or [])
+    if twin_raw.empty:
+        twin_r = pd.Series(dtype=float)
+        note(f"The twin has no {FOCUS} series in this response.")
+    else:
+        twin_rows = pick(twin_raw, ["week_start", "week_return", "status"])
+        twin_rows["week_start"] = pd.to_datetime(twin_rows["week_start"], format="%Y-%m-%d", errors="coerce")
+        twin_rows["week_return"] = pd.to_numeric(twin_rows["week_return"], errors="coerce")
+        twin_rows = twin_rows.drop_duplicates("week_start", keep="last")
+        twin_r = twin_rows.loc[twin_rows["status"].eq("ok")].set_index("week_start")["week_return"]
+        print(f"Twin {FOCUS}: {len(twin_rows)} weeks served, {len(twin_r)} with status 'ok' "
+              f"({twin_rows['status'].value_counts().to_dict()}).")
+
+# %%
+if FOCUS == "MARKET":
+    long_only = wide["MARKET"] if "MARKET" in wide.columns else pd.Series(dtype=float)
+else:
+    long_only = spreads[FOCUS] if FOCUS in spreads.columns else pd.Series(dtype=float)
+lo_name = "MARKET book" if FOCUS == "MARKET" else f"{FOCUS} − MARKET (long-only)"
+pair = pd.concat({lo_name: long_only, f"{FOCUS} 2×3 twin": twin_r}, axis=1, sort=True).dropna()
+if len(pair) < MIN_WEEKS:
+    note(f"Fewer than {MIN_WEEKS} weeks in which both the {lo_name} and the twin have a clean return, "
+         "so they are not compared.")
+else:
+    pair_level = growth_index(pair)
+    pair_final = pair_level.iloc[-1]
+    rho = float(pair.corr().iloc[0, 1])
+    y_range = padded_range(pair_level.to_numpy())
+    beta = float(pair.cov().iloc[0, 1] / pair.iloc[:, 1].var())     # long-only move per unit of the twin's move
+    PLOT_PX, BOTTOM = 300, 130
+    styles = {lo_name: dict(color=FACTOR_COLORS[FOCUS], width=2.4),
+              f"{FOCUS} 2×3 twin": dict(color=INK_2, width=2, dash="dash")}
+    fig = go.Figure()
+    fig.add_hline(y=100, line=dict(color=AXIS, width=1), layer="below")
+    for name in pair.columns:
+        fig.add_trace(go.Scatter(x=pair_level.index, y=pair_level[name], mode="lines", name=name, line=styles[name],
+                                 hovertemplate=f"{name}: %{{y:.1f}}<extra></extra>"))
+    ends = pd.DataFrame({"x": [pair_level.index[-1]] * 2, "y": pair_final.to_numpy(),
+                         "text": [f"{'Long-only' if i == 0 else 'Twin'} {v:.0f}" for i, v in enumerate(pair_final)],
+                         "color": [FACTOR_COLORS[FOCUS], INK_2]})
+    add_end_labels(fig, ends, y_range, PLOT_PX)
+    heading, top = chart_title(
+        f"{FOCUS}: the long-only {'book' if FOCUS == 'MARKET' else 'spread'} and its 2×3 twin correlate "
+        f"{rho:+.2f} week to week",
+        f"Value of 100 in each, over the {plural(len(pair), 'week')} both have a clean return · twin "
+        f"{TWIN} (long-short, a yardstick for measurement, not one of the books) · gross of costs")
+    fig.update_layout(title=heading, height=top + PLOT_PX + BOTTOM, margin=dict(t=top, b=BOTTOM, r=120),
+                      hovermode="x unified", legend=dict(BOTTOM_LEGEND, itemclick=False, itemdoubleclick=False),
+                      xaxis=date_axis(pair_level.index), yaxis=dict(title="Value of 100 (index)", range=y_range))
+    fig.show()
+    pair_stats = pd.DataFrame({name: annual_stats(pair[name]) for name in pair.columns}).T
+    pair_stats["correlation with the other"] = rho
+    print(f"Regression slope of the long-only series on the twin: {beta:.2f} (it moves about {beta:.2f} for each "
+          "1.00 the twin moves in a week).")
+    display(pair_stats.rename_axis("series").reset_index().style.format(
+        {"weeks": "{:.0f}", "years": "{:.1f}", "mean / year": "{:+.1%}", "vol / year": "{:.1%}",
+         "95% low": "{:+.1%}", "95% high": "{:+.1%}", "t (HAC)": "{:+.2f}",
+         "correlation with the other": "{:+.2f}"}).hide(axis="index"))
+
+# %% [markdown]
+# **How to read this.** Both lines start at 100 on the first week they share.
+# If they rise and fall in step (a high correlation), the long-only spread and
+# the academic long-short portfolio capture the same style. Their levels need
+# not match: the twin's exposure to the style is whatever its sort produces,
+# while the long-only spread carries about one unit of it, so one line can be
+# a scaled version of the other. The printed regression slope measures that
+# scale: how far the long-only spread moved, on average, per unit move of the
+# twin in the same week.
+#
+# **Caveats.**
+#
+# - The twin is a yardstick for measurement, not one of the books (read its
+#   own label above). It needs short selling, which costs money and is not
+#   always possible.
+# - Both are gross of costs and measured on the same return basis (see the
+#   twin's `returns_label` above).
+
+# %% [markdown]
+# ## 5. The query parameters, and what the errors look like
+#
+# Three more requests show the parameters you have not used yet:
+#
+# 1. **`factor` + `formation_date` + a complete book.** We ask for the `FOCUS`
+#    book only (`factor=`), at a published formation date about a year ago
+#    (`formation_date=`), with every holding (`holdings=5000`), one week of
+#    returns (`weeks=1`) and no twins (`measurement=false`). With the complete
+#    list we can check two things ourselves: whether the weights sum to 1, and
+#    whether the weighted average of the holdings' style scores reproduces the
+#    book's exposures.
+# 2. **A date with no published books.** Formations happen once a week, so the
+#    day after a formation date is never one. The API answers with the empty
+#    state and `reason_code` = `formation_date_not_published`.
+# 3. **An invalid factor.** `factor=QUALITY` is not one of the seven books. The
+#    API answers HTTP 400 with the code `INVALID_FACTOR` (the JSON body's
+#    `error.factors` lists the valid names), and `sf_get` raises
+#    `SurgeFlowError`, which we catch.
+#
+# The other errors work the same way: HTTP 400 `INVALID_DATE` for a
+# `formation_date` that is not a `YYYY-MM-DD` date, HTTP 400 `INVALID_MARKET`
+# for a market outside `us`, `cn`, `jp`, `hk`, and HTTP 503 when the data cannot
+# be read right now (`sf_get` retries, then raises; `sf_try` prints a note and
+# returns `None`).
+
+# %%
+focus_ok = ret.loc[ret["factor"].eq(FOCUS) & ret["status"].eq("ok"), "formation_date"] if not ret.empty else []
+pool = focus_ok if len(focus_ok) else (ret.loc[ret["status"].eq("ok"), "formation_date"] if not ret.empty else [])
+formations = sorted(pd.Series(pool).dropna().unique())   # published formation dates where the FOCUS book was formed
+if not formations:
+    PAST_DATE = None
+    note("No published formation dates in the main response, so the formation_date examples are skipped.")
+else:
+    PAST_DATE = pd.Timestamp(formations[max(0, len(formations) - 53)])     # about a year before the latest
+    one = sf_get(f"/api/v1/markets/{MARKET}/factor-portfolios", factor=FOCUS,
+                 formation_date=f"{PAST_DATE:%Y-%m-%d}", weeks=1, holdings=5000, measurement="false")
+    show_freshness(one, "factor + formation_date response:")
+    one_data = one["data"]
+    served_books = [b["factor"] for b in records(one, "factor_portfolios")]
+    print(f"Asked for factor={FOCUS}, formation_date={PAST_DATE:%Y-%m-%d}. Served: data.status "
+          f"{one_data['status']!r}, formation_date {one_data.get('formation_date')!r}, books {served_books}.")
+    if len(served_books) > 1 or one_data.get("formation_date") != f"{PAST_DATE:%Y-%m-%d}":
+        print("The server did not apply every parameter (the offline mock used for testing ignores query "
+              f"parameters). The {FOCUS} book is picked out of the response below.")
+    book = next((b for b in records(one, "factor_portfolios") if b["factor"] == FOCUS), None)
+    if one_data["status"] != "available" or book is None or not book.get("holdings"):
+        show_state(one, f"{FOCUS} at {PAST_DATE:%Y-%m-%d}")
+        note(f"No {FOCUS} holdings in this answer, so the checks are skipped.")
+    else:
+        full = pd.json_normalize(book["holdings"])
+        full["weight"] = pd.to_numeric(full["weight"], errors="coerce")
+        truncated = bool(book.get("holdings_truncated"))
+        print(f"{len(full):,} holdings received of n_holdings = {book['n_holdings']:,}; "
+              f"holdings_truncated = {truncated}.")
+        print(f"Sum of the received weights: {full['weight'].sum():.6f} (sum_weight says {book['sum_weight']:.6f})"
+              + (" - partial, because the list is truncated." if truncated else "."))
+        implied = {s: float((full["weight"] * pd.to_numeric(full[f"exposures.{s}"], errors="coerce")).sum())
+                   for s in STYLES if f"exposures.{s}" in full.columns}
+        implied["market"] = float(full["weight"].sum())          # every stock's market loading is 1
+        recon = pd.DataFrame({"book exposure (API)": pd.Series(book["exposures"]),
+                              "Σ weight × holding score": pd.Series(implied)}).reindex(STYLES)
+        recon["difference"] = recon["Σ weight × holding score"] - recon["book exposure (API)"]
+        display(recon.style.format("{:+.4f}", na_rep="–"))
+        current = set(holds.loc[holds["factor"].eq(FOCUS), "ticker"])
+        then = set(full.nlargest(len(current) or HOLDINGS, "weight")["ticker"])
+        if current:
+            print(f"Of today's {len(current)} largest {FOCUS} holdings, {len(current & then)} were also among the "
+                  f"{len(then)} largest at {PAST_DATE:%Y-%m-%d}.")
+    del one                                                   # keep memory small: only the summary is needed
+
+# %% [markdown]
+# **How to read this.** The first line confirms what the server applied.
+# With the complete list (`holdings_truncated` false), the weights should add
+# up to 1. The table tests the usual definition of an exposure, the weighted
+# average of the holdings' style scores: if the book's exposures are built that
+# way, the `difference` column is close to zero for every style, and `market`
+# is 1 because each stock counts once on the market. If the list is truncated,
+# both checks are partial and the differences show it. The last line compares
+# today's largest holdings with those of a year ago: a book is rebuilt every
+# week, and its names drift.
+
+# %%
+if PAST_DATE is None:
+    note("Skipped: no formation dates to build an unpublished date from.")
+else:
+    NOT_PUBLISHED = ret["formation_date"].max() + pd.Timedelta(days=1)   # the day after the latest formation
+    miss = sf_get(f"/api/v1/markets/{MARKET}/factor-portfolios", formation_date=f"{NOT_PUBLISHED:%Y-%m-%d}",
+                  weeks=1, holdings=0, measurement="false")
+    show_freshness(miss, "Unpublished formation_date response:")
+    status, code, message = state_of(miss)
+    print(f"HTTP 200, ok = {miss['ok']} | data.status: {status!r} | data.reason_code: {code!r}")
+    if status == "empty":
+        display(Markdown(f"> {message}"))
+    else:
+        print("The server answered with books (the offline mock ignores formation_date); live, this date returns "
+              "the empty state with reason_code 'formation_date_not_published'.")
+    del miss
+
+try:
+    sf_get(f"/api/v1/markets/{MARKET}/factor-portfolios", factor="QUALITY", weeks=1, holdings=0,
+           measurement="false")
+    print("No error came back: the offline mock ignores query parameters. Live, factor=QUALITY answers "
+          "HTTP 400 INVALID_FACTOR.")
+except SurgeFlowError as exc:
+    print(f"Caught SurgeFlowError: HTTP {exc.status}, code {exc.code}")
+    print(f"Message: {exc}")
+
+# %% [markdown]
+# **How to read this.** An unpublished date is **not** an error: the answer is
+# HTTP 200 with `data.status` = `"empty"`, so the code prints the message and
+# carries on. An invalid factor **is** an error: a 400 with a code you can test
+# for (`exc.code == "INVALID_FACTOR"`). Keep that distinction in your own code:
+# show empty states, and let real errors raise, or catch them by code.
+
+# %% [markdown]
+# ## 6. Four markets: who publishes, how fresh, and one spread side by side
+#
+# Each market has its own publication, calendar, universe and return basis. The
+# cell reuses the responses we already have (yours and Hong Kong's) and fetches
+# the others with `holdings=0` and `measurement=false`, because only the return
+# series are needed. It uses `sf_try`, so a market that cannot be read right
+# now prints a note instead of stopping the notebook. The table shows each
+# market's `data.status` and its freshness block's `state` and `weeks_behind`
+# exactly as reported; the small panels compound the `FOCUS` spread (the MARKET
+# book itself when `FOCUS` is MARKET).
+
+# %%
+def focus_series(payload: dict) -> pd.Series:
+    """The FOCUS spread (or the MARKET book) from one market's response: clean weeks only."""
+    frames = []
+    for book in {"MARKET", FOCUS}:
+        rows = pd.DataFrame(dig(payload, "data", "returns", book, default=[]) or [])
+        if rows.empty:
+            return pd.Series(dtype=float)
+        rows = pick(rows, ["week_start", "week_return", "status"]).drop_duplicates("week_start", keep="last")
+        rows["week_start"] = pd.to_datetime(rows["week_start"], format="%Y-%m-%d", errors="coerce")
+        rows["week_return"] = pd.to_numeric(rows["week_return"], errors="coerce")
+        frames.append(rows.loc[rows["status"].eq("ok")].set_index("week_start")["week_return"].rename(book))
+    both = pd.concat(frames, axis=1, sort=True)
+    return (both["MARKET"] if FOCUS == "MARKET" else both[FOCUS] - both["MARKET"]).dropna()
+
+
+VIEWS = {}
 if COMPARE_MARKETS:
     for m in MARKETS:
-        if m == MARKET:
+        payload = PAYLOADS.get(m)
+        if payload is None:
+            payload = sf_try(f"/api/v1/markets/{m}/factor-portfolios", weeks=WEEKS, holdings=0, measurement="false")
+            if payload is not None:
+                show_freshness(payload, f"{MARKET_NAMES[m]}:")
+        if payload is None:
+            VIEWS[m] = {"market": m, "data.status": "unreadable now"}
             continue
-        payload = sf_try(f"/api/v1/markets/{m}/factor-portfolios")
-        if payload is None:                     # unavailable right now: sf_try already printed a note
-            continue
-        show_freshness(payload, f"{MARKET_NAMES[m]}:")
-        fp_by_market[m] = payload["data"]["data"]
+        status, code, message = state_of(payload)
+        fresh = dig(payload, "data", "freshness", default={}) or {}
+        series = focus_series(payload) if status == "available" else pd.Series(dtype=float)
+        VIEWS[m] = {"market": m, "data.status": status, "reason_code": code, "message": message,
+                    "publication_id": dig(payload, "data", "publication", "publication_id"),
+                    "freshness.state": fresh.get("state"), "freshness.weeks_behind": fresh.get("weeks_behind"),
+                    "return basis": dig(payload, "data", "return_basis", "label"),
+                    "series": series} | annual_stats(series)
+        if m not in (MARKET, EMPTY_DEMO):
+            del payload                                       # only the summary and the series are kept
+    market_table = pd.DataFrame([{k: v for k, v in view.items() if k != "series"} for view in VIEWS.values()])
+    as_sent = lambda v: "–" if v is None or pd.isna(v) else f"{v:g}"      # 2.0 (a float after NaN) prints as 2
+    display(styled_freshness(market_table).format({"freshness.weeks_behind": as_sent, "years": "{:.1f}",
+                                                   "mean / year": "{:+.1%}",
+                                                   "vol / year": "{:.1%}", "95% low": "{:+.1%}",
+                                                   "95% high": "{:+.1%}", "t (HAC)": "{:+.2f}"}, na_rep="–"))
 else:
-    note("COMPARE_MARKETS is False, so this section uses only your own market.")
-
-fetched = [m for m in MARKETS if m in fp_by_market]
-releases = pd.DataFrame([{
-    "market": f"{MARKET_NAMES[m]} ({m})",
-    "as_of": fp_by_market[m]["as_of"] or "null",
-    "published": f"{fp_by_market[m]['n_active']} of {len(fp_by_market[m]['factors'])}",
-    "risk-ready": fp_by_market[m]["n_risk_ready"],
-    "benchmark": fp_by_market[m]["research_passport"]["benchmark_id"],
-    "release_id": fp_by_market[m]["release_id"],
-    "contract fingerprint": str(fp_by_market[m]["factor_contract_sha256"])[:12] + "…",
-} for m in fetched])
-display(releases.style.hide(axis="index"))
-same_release = releases["release_id"].nunique() == 1
-same_contract = len({fp_by_market[m]["factor_contract_sha256"] for m in fetched}) == 1
-print(f"{len(fetched)} markets fetched. Release: {'one build for all' if same_release else 'different builds'}; "
-      f"factor contract: {'identical' if same_contract else 'different, so compare factors with care'}.")
-
-# %% [markdown]
-# **Chart: the gate state in every market.** One row per market and one column
-# per factor. The marks reuse the language of the checklist in section 3.2: a
-# green dot is published, a red ✕ failed a test, and a grey hourglass or
-# circle is still pending (too little history, or checks not yet run).
+    note("COMPARE_MARKETS is False, so the four-market comparison is skipped.")
 
 # %%
-grid = pd.DataFrame([{
-    "market": MARKET_NAMES[m], "factor_id": f["factor_id"], "code": f["factor_name_published"].split("_")[0],
-    "verdict": verdict(f["publish_state"], f["gate_reason"]), "reason": main_reason(f["gate_reason"]),
-    "return days": len(f["return_series"] or [])} for m in fetched for f in fp_by_market[m]["factors"]])
-codes_order = [c for c in factors["code"]] + sorted(set(grid["code"]) - set(factors["code"]))
-market_rows = [MARKET_NAMES[m] for m in fetched]
-
-fig = go.Figure()
-for v, (label, sym, color) in VERDICT_STYLE.items():
-    part = grid[grid["verdict"] == v]
-    if part.empty:
-        continue
-    fig.add_trace(go.Scatter(
-        x=part["code"], y=part["market"], mode="markers", name=label,
-        marker=dict(symbol=sym, color=color, size=13 if v == "published" else 17,
-                    line=dict(width=2.5 if sym.endswith("open") else 0, color=color)),
-        customdata=part[["verdict", "reason", "return days"]].to_numpy(),
-        hovertemplate=("<b>%{x} in %{y}</b>: %{customdata[0]}<br>%{customdata[2]} return days"
-                       + ("" if v == "published" else "<br>Main reason: %{customdata[1]}") + "<extra></extra>")))
-
-n_pairs, n_pub = len(grid), int((grid["verdict"] == "published").sum())
-per_market = grid.assign(pub=grid["verdict"] == "published").groupby("market", sort=False)["pub"].sum()
-everywhere = [c for c in codes_order if (grid.loc[grid["code"] == c, "verdict"] == "published").all()]
-if n_pub == 0:
-    n_fail = int((grid["verdict"] == "failed a test").sum())
-    where = "in any market" if len(fetched) > 1 else f"in {MARKET_NAMES[fetched[0]]}"
-    title = (f"No factor is published {where} today: {n_fail} of {n_pairs} failed a test, "
-             f"{n_pairs - n_fail} are pending")
-    subtitle = "Gate verdict of each factor in each market · hover a mark for its main reason"
-elif len(fetched) == 1:
-    title = (f"{MARKET_NAMES[fetched[0]]}: {n_pub} of {n_pairs} factors are published "
-             "(set COMPARE_MARKETS = True to add the other markets)")
-    subtitle = "Gate verdict of each factor · hover a mark for its main reason"
+if not VIEWS:
+    note("Nothing to draw: the comparison was skipped.")
 else:
-    leaders = per_market[per_market == per_market.max()].index.tolist()
-    none_in = per_market[per_market == 0].index.tolist()
-    title = (f"{n_pub} of {n_pairs} factor-market pairs are published; most in {and_list(leaders)} "
-             f"({per_market.max()} of {len(factors)}{' each' if len(leaders) > 1 else ''})"
-             + (f", none in {and_list(none_in)}" if none_in else ""))
-    subtitle = f"Gate verdict of each factor in each market · published in every market: {and_list(everywhere)}"
-heading, top = chart_title(title, subtitle, extra_top=22)          # + room for the factor codes above the grid
-fig.update_layout(
-    title=heading, height=top + 80 + 52 * len(fetched), margin=dict(t=top, b=80, l=130, r=30), legend=BOTTOM_LEGEND,
-    hovermode="closest",
-    xaxis=dict(categoryorder="array", categoryarray=codes_order, side="top", showgrid=False, ticks="",
-               tickfont=dict(size=13, color=INK), range=[-0.6, len(codes_order) - 0.4]),
-    yaxis=dict(categoryorder="array", categoryarray=market_rows, autorange="reversed", gridcolor=GRID, ticks="",
-               range=[len(market_rows) - 0.5, -0.5]))
-fig.show()
-display(grid.pivot(index="market", columns="code", values="verdict").reindex(index=market_rows, columns=codes_order)
-        .rename_axis(index="market", columns=None))
-
-# %% [markdown]
-# **How to read this.** Read along a row to see one market's factors, and down
-# a column to see one factor in every market. A column of green dots is a style
-# you can compare across all the markets today; the table under the chart is
-# the same grid in words. Hover over a mark for its main reason, chosen in this
-# order: a failed test first, then missing history, then a check not yet run.
-#
-# **Caveats.**
-#
-# - Gate state can change from one release to the next. A factor that is
-#   withheld today can be published tomorrow, and the other way round.
-# - The gates run separately in each market, on that market's own history, so a
-#   factor can pass in one market and fail in another.
-
-# %% [markdown]
-# **Cleaning each market's series.** `factor_series` repeats the steps from
-# section 3.3 for one factor in one payload: numeric coercion, UTC date
-# parsing, dropping missing values, the units check on the raw values,
-# dropping impossible values, and de-duplicating on the date. It is written
-# out here, not hidden in a helper, so you can check it. It also counts every
-# row it drops, and the table below prints those counts for each market.
-
-# %%
-def factor_series(payload_data: dict, fid: str, where: str) -> tuple:
-    """One factor's cleaned daily returns (decimals, indexed by session date) from a factor-portfolios payload,
-    plus the number of rows dropped at each step."""
-    rec = next((f for f in payload_data["factors"] if f["factor_id"] == fid), None)
-    dropped = {"missing": 0, "impossible": 0, "duplicate": 0}
-    if rec is None or not rec["return_series"]:
-        return pd.Series(dtype=float), dropped
-    s = pd.DataFrame([{"date": p["date"], "ret": p["ret"]} for p in rec["return_series"]], columns=["date", "ret"])
-    s["ret"] = pd.to_numeric(s["ret"], errors="coerce")
-    s["date"] = pd.to_datetime(s["date"], utc=True, errors="coerce").dt.tz_localize(None)
-    dropped["missing"] = int(s.isna().any(axis=1).sum())
-    s = s.dropna()
-    units_check(s["ret"], where)                        # stops if the API sent percent (before the ±50% filter)
-    dropped["impossible"] = int((s["ret"].abs() > MAX_ABS_DAILY).sum())
-    s = s[s["ret"].abs() <= MAX_ABS_DAILY]
-    dropped["duplicate"] = int(s.duplicated(subset="date").sum())
-    s = s.drop_duplicates(subset="date", keep="last").sort_values("date")
-    return s.set_index("date")["ret"], dropped
-
-
-def why_withheld(payload_data: dict, fid: str) -> str:
-    """Why a factor has no returns in one market: its verdict and its most decisive gate, in plain English."""
-    rec = next((f for f in payload_data["factors"] if f["factor_id"] == fid), None)
-    if rec is None:
-        return "not in the payload: the factor is missing from this market's contract"
-    return f"{verdict(rec['publish_state'], rec['gate_reason'])}: {main_reason(rec['gate_reason'])}"
-
-
-CROSS = FOCUS_FACTOR
-cleaned = {m: factor_series(fp_by_market[m], CROSS, f"{MARKET_NAMES[m]} {CROSS.upper()}") for m in fetched}
-cross = {m: series for m, (series, _) in cleaned.items()}
-live = [m for m in fetched if not cross[m].empty]
-summary = pd.DataFrame([{
-    "market": MARKET_NAMES[m], "state": "published" if m in live else "withheld",
-    "days": len(cross[m]), "first": f"{cross[m].index.min():%Y-%m-%d}" if m in live else "–",
-    "last": f"{cross[m].index.max():%Y-%m-%d}" if m in live else "–",
-    "total return": (1 + cross[m]).prod() - 1 if m in live else np.nan,
-    "volatility a year": cross[m].std() * np.sqrt(TRADING_DAYS) if m in live else np.nan,
-    "dropped: missing / beyond ±50% / duplicate": " / ".join(str(n) for n in cleaned[m][1].values()),
-    "reason if withheld": "" if m in live else why_withheld(fp_by_market[m], CROSS)} for m in fetched])
-display(summary.style.format({"total return": "{:+.1%}", "volatility a year": "{:.1%}"}, na_rep="–")
-        .hide(axis="index"))
-
-# %%
-if not live:
-    published_somewhere = [c for c in codes_order if (grid.loc[grid["code"] == c, "verdict"] == "published").any()]
-    note(f"{CROSS.upper()} is withheld in every fetched market today, so there is nothing to compare. "
-         + (f"Factors published somewhere today: {and_list(published_somewhere)}. Set FOCUS_FACTOR to one of them."
-            if published_somewhere else "No factor is published in any fetched market, so try again on another day."))
-else:
-    code = CODE.get(CROSS, CROSS.upper())
-    rows, cols = grid_shape(len(fetched), max_cols=2)                 # one panel per fetched market
-    titles = [f"{MARKET_NAMES[m]} · {(1 + cross[m]).prod() - 1:+.1%} over {plural(len(cross[m]), 'day')}"
-              if m in live else f"{MARKET_NAMES[m]} · withheld today" for m in fetched]
-    fig = make_subplots(rows=rows, cols=cols, shared_xaxes="all", shared_yaxes="all", subplot_titles=titles,
-                        horizontal_spacing=0.05, vertical_spacing=0.14)
+    label = "MARKET book" if FOCUS == "MARKET" else f"{FOCUS} − MARKET"
+    fig = make_subplots(rows=2, cols=2, shared_xaxes="all", shared_yaxes="all", horizontal_spacing=0.06,
+                        vertical_spacing=0.16, subplot_titles=[MARKET_NAMES[m] for m in MARKETS])
     fig.update_annotations(font=dict(size=13, color=INK))
-    levels = {m: pd.concat([pd.Series([100.0], index=[cross[m].index[0] - pd.offsets.BDay(1)]),   # start at 100
-                            100 * (1 + cross[m]).cumprod()]) for m in live}
-    lo_y = min(float(v.min()) for v in levels.values())
-    hi_y = max(float(v.max()) for v in levels.values())
-    pad = (hi_y - lo_y) * 0.08 + 0.5
-    filled = []
-    for k, m in enumerate(fetched):
-        r, c = k // cols + 1, k % cols + 1
-        if m in live:
-            lv = levels[m]
-            filled.append((r, c))
-            fig.add_trace(go.Scatter(x=lv.index, y=lv, mode="lines", name=MARKET_NAMES[m], legendgroup=m,
+    finals = {}
+    for k, m in enumerate(MARKETS):
+        r, c = k // 2 + 1, k % 2 + 1
+        series = VIEWS.get(m, {}).get("series", pd.Series(dtype=float))
+        if len(series) >= MIN_WEEKS:
+            lv = growth_index(series.to_frame(m))[m]
+            finals[m] = float(lv.iloc[-1])
+            fig.add_trace(go.Scatter(x=lv.index, y=lv, mode="lines", name=MARKET_NAMES[m],
                                      line=dict(color=MARKET_COLORS[m], width=2),
                                      hovertemplate=f"{MARKET_NAMES[m]}: %{{y:.1f}}<extra></extra>"), row=r, col=c)
-            fig.add_trace(go.Scatter(x=[lv.index[-1]], y=[lv.iloc[-1]], mode="markers", legendgroup=m,
-                                     showlegend=False, hoverinfo="skip",
-                                     marker=dict(size=8, color=MARKET_COLORS[m], line=dict(width=2, color=SURFACE))),
-                          row=r, col=c)
             fig.add_hline(y=100, line=dict(color=AXIS, width=1), layer="below", row=r, col=c)
         else:
-            # An empty panel has no data to anchor "x domain" coordinates, so place the note on the page
-            # (paper coordinates) at the centre of the panel's own domain.
-            panel_axes = fig.get_subplot(r, c)
-            why, reason = why_withheld(fp_by_market[m], CROSS).split(": ", 1)
-            reason = "<br>".join(textwrap.wrap(f"({reason})", 36))
-            fig.add_annotation(text=f"Withheld: {why}<br>{reason}", xref="paper", yref="paper", showarrow=False,
-                               x=float(np.mean(panel_axes.xaxis.domain)), y=float(np.mean(panel_axes.yaxis.domain)),
+            view = VIEWS.get(m, {})
+            why = view.get("message") or f"fewer than {MIN_WEEKS} clean weeks of {label}"
+            xd = fig.layout[f"xaxis{k + 1 if k else ''}"].domain       # the empty panel's place on the page
+            yd = fig.layout[f"yaxis{k + 1 if k else ''}"].domain
+            fig.add_annotation(text="<br>".join(textwrap.wrap(f"{view.get('data.status')}: {why}", 38)),
+                               x=sum(xd) / 2, y=sum(yd) / 2, xref="paper", yref="paper", showarrow=False,
                                font=dict(size=12, color=MUTED))
-    totals = pd.Series({m: (1 + cross[m]).prod() - 1 for m in live})
-    shared_from = max(cross[m].index.min() for m in live)
-    shared_to = min(cross[m].index.max() for m in live)
-    same_window = len({(cross[m].index.min(), cross[m].index.max()) for m in live}) == 1
-    if len(live) >= 2 and same_window:
-        title = (f"{code} across markets: best in {MARKET_NAMES[totals.idxmax()]} ({totals.max():+.1%}), "
-                 f"weakest in {MARKET_NAMES[totals.idxmin()]} ({totals.min():+.1%})")
-        window = "Same window in every market · "
-    elif len(live) >= 2 and shared_from < shared_to:
-        # The markets start or end on different dates: rank them over the window they all cover.
-        shared = pd.Series({m: (1 + cross[m].loc[shared_from:shared_to]).prod() - 1 for m in live})
-        title = (f"{code} across markets, over the window all share: best in {MARKET_NAMES[shared.idxmax()]} "
-                 f"({shared.max():+.1%}), weakest in {MARKET_NAMES[shared.idxmin()]} ({shared.min():+.1%})")
-        window = f"Title ranked over {shared_from:%b %d, %Y} to {shared_to:%b %d, %Y}, the dates all markets cover · "
-    elif len(live) >= 2:
-        title = f"{code} is published in {len(live)} markets whose windows do not overlap, so they are not ranked"
-        window = "No shared window · "
-    elif len(fetched) == 1:
-        title = (f"{code} in {MARKET_NAMES[live[0]]}: {totals.iloc[0]:+.1%} "
-                 "(set COMPARE_MARKETS = True to add the other markets)")
+    if finals:
+        top_m = max(finals, key=finals.get)
+        title = (f"{label} across markets: {len(finals)} of 4 have a series; {MARKET_NAMES[top_m]} ended highest "
+                 f"at {finals[top_m]:.0f}" if len(finals) > 1 else f"{label}: only {MARKET_NAMES[top_m]} has a series")
     else:
-        title = f"{code} is published only in {MARKET_NAMES[live[0]]} today ({totals.iloc[0]:+.1%})"
-    if len(live) < 2:
-        window = "One market only · "
-    fig.update_yaxes(range=[lo_y - pad, hi_y + pad])
+        title = f"No market has {MIN_WEEKS} clean weeks of {label}"
+    heading, top = chart_title(title, f"Value of 100 in the weekly {label} series of each market, compounded "
+                                      "weekly · each market on its own calendar and return basis (see the table) "
+                                      "· shared axes · gross of costs", extra_top=22)
+    fig.update_layout(title=heading, height=top + 520, margin=dict(t=top, b=70), hovermode="x unified",
+                      legend=dict(BOTTOM_LEGEND, itemclick=False, itemdoubleclick=False))
     fig.update_yaxes(title_text="Value of 100", col=1)
-    fig.update_xaxes(type="date")                     # an empty panel cannot guess its axis type
-    label_lowest_panels(fig, filled, rows, cols)
-    hide_unused_panels(fig, len(fetched), rows, cols)
-    heading, top = chart_title(
-        title, f"{NAME.get(CROSS, code)}: value of 100 invested, each market on its own trading calendar · "
-               f"line colour = market · before costs · shared axes<br>{window}panel titles: each market's own window",
-        extra_top=22)                                         # + room for the panel titles
-    fig.update_layout(title=heading, height=top + 250 * rows + 70, margin=dict(t=top, b=80), hovermode="x",
-                      legend=BOTTOM_LEGEND,
-                      showlegend=len(live) >= 2)              # one series needs no legend: the title names it
     fig.show()
 
 # %% [markdown]
-# **How to read this.** Each panel is one market, in its fixed market colour
-# (from here on, line colour means market, not factor), with its total return
-# over its own window in the panel title. When the markets' windows differ,
-# the chart title ranks them over the dates they all cover instead. All the panels share both axes, so
-# heights and dates compare directly. A panel that says "withheld today" is a
-# market where this factor did not pass its gates; the panel prints why.
+# **How to read this.** The table is the place to start: which markets answer
+# `available`, which answer `empty` (with their message), and each market's
+# freshness `state` and `weeks_behind` as reported. The panels then show the
+# same spread in each published market, in that market's colour, on shared axes.
+# An empty market's panel carries its status and message instead of a line.
 #
 # **Caveats.**
 #
-# - Each market sorts its *own* stocks. "Value" in Japan and "value" in the US
-#   are the same rule applied to very different universes.
-# - The windows differ slightly: a market on holiday stops earlier (the `last`
-#   column above).
-# - Long-short returns are in local terms. Because the two legs are in the same
-#   currency, the currency's own move largely cancels; ERP does not cancel.
+# - Each market's returns are in its own currency and on its own return basis
+#   (the `return basis` column). A spread is a difference of two returns in the
+#   same currency, which removes most, but not all, of the currency's effect.
+# - Markets close on different holidays, so their weeks do not line up
+#   perfectly. Compare shapes and summary numbers, not individual weeks.
+# - Each market's publication covers its own window and freshness; read the
+#   table before comparing the lines.
 
 # %% [markdown]
-# ### 4.1 Different calendars: aligning returns across markets
+# ## 7. Extension: PCA both ways (beyond the raw API)
 #
-# Markets close on different holidays. If we join the markets' series on the
-# date (an outer join), each market gets NaN on the days when *another* market
-# traded but it did not. Those NaNs are **holidays**, not gaps: as section 3.3
-# says, a market holiday is not a gap. (A gap is a missing return on a day the
-# market was open.) There are three ways to treat these holiday NaNs, and two
-# are wrong:
+# **Principal component analysis (PCA)** looks for the few directions that
+# explain most of the variation shared by many series. Here the series are the
+# books' weekly returns. We run it twice, on the same weeks:
 #
-# 1. **Right:** keep each market's statistics on its own trading days, and
-#    compare markets only on the dates they share (the complete case).
-# 2. **Wrong:** forward-fill the return. That repeats the previous day's move,
-#    as if it happened twice.
-# 3. **Wrong:** fill with 0. The total return survives, but the extra zero days
-#    make the factor look calmer than it was.
+# 1. on the **raw** long-only returns, where we expect one component to
+#    dominate: the market, which every book carries once;
+# 2. on the **style-minus-MARKET spreads**, where the market is gone and the
+#    variation spreads over several components.
 #
-# The table below measures the damage on the market with the most holidays
-# inside its span.
+# Following the kit's rules, each series is standardised first (inside a
+# scikit-learn `Pipeline`, so the scaling is part of the model), and we show
+# the scree (the share of variance each component explains), the cumulative
+# share, and the loadings. This is descriptive: it summarises how the books
+# moved together over this window, nothing more.
 
 # %%
-if len(live) < 2:
-    note("This needs the focus factor in at least two markets; today it has fewer.")
+both_ok = raw_aligned.index.intersection(spread_aligned.index) if SPREAD_USE else pd.DatetimeIndex([])
+raw_frame = raw_aligned.loc[both_ok] if len(both_ok) else raw_aligned
+spread_frame = spread_aligned.loc[both_ok] if len(both_ok) else spread_aligned
+if raw_frame.shape[1] < 3 or len(raw_frame) < MIN_WEEKS:
+    pca_ready = False
+    note("PCA needs at least 3 books with enough aligned clean weeks; this response does not have them.")
 else:
-    panel = pd.DataFrame({m: cross[m] for m in live})        # outer join on the union of all trading dates
-    common = panel.dropna()
-    calendar = pd.DataFrame({
-        "market": [MARKET_NAMES[m] for m in live],
-        "trading days": [int(panel[m].notna().sum()) for m in live],
-        "holidays: dates another market traded but this one did not": [int(panel[m].isna().sum()) for m in live],
-        "its holidays inside its span": [int(panel[m].loc[cross[m].index.min():cross[m].index.max()].isna().sum())
-                                         for m in live]})
-    display(calendar.style.hide(axis="index"))
-    print(f"Union of all calendars: {len(panel)} dates. Dates on which every market traded: {len(common)}.")
-
-    victim = max(live, key=lambda m: panel[m].loc[cross[m].index.min():cross[m].index.max()].isna().sum())
-    inside = panel[victim].loc[cross[victim].index.min():cross[victim].index.max()]
-    k = np.sqrt(TRADING_DAYS)
-    demo = pd.DataFrame([
-        ("Right: its own trading days", int(inside.notna().sum()), (1 + inside.dropna()).prod() - 1, inside.dropna().std() * k),
-        ("Wrong: forward-fill the return", int(inside.ffill().notna().sum()), (1 + inside.ffill()).prod() - 1,
-         inside.ffill().std() * k),
-        ("Wrong: fill with 0", len(inside), (1 + inside.fillna(0)).prod() - 1, inside.fillna(0).std() * k),
-    ], columns=[f"{MARKET_NAMES[victim]}: method", "days used", "total return", "volatility a year"])
-    display(demo.style.format({"total return": "{:+.2%}", "volatility a year": "{:.2%}"}).hide(axis="index"))
-
-    start = max(cross[m].index.min() for m in live)
-    end = min(cross[m].index.max() for m in live)
-    weekly = (1 + panel.loc[start:end]).groupby(pd.Grouper(freq="W-FRI")).prod(min_count=1) - 1
-    pair_rows = []
-    for a, b in combinations(live, 2):
-        daily_ab = panel[[a, b]].dropna()
-        weekly_ab = weekly[[a, b]].dropna()
-        pair_rows.append({"pair": f"{MARKET_NAMES[a]} – {MARKET_NAMES[b]}", "shared days": len(daily_ab),
-                          "daily correlation": daily_ab[a].corr(daily_ab[b]), "weeks": len(weekly_ab),
-                          "weekly correlation": weekly_ab[a].corr(weekly_ab[b])})
-    display(pd.DataFrame(pair_rows).style.format({"daily correlation": "{:+.2f}", "weekly correlation": "{:+.2f}"})
-            .hide(axis="index"))
-
-# %% [markdown]
-# **How to read this.** The first table counts, for each market, the dates on
-# which another market traded but it did not: its holidays. The second applies
-# the three treatments to the market with the most holidays inside its span. With the right treatment the
-# total return and volatility are the market's own. Forward-filling changes
-# both; filling with 0 keeps the total but understates volatility. The third
-# table correlates the factor across markets two ways: on shared trading days,
-# and on weekly returns (compounded from Monday to Friday).
-#
-# **Caveats.**
-#
-# - **Same date, different hours.** Tokyo, Hong Kong and Shanghai close before
-#   New York opens, so "Tuesday" in Asia and "Tuesday" in the US are different
-#   24-hour windows. Same-day correlations across those markets understate the
-#   link. Weekly returns soften this problem, at the cost of far fewer points.
-# - With about 50 weeks, a weekly correlation needs to exceed roughly ±0.28 to
-#   be distinguishable from zero.
-
-# %% [markdown]
-# ## 5. Extensions (beyond the raw API)
-#
-# *These sections go beyond the raw API.* They use the cleaned tables from
-# section 3 to answer two follow-up questions: how much does mixing the factors
-# reduce risk, and how "pure" are the long-short factors really?
-
-# %% [markdown]
-# ### 5.1 The equal-weight mix: diversification in one number
-#
-# If you hold all the published factors in equal weights, rebalanced every day,
-# the mix's daily return is the plain average of the factors' returns. The API
-# sends this series as `aggregate.return_series` and its statistics as
-# `aggregate.equal_weight_stats`. We rebuild it on the complete-case window and
-# check it. Because the factors are only weakly correlated, the mix should swing
-# far less than the average factor. That reduction is **diversification**. With
-# N uncorrelated factors of *equal* risk, the average volatility ÷ the mix's
-# volatility would be √N. Here the risks are not equal (ERP swings much more
-# than the long-short factors), so the uncorrelated benchmark is
-# Σσ ÷ √(Σσ²), where σ is each factor's volatility. A mix that beats this
-# number gained more than zero correlation would give, which needs some
-# negative correlations.
+    pca_ready = True
+    raw_ev, raw_load, raw_scores = pca_fit(raw_frame)
+    spread_ok = spread_frame.shape[1] >= 3 and len(spread_frame) >= MIN_WEEKS
+    if spread_ok:
+        spread_ev, spread_load, spread_scores = pca_fit(spread_frame)
+    print(f"PCA on {len(raw_frame)} weeks: raw books {list(raw_frame.columns)}"
+          + (f"; spreads {list(spread_frame.columns)}." if spread_ok else "; too few spreads for a second PCA."))
+    if "MARKET" in raw_frame.columns:
+        print(f"Correlation of the raw PC1 score with the MARKET book's return: "
+              f"{np.corrcoef(raw_scores['PC1'], raw_frame['MARKET'])[0, 1]:+.2f}")
+    if spread_ok and "MARKET" in wide.columns:
+        print(f"Correlation of the spreads' PC1 score with the MARKET book's return: "
+              f"{np.corrcoef(spread_scores['PC1'], wide.loc[spread_frame.index, 'MARKET'])[0, 1]:+.2f}")
 
 # %%
-if len(IDS) < 2:
-    note("The mix needs at least two published factors.")
+if not pca_ready:
+    note("No PCA to chart.")
 else:
-    ew = aligned.mean(axis=1)                                   # equal weights, rebalanced daily
-    api_points = pd.DataFrame([{"date": p["date"], "ret": p["ret"]} for p in agg["return_series"]],
-                              columns=["date", "ret"])
-    api_points["ret"] = pd.to_numeric(api_points["ret"], errors="coerce")
-    api_points["date"] = pd.to_datetime(api_points["date"], utc=True, errors="coerce").dt.tz_localize(None)
-    api_ew = api_points.dropna().drop_duplicates(subset="date", keep="last").set_index("date")["ret"]
-    both = pd.concat([ew.rename("ours"), api_ew.rename("api")], axis=1, sort=True).dropna()
-    if both.empty:
-        print("The API sends no equal-weight series to compare with.")
-    else:
-        print(f"Our mix vs aggregate.return_series: {len(both)} shared dates, largest difference "
-              f"{(both['ours'] - both['api']).abs().max():.6f} (the API rounds its returns).")
-    ours_ew, api_ew_stats = risk_stats(ew, level=0.95), agg["equal_weight_stats"]
-    display(pd.DataFrame({"API equal_weight_stats": api_ew_stats, "ours": ours_ew}).loc[STAT_KEYS]
-            .style.format("{:.4f}", na_rep="–").format("{:.0f}", subset=pd.IndexSlice[["n_obs"], :]))
-
-    vols = aligned.std() * np.sqrt(TRADING_DAYS)
-    ew_vol = float(ew.std() * np.sqrt(TRADING_DAYS))
-    avg_vol = float(vols.mean())
-    bench = float(vols.sum() / np.sqrt((vols**2).sum()))        # average ÷ mix volatility if uncorrelated
-    zero_corr_vol = float(np.sqrt((vols**2).sum()) / len(IDS))  # the mix's volatility if uncorrelated
-    reached = avg_vol / ew_vol
-    sr, se, lo, hi = sharpe_interval(ew)
-    names = [NAME[f] for f in IDS] + ["Equal-weight mix"]
-    values = list(vols[IDS]) + [ew_vol]
-    fig = go.Figure(go.Bar(
-        x=values, y=names, orientation="h", width=0.56, showlegend=False, cliponaxis=False,
-        marker=dict(color=[AXIS] * len(IDS) + [INK]),                # the factors in grey, the mix stands out
-        text=[pct(v) for v in values], textposition="outside", textfont=dict(size=12, color=INK_2),
-        hovertemplate="%{y}: %{x:.1%} a year<extra></extra>"))
-    fig.add_vline(x=avg_vol, line=dict(color=INK_2, width=1, dash="dot"),
-                  annotation_text=f"average factor {avg_vol:.1%}", annotation_position="top",
-                  annotation_font=dict(size=11, color=INK_2))
-    verdict_text = ("better than" if reached > bench * 1.02 else "short of" if reached < bench * 0.98 else "about")
-    heading, top = chart_title(
-        f"Mixing {len(IDS)} factors cut volatility to {ew_vol:.1%} a year, against {avg_vol:.1%} for the average "
-        f"factor ({reached:.2f}× less)",
-        f"Yearly volatility over the {len(aligned)} aligned days · the mix holds every published factor in equal "
-        f"weights<br>{bench:.2f}× if they were uncorrelated (√N = {np.sqrt(len(IDS)):.2f}× only when risks are "
-        f"equal), so the mix did {verdict_text} that", extra_top=16)     # + room for the "average factor" label
-    fig.update_layout(
-        title=heading, height=top + 50 + 50 * len(names), margin=dict(t=top, b=60, r=60),
-        xaxis=dict(title="Volatility (% a year)", tickformat=".0%", rangemode="tozero",
-                   range=[0, max(values) * 1.18]),
-        yaxis=dict(autorange="reversed", ticks=""))
+    panels = [("Raw long-only books", raw_ev)] + ([("Style − MARKET spreads", spread_ev)] if spread_ok else [])
+    fig = make_subplots(rows=1, cols=len(panels), shared_yaxes=True, horizontal_spacing=0.08,
+                        subplot_titles=[p[0] for p in panels])
+    fig.update_annotations(font=dict(size=13, color=INK))
+    for c, (name, ev) in enumerate(panels, start=1):
+        fig.add_trace(go.Bar(x=ev.index, y=ev, name="Share of variance (each component)", marker_color=SERIES[0],
+                             showlegend=c == 1, hovertemplate="%{x}: %{y:.1%} of the variance<extra></extra>"),
+                      row=1, col=c)
+        fig.add_trace(go.Scatter(x=ev.index, y=ev.cumsum(), mode="lines+markers", name="Cumulative share",
+                                 line=dict(color=INK, width=2), marker=dict(size=8, color=INK),
+                                 showlegend=c == 1, hovertemplate="Up to %{x}: %{y:.1%}<extra></extra>"),
+                      row=1, col=c)
+    title = (f"On raw returns PC1 explains {raw_ev.iloc[0]:.0%} of the variance; on the spreads, "
+             f"{spread_ev.iloc[0]:.0%}" if spread_ok else f"On raw returns PC1 explains {raw_ev.iloc[0]:.0%}")
+    heading, top = chart_title(title, "Scree: share of the standardised variance explained by each principal "
+                                      "component (bars) and the running total (line) · same weeks in both "
+                                      "panels", extra_top=22)
+    fig.update_layout(title=heading, height=top + 400, margin=dict(t=top, b=110),
+                      legend=dict(BOTTOM_LEGEND))
+    fig.update_yaxes(tickformat=".0%", range=[0, 1.05])
+    fig.update_yaxes(title_text="Share of variance (%)", col=1)
+    fig.update_xaxes(title_text="Principal component")
     fig.show()
-    display(pd.DataFrame({"portfolio": names, "volatility a year": values,
-                          "Sharpe-like": [sharpe_interval(aligned[f])[0] for f in IDS] + [sr]})
-            .style.format({"volatility a year": "{:.1%}", "Sharpe-like": "{:+.2f}"}).hide(axis="index"))
-    print(f"Mix volatility {ew_vol:.2%} a year; if the factors were uncorrelated it would be {zero_corr_vol:.2%} "
-          f"(√(Σσ²) ÷ N). Average ÷ mix: {reached:.2f}× actual vs {bench:.2f}× uncorrelated.")
-    print(f"The mix's Sharpe-like ratio: {sr:+.2f} (95% interval {lo:+.2f} to {hi:+.2f}).")
-
-# %% [markdown]
-# **How to read this.** Each grey bar is a factor's yearly volatility on the
-# shared window; the black bar at the bottom is the equal-weight mix, and the
-# dotted line marks the average factor. The gap between the line and the black
-# bar is what diversification bought. The subtitle compares it with the
-# benchmark for uncorrelated factors, Σσ ÷ √(Σσ²); the printed line gives the
-# mix's volatility under zero correlation next to the actual one.
-#
-# **Caveats.**
-#
-# - The mix is chosen after the fact: it holds the factors that passed today's
-#   gates, measured on the same year. That flatters it.
-# - Diversification depends on correlations, and correlations rise in a crisis
-#   (section 3.8), so the mix can be riskier than this exactly when it matters.
-# - Lower volatility is not higher return. The mix's Sharpe-like ratio still
-#   has an interval about ±2 wide.
-
-# %% [markdown]
-# ### 5.2 How pure are the long-short factors? Their market beta
-#
-# A "pure" long-short factor should not care which way the market goes: its
-# long and short legs should cancel the market's move. We check that with a
-# time-series regression on the complete-case window:
-#
-# factor return = α + β × ERP return + noise
-#
-# **β (beta)** is how much the factor moves, on average, when the market moves
-# by 1%. A pure factor has β near 0. **α (alpha)** is the average return that
-# the market does not explain, shown per year. This regression *describes* the
-# past year. It does not forecast returns and it does not recommend trades.
-#
-# We report two kinds of robust standard errors. **HC3** is robust to noise
-# that is bigger on some days than others, including calm and stormy spells.
-# **HAC** (Newey–West) is robust to that too, and also to returns that are
-# correlated from one day to the next (a move that tends to carry on, or to
-# reverse). Daily factor returns can be, so we use HAC for the intervals.
+    scree = pd.DataFrame({"raw: share": raw_ev, "raw: cumulative": raw_ev.cumsum()})
+    if spread_ok:
+        scree = scree.join(pd.DataFrame({"spreads: share": spread_ev, "spreads: cumulative": spread_ev.cumsum()}),
+                           how="outer")
+    display(scree.style.format("{:.1%}", na_rep="–"))
 
 # %%
-others = [f for f in IDS if f != "erp"]
-if "erp" not in IDS or not others:
-    note("This needs ERP and at least one long-short factor published in the same market.")
+if not pca_ready:
+    note("No loadings to chart.")
 else:
-    X = sm.add_constant(aligned["erp"].rename("ERP"))
-    lags = newey_west_lags(len(aligned))
-    beta_rows = []
-    for fid in others:
-        hac = sm.OLS(aligned[fid], X).fit(cov_type="HAC", cov_kwds={"maxlags": lags})
-        hc3 = sm.OLS(aligned[fid], X).fit(cov_type="HC3")
-        lo, hi = hac.conf_int().loc["ERP"]
-        beta_rows.append({"factor_id": fid, "factor": NAME[fid], "beta": hac.params["ERP"],
-                          "SE (HAC)": hac.bse["ERP"], "SE (HC3)": hc3.bse["ERP"], "95% low": lo, "95% high": hi,
-                          "t (HAC)": hac.tvalues["ERP"], "alpha a year": hac.params["const"] * TRADING_DAYS,
-                          "alpha t (HAC)": hac.tvalues["const"], "R²": hac.rsquared})
-    betas = pd.DataFrame(beta_rows)
-    clear = betas[(betas["95% low"] > 0) | (betas["95% high"] < 0)]
-    NEUTRAL_BAND = 0.1                  # "close to market-neutral" only if every 95% interval sits inside ±0.1
-
-    fig = go.Figure()
-    fig.add_vline(x=0, line=dict(color=AXIS, width=1), layer="below")
-    excludes = betas["factor_id"].isin(clear["factor_id"])
-    for is_clear, label, color in ((True, "95% interval excludes 0", SERIES[0]),
-                                   (False, "Cannot be told from 0", INK_2)):
-        part = betas[excludes == is_clear]
-        if part.empty:
-            continue
-        fig.add_trace(go.Scatter(
-            x=part["beta"], y=part["factor"], mode="markers+text", name=label,
-            marker=dict(size=11, color=color, line=dict(width=2, color=SURFACE)),
-            error_x=dict(type="data", symmetric=False, array=part["95% high"] - part["beta"],
-                         arrayminus=part["beta"] - part["95% low"], color=color, thickness=2, width=0),
-            text=part["beta"].map(signed), textposition="top center", textfont=dict(size=11, color=INK_2),
-            customdata=part[["95% low", "95% high", "R²"]].to_numpy(),
-            hovertemplate=("<b>%{y}</b><br>beta %{x:+.2f} (95%: %{customdata[0]:+.2f} to %{customdata[1]:+.2f})"
-                           "<br>R² %{customdata[2]:.2f}<extra></extra>")))
-    if clear.empty:                     # "cannot be told from 0" is not "near 0" when the intervals are wide
-        inside = bool(((betas["95% low"] >= -NEUTRAL_BAND) & (betas["95% high"] <= NEUTRAL_BAND)).all())
-        widest = float((betas["95% high"] - betas["95% low"]).max() / 2)
-        title = (f"No long-short factor's market beta can be told from zero, and every 95% interval sits inside "
-                 f"±{NEUTRAL_BAND:.1f}: they are close to market-neutral" if inside else
-                 f"No long-short factor's market beta can be told from zero with {len(aligned)} days "
-                 f"(widest 95% interval ±{widest:.2f})")
-    else:                               # name the strongest beta among the clear ones, never a grey dot
-        biggest = clear.loc[clear["beta"].abs().idxmax()]
-        title = (f"1 of {len(betas)} long-short factors carries a clear market beta: "
-                 f"{CODE[biggest['factor_id']]} ({signed(biggest['beta'])})" if len(clear) == 1 else
-                 f"{len(clear)} of {len(betas)} long-short factors carry a clear market beta; "
-                 f"{CODE[biggest['factor_id']]}'s is the strongest ({signed(biggest['beta'])})")
-    heading, top = chart_title(title, f"Slope of each factor's daily return on ERP's, {len(aligned)} aligned days · "
-                                      f"whisker: 95% interval with HAC (Newey–West, {lags} lags) standard errors")
-    fig.update_layout(
-        title=heading, height=top + 80 + 58 * len(betas), margin=dict(t=top, b=110, r=40), legend=BOTTOM_LEGEND,
-        showlegend=True,
-        xaxis=dict(title="Market beta (factor move per 1% market move)", zeroline=False),
-        yaxis=dict(ticks="", categoryorder="array", categoryarray=betas["factor"].tolist()[::-1]))
+    k = 3
+    sets = [("Raw books", raw_load.iloc[:, :k])] + ([("Spreads", spread_load.iloc[:, :k])] if spread_ok else [])
+    fig = make_subplots(rows=1, cols=len(sets), subplot_titles=[s[0] for s in sets], horizontal_spacing=0.2)
+    fig.update_annotations(font=dict(size=13, color=INK))
+    for c, (name, load) in enumerate(sets, start=1):
+        z = load.to_numpy(dtype=float)
+        fig.add_trace(go.Heatmap(z=z, x=load.columns.tolist(), y=load.index.tolist(),
+                                 text=[[signed(v) for v in row] for row in z], texttemplate="%{text}",
+                                 textfont=dict(size=12), colorscale=DIVERGING, zmin=-1, zmax=1, zmid=0,
+                                 xgap=2, ygap=2, showscale=c == 1,
+                                 colorbar=dict(title=dict(text="Loading"), tickvals=[-1, -0.5, 0, 0.5, 1],
+                                               thickness=14, len=0.85),
+                                 hovertemplate=f"{name} · %{{y}} on %{{x}}: %{{z:+.2f}}<extra></extra>"),
+                      row=1, col=c)
+    same_sign = bool((np.sign(raw_load["PC1"]) == np.sign(raw_load["PC1"].iloc[0])).all())
+    spread_mixed = spread_ok and not bool((np.sign(spread_load["PC1"]) == np.sign(spread_load["PC1"].iloc[0])).all())
+    title = ("Raw PC1 loads on every book with the same sign: it is the market" if same_sign else
+             "Raw PC1 does not load on every book with the same sign")
+    title += "; the spreads' PC1 mixes signs" if spread_mixed else ""
+    heading, top = chart_title(title, f"Loadings of the first {k} components (standardised data) · blue = "
+                                      "positive, red = negative · signs are arbitrary, flipped so each "
+                                      "component's loadings sum to a positive number", extra_top=22)
+    fig.update_layout(title=heading, height=top + 120 + 40 * max(len(s[1]) for s in sets),
+                      margin=dict(t=top, l=120, b=60))
+    fig.update_yaxes(autorange="reversed", showgrid=False, ticks="")
+    fig.update_xaxes(showgrid=False, ticks="", side="bottom")
     fig.show()
-    display(betas.drop(columns="factor_id").style.format({
-        "beta": "{:+.3f}", "SE (HAC)": "{:.3f}", "SE (HC3)": "{:.3f}", "95% low": "{:+.3f}", "95% high": "{:+.3f}",
-        "t (HAC)": "{:+.2f}", "alpha a year": "{:+.1%}", "alpha t (HAC)": "{:+.2f}", "R²": "{:.2f}"}).hide(axis="index"))
+    display(raw_load.iloc[:, :k].style.format(signed).set_caption("Raw books: loadings"))
+    if spread_ok:
+        display(spread_load.iloc[:, :k].style.format(signed).set_caption("Spreads: loadings"))
 
 # %% [markdown]
-# **How to read this.** Each dot is a factor's market beta, with its 95%
-# interval. A grey whisker crosses zero: one year of data cannot tell that
-# factor's beta from zero. That makes it close to market-neutral only if the
-# whisker is also short; a long whisker means the data cannot say either way.
-# A blue whisker stays clear of zero. A clearly positive beta means the factor
-# tends to rise with the market: its long leg amplifies the market's moves more
-# than its short leg does (for SMB, that would be small stocks moving more than
-# the giants they are paired against). The table adds both standard errors.
-# HC3 and HAC are usually close. When HAC is bigger, the regression's surprises
-# (each day's residual times the market's move) are positively correlated from
-# one day to the next; when it is smaller, they tend to reverse. The table
-# also gives the yearly alpha with its t-statistic, and R², the share of the
-# factor's daily variance that the market explains.
+# **How to read this.** In the raw panel the first bar is tall: one component
+# explains most of the variance of all the books together. Its loadings have
+# the same sign and similar size on every book, and its score moves almost
+# one-for-one with the MARKET book's return (printed above). That component is
+# the market. In the spread panel the bars are flatter: once the market is
+# subtracted, no single direction dominates, and the loadings mix signs.
+# Pairs of styles that load together on a component are styles whose spreads
+# moved together (compare with the right-hand correlation matrix in section
+# 4.11).
 #
 # **Caveats.**
 #
-# - Descriptive and in-sample: β describes the last year, and it drifts.
-# - A beta near zero does not mean the factor is safe. It can still have large
-#   swings and drawdowns of its own (sections 3.6–3.9).
-# - The regression explains co-movement on the same day. It does not forecast
-#   tomorrow's factor return from today's market.
+# - Descriptive and in-sample: the components summarise this window's weekly
+#   co-movement. They do not forecast returns and they are not trading signals.
+# - Standardising gives every series the same weight. Without it, the most
+#   volatile book would dominate the first component.
+# - A component's sign is arbitrary, and its loadings can change with the
+#   window and with which books pass the coverage rule.
 
 # %% [markdown]
 # ## Next steps
 #
-# - Change `MARKET` and compare which factors pass their gates there (the
-#   tables in sections 3.2 and 4).
-# - Set `FOCUS_FACTOR = "smb"` and, on a day when SMB is published, look at the
-#   short leg: it holds the market's largest companies.
-# - Re-run the notebook tomorrow. Expect a new `release_id`, one more day in each
-#   series, and perhaps a factor that passes its gates for the first time.
-# - Join the holdings preview to the screen endpoint (notebook 01) on `ticker`,
-#   and check each stock's `bp`, `profit_margin` or `ma200_excess` (a rough
-#   momentum proxy) against its leg.
-# - Set `ROLL_DAYS = 21` for a twitchier one-month volatility, or `TAIL = 0.99`
-#   for a deeper tail (and see how few days that averages).
-# - Notebook 02's ML clusters describe similar styles (momentum, value, size)
-#   from the stocks' side: compare a cluster's members with a factor's legs.
+# - Change `MARKET` to `"cn"` or `"jp"` and compare the quoted return-basis
+#   label first, then the exposure matrix and the spreads.
+# - Set `FOCUS = "VALUE"` (or another style) to see its holdings, its twin and
+#   its spread in every market.
+# - Check the direction of a style yourself: join the `FOCUS` book's holdings to
+#   notebook 01's screen on `ticker` and compare each holding's `size` score
+#   with its `market_cap_usd`, or its `value` score with its `bp`.
+# - Raise `WEEKS` to 520 for about ten years of history and watch how much the
+#   95% intervals of section 4.10 narrow. Keep `HOLDINGS` small when you do:
+#   ask only for what you use.
+# - Set `TWIN = "s3b_ff_2x3_rp126"` to compare with the volatility-weighted twin.
+# - Re-run the notebook later and compare the `publication_id` and the
+#   freshness block with what you see today.
+# - Notebook 05 (the ML lab) reads these weekly series too, as input for more
+#   machine learning.
 #
 # ---
 #
 # *Research and education only. Nothing here is investment advice or a
-# recommendation to buy or sell any security. The factor portfolios are
-# in-sample research constructs, shown before trading costs and borrowing fees;
-# past factor returns do not predict future ones. The endpoint name `realtime`
-# elsewhere in the API names a current-session board, not a live-tick feed, and
-# data cadence varies by market: always check `as_of` and the freshness fields.*
+# recommendation to buy or sell any security. The API describes these books as
+# "Model candidates, not recommendations; no accuracy or performance claim is
+# made." They are retrospective measurements, gross of costs, and past returns
+# do not predict future ones. The endpoint name `realtime` elsewhere in the API
+# names a current-session board, not a live-tick feed, and data cadence varies
+# by market: always check the freshness fields.*
 
 # %%
 print(f"API requests made in this session: {api_calls_used()}")
