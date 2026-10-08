@@ -1,0 +1,18 @@
+{
+ "ok": true,
+ "schema_version": "surgeflow.market_hotlist.v1",
+ "source_schema_version": "addin.hotlist.v1",
+ "data": {
+  "schema_version": "addin.hotlist.v1",
+  "market": "hk",
+  "as_of_utc": "2026-10-07T05:26:37+00:00",
+  "as_of_local": "2026-10-07T13:26:37+08:00",
+  "market_status": "OPEN",
+  "source": null,
+  "cache_ttl_seconds": 60,
+  "data_quality": "empty",
+  "stale_reason": "no_current_hotlist_members",
+  "count": 0,
+  "rows": []
+ }
+}

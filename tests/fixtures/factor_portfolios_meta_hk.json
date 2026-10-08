@@ -1,0 +1,71 @@
+{
+ "ok": true,
+ "schema_version": "surgeflow.factor_portfolios_meta.v2",
+ "source": "/api/{market}/three-model/meta",
+ "market": "hk",
+ "note": "Automated research documentation, not investment advice or a solicitation.",
+ "data": {
+  "market": "hk",
+  "contract": "three_model_served_schema_v1",
+  "status": "empty",
+  "reason_code": "no_publication_for_market",
+  "message": "No publication exists for this market yet (fixture placeholder).",
+  "market_caveats": {
+   "ruling": "fixture ruling 16",
+   "label": "Known data caveats (fixture placeholder):",
+   "items": [
+    "Placeholder data caveat 1 (fixture).",
+    "Placeholder data caveat 2 (fixture).",
+    "Placeholder data caveat 3 (fixture).",
+    "Placeholder data caveat 4 (fixture).",
+    "Placeholder data caveat 5 (fixture).",
+    "Placeholder data caveat 6 (fixture)."
+   ]
+  },
+  "contract_revision": "fixture_contract_rev2",
+  "return_basis": {
+   "state": "no_portfolios_published",
+   "basis": null,
+   "label": null,
+   "returns_label": null,
+   "twin_returns_label": null,
+   "publications": [],
+   "ruling": "fixture ruling 1",
+   "rule": "Every served row names its return basis, which must match the basis its publication declares; otherwise the returns are withheld (fixture wording)."
+  },
+  "degraded_rule": {
+   "state": "no_portfolios_published",
+   "rule": null,
+   "rule_ruling": null,
+   "text": null,
+   "label": null,
+   "terms": null,
+   "threshold": null,
+   "publications": [],
+   "ruling": "fixture ruling 6",
+   "mechanism": "One degraded rule per served history, taken from the rows or from their publication's declaration; if they disagree the portfolios are withheld (fixture wording).",
+   "shares_note": "The three *_weight_share fields hold the largest share over the holding sessions; the *_max fields are null unless a row carries them (fixture wording).",
+   "declaration_keys": [
+    "receipt_json.degraded_rule_declared",
+    "checks_json.R_weight_shares_status.predicate",
+    "caveats_json.items.degraded_rule"
+   ]
+  },
+  "labels": {
+   "status": {
+    "ok": null,
+    "degraded": null,
+    "unavailable": "No return: too little return data this week to measure it.",
+    "no_holdings": "No holdings: no book could be formed this week; the failed constraint is named.",
+    "shares_not_recorded": "The run did not record the weight shares; the week is not classified.",
+    "return_not_yet_realised": "Next week's candidates, formed at the entry close: not held yet, so there is no return (return not yet realised)."
+   },
+   "degraded_rule": null,
+   "degraded_rule_label": null
+  },
+  "cache": {
+   "state": "stale_revalidating",
+   "age_seconds": 118.6
+  }
+ }
+}

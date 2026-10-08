@@ -1,0 +1,113 @@
+"""Call every authenticated endpoint the kit uses and compare live shapes with the fixtures.
+
+    SURGEFLOW_API_KEY=sf_live_... python tools/probe_endpoints.py
+
+Saves each live response to tests/fixtures/live/ (git-ignored, never
+committed) and prints, per endpoint, the key paths that exist live but not
+in the mock fixture (+) and the reverse (-). Use it to correct fixtures and
+notebook column names after the API changes. Uses about 55 requests.
+"""
+from __future__ import annotations
+
+import json
+import os
+import sys
+import time
+from pathlib import Path
+
+import requests
+
+ROOT = Path(__file__).resolve().parents[1]
+FIXTURES = ROOT / "tests" / "fixtures"
+LIVE = FIXTURES / "live"
+BASE_URL = os.getenv("SURGEFLOW_BASE_URL", "https://stock-api-c4qdowjxva-uc.a.run.app")
+MARKETS = ("us", "cn", "jp", "hk")
+
+GLOBAL = {
+    "health": "/api/v1/health",
+    "catalog": "/api/v1/catalog",
+    "me": "/api/v1/me",
+    "summary": "/api/v1/summary",
+    "notes_daily": "/api/v1/notes/daily",
+    "macro_calendar": "/api/v1/macro/calendar",
+    "bond_etfs": "/api/v1/bond/etfs",
+}
+PER_MARKET = {
+    "screen": "screen",
+    "realtime": "realtime",
+    "hotlist": "hotlist",
+    "ml_clusters": "ml/clusters",
+    "whales": "whales",
+    "sector": "sector",
+    "news": "news",
+    "factor_portfolios": "factor-portfolios",
+    "factor_portfolios_meta": "factor-portfolios/meta",
+}
+
+
+def paths(obj, prefix: str = "") -> set[str]:
+    """Key paths with list items collapsed to [] (first 5 items sampled)."""
+    out = set()
+    if isinstance(obj, dict):
+        for key, value in obj.items():
+            here = f"{prefix}.{key}" if prefix else key
+            out.add(here)
+            out |= paths(value, here)
+    elif isinstance(obj, list):
+        for item in obj[:5]:
+            out |= paths(item, f"{prefix}[]")
+    return out
+
+
+def main() -> int:
+    key = os.getenv("SURGEFLOW_API_KEY", "").strip()
+    if not key:
+        print("Set SURGEFLOW_API_KEY first.")
+        return 2
+    session = requests.Session()
+    session.headers["Authorization"] = f"Bearer {key}"
+    LIVE.mkdir(parents=True, exist_ok=True)
+
+    jobs = [(name, path, {}) for name, path in GLOBAL.items()]
+    for name, suffix in PER_MARKET.items():
+        jobs += [(f"{name}_{m}", f"/api/v1/markets/{m}/{suffix}", {}) for m in MARKETS]
+    # The screen is paged (page_size <= 100); save the three largest-cap pages per market.
+    jobs = [j for j in jobs if not j[0].startswith("screen_")]
+    for m in MARKETS:
+        for page in (1, 2, 3):
+            name = f"screen_{m}" + ("" if page == 1 else f".page{page}")
+            jobs.append((name, f"/api/v1/markets/{m}/screen", {"page": page, "page_size": 100, "sort": "market_cap_usd"}))
+    # Factor portfolios (v2): five years of weekly returns and 25 holdings per book, with the measurement twins
+    # (the default). No notebook asks for exactly this: it is a superset of the main requests of 04 (weeks=156,
+    # holdings=25, measurement on) and 05 (weeks=260, holdings=0, measurement off), so one snapshot serves both
+    # offline (the mock ignores query parameters).
+    jobs = [(n, p, {"weeks": 260, "holdings": 25} if n.startswith("factor_portfolios_") and "meta" not in n else q)
+            for n, p, q in jobs]
+    failures = 0
+    for name, path, params in jobs:
+        time.sleep(0.5)
+        response = session.get(BASE_URL + path, params=params, timeout=60)
+        try:
+            payload = response.json()
+        except ValueError:
+            payload = {"_non_json": response.text[:500]}
+        (LIVE / f"{name}.json").write_text(json.dumps(payload, indent=1, ensure_ascii=False))
+        mock_file = FIXTURES / f"{name}.json"
+        if not mock_file.exists():
+            mock_file = FIXTURES / f"{name.split('.')[0].rsplit('_', 1)[0]}.json"
+        mock = json.loads(mock_file.read_text()) if mock_file.exists() else {}
+        live_paths, mock_paths = paths(payload), paths(mock)
+        added, missing = sorted(live_paths - mock_paths), sorted(mock_paths - live_paths)
+        status = "OK " if response.ok else "ERR"
+        failures += not response.ok
+        print(f"{status} {response.status_code} {path}  (+{len(added)} / -{len(missing)})")
+        for p in added[:40]:
+            print(f"      + {p}")
+        for p in missing[:40]:
+            print(f"      - {p}")
+    print(f"\nSaved live responses to {LIVE.relative_to(ROOT)}/ (git-ignored).")
+    return 1 if failures else 0
+
+
+if __name__ == "__main__":
+    sys.exit(main())

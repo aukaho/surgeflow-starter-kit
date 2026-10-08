@@ -1,5 +1,5 @@
 const SURGEFLOW_API_BASE = 'https://stock-api-c4qdowjxva-uc.a.run.app';
-const MARKETS = ['us', 'cn', 'jp', 'hk', 'uk', 'in'];
+const MARKETS = ['us', 'cn', 'jp', 'hk'];
 
 const HOTLIST_COLS = [
   'hotlist_rank', 'market', 'ticker', 'company_name', 'industry', 'price',
@@ -21,8 +21,6 @@ function onOpen() {
     .addItem('Refresh CN', 'refreshCN')
     .addItem('Refresh JP', 'refreshJP')
     .addItem('Refresh HK', 'refreshHK')
-    .addItem('Refresh UK', 'refreshUK')
-    .addItem('Refresh IN', 'refreshIN')
     .addToUi();
 }
 
@@ -60,8 +58,6 @@ function refreshUS() { return refreshMarket('us'); }
 function refreshCN() { return refreshMarket('cn'); }
 function refreshJP() { return refreshMarket('jp'); }
 function refreshHK() { return refreshMarket('hk'); }
-function refreshUK() { return refreshMarket('uk'); }
-function refreshIN() { return refreshMarket('in'); }
 
 function refreshFromCard(e) {
   var market = e && e.parameters && e.parameters.market ? e.parameters.market : 'us';
@@ -98,7 +94,11 @@ function refreshMarket(market) {
     realtime_status: realtime.market_status || '',
     hotlist_status: hotlist.market_status || '',
     realtime_quality: realtime.data_quality || '',
-    hotlist_quality: hotlist.data_quality || ''
+    hotlist_quality: hotlist.data_quality || '',
+    realtime_as_of: realtime.as_of_local || realtime.as_of_utc || '',
+    hotlist_as_of: hotlist.as_of_local || hotlist.as_of_utc || '',
+    realtime_stale_reason: realtime.stale_reason || '',
+    hotlist_stale_reason: hotlist.stale_reason || ''
   };
 }
 
@@ -115,11 +115,18 @@ function fetchJson(path) {
   return JSON.parse(response.getContentText());
 }
 
+// Three-row freshness block written above each table.
+// Columns A:B keep the original add-on layout (section, market_status,
+// market_quality). The starter workbook's Dashboard finds market_status and
+// market_quality by these labels and reads the first realtime row 5 rows below
+// "REALTIME TABLE", so do not rename these labels or add rows to the block.
+// Columns C:D show when the data is from and why it may be stale or empty:
+// a closed market returns its last session.
 function metaRows(payload, label) {
   return [
-    ['section', label],
-    ['market_status', scalar(payload.market_status)],
-    ['market_quality', scalar(payload.data_quality)]
+    ['section', label, 'as_of_local', scalar(payload.as_of_local)],
+    ['market_status', scalar(payload.market_status), 'as_of_utc', scalar(payload.as_of_utc)],
+    ['market_quality', scalar(payload.data_quality), 'stale_reason', scalar(payload.stale_reason)]
   ];
 }
 
@@ -139,9 +146,10 @@ function scalar(value) {
 
 function writeSection(sheet, startRow, title, payload, cols) {
   var meta = metaRows(payload, title);
-  sheet.getRange(startRow, 1, meta.length, 2).setValues(meta);
+  sheet.getRange(startRow, 1, meta.length, 4).setValues(meta);
   sheet.getRange(startRow, 1, meta.length, 1).setFontWeight('bold');
-  sheet.getRange(startRow, 1, 1, 2).setBackground('#f8fafc');
+  sheet.getRange(startRow, 3, meta.length, 1).setFontWeight('bold');
+  sheet.getRange(startRow, 1, 1, 4).setBackground('#f8fafc');
 
   var headerRow = startRow + meta.length + 1;
   sheet.getRange(headerRow, 1, 1, cols.length).setValues([cols]);

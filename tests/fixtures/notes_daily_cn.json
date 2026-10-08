@@ -1,0 +1,1473 @@
+{
+ "ok": true,
+ "schema_version": "surgeflow.daily_notes.v1",
+ "source": "/api/notes/daily",
+ "market": "cn",
+ "data": {
+  "ok": true,
+  "count": 1,
+  "as_of_date": "2026-10-07",
+  "market": "cn",
+  "notes": [
+   {
+    "as_of_date": "2026-10-07",
+    "generated_at": "2026-10-07T01:20:37.448120+00:00",
+    "scope": "market",
+    "market": "cn",
+    "title": "China Daily Notes — 2026-10-07",
+    "subtitle": "Daily conclusion for China, ready to copy.",
+    "website_url": "https://surgeflows.capital/notes",
+    "x_post": "China market watch - 2026-10-07\nPlaceholder post generated from fixture data.\nPrice Momentum (placeholder): 540 fixture names pass the filter; top trend_run 1.19.\nTurnover Surge (placeholder): no qualifying names this session.\nMarket Structure (placeholder): Technology leads the fixture sector trend; Engineering & C\nhttps://surgeflows.capital/notes",
+    "reddit_post": "# China Daily Notes — 2026-10-07\n\nSource dashboard: https://surgeflows.capital/notes\n\n## Price Momentum\nPrice Momentum (placeholder): 540 fixture names pass the filter; top trend_run 1.19.\n\n## Turnover Surge\nTurnover Surge (placeholder): no qualifying names this session.\n\n## Market Structure\nMarket Structure (placeholder): Technology leads the fixture sector trend; Engineering & Construction shows the largest turnover-versus-cap inflow.\n\n## Whales\nWhales (placeholder): consensus leader 300059 in the fixture boards.\n- Placeholder: conviction leader is 603515.\n- Placeholder: position_delta leader is 600309.\n- Placeholder: network leader is 600030.\n\n## Fundamental Valuation\nFundamental Valuation (placeholder): 155 fixture names pass the strict filter.\n\n## Macro Risk\nMacro Risk (placeholder): leading -0.86, coincident +0.11, lagging +0.65.\n- Placeholder line: composite scores are synthetic fixture values.\n- Placeholder line: composite scores are synthetic fixture values.\n- Placeholder line: composite scores are synthetic fixture values.\n\n## ML Market Map\nML Market Map (placeholder): 7 clusters; largest is 'low idio vol · low volatility (1y) · low volatility (3m)'.\n- Placeholder line 1: see the ml/clusters fixture for the numbers.\n- Placeholder line 2: see the ml/clusters fixture for the numbers.\n- Placeholder line 3: see the ml/clusters fixture for the numbers.\n\n## News & Sentiment\nNews & Sentiment (placeholder): 40 fixture articles, mean score +0.07.\n- Placeholder line: headlines are synthetic.\n- Placeholder line: scores are synthetic.\n",
+    "copy_markdown": "# China Daily Notes — 2026-10-07\n\nSource dashboard: https://surgeflows.capital/notes\n\n## Price Momentum\nPrice Momentum (placeholder): 540 fixture names pass the filter; top trend_run 1.19.\n\n## Turnover Surge\nTurnover Surge (placeholder): no qualifying names this session.\n\n## Market Structure\nMarket Structure (placeholder): Technology leads the fixture sector trend; Engineering & Construction shows the largest turnover-versus-cap inflow.\n\n## Whales\nWhales (placeholder): consensus leader 300059 in the fixture boards.\n- Placeholder: conviction leader is 603515.\n- Placeholder: position_delta leader is 600309.\n- Placeholder: network leader is 600030.\n\n## Fundamental Valuation\nFundamental Valuation (placeholder): 155 fixture names pass the strict filter.\n\n## Macro Risk\nMacro Risk (placeholder): leading -0.86, coincident +0.11, lagging +0.65.\n- Placeholder line: composite scores are synthetic fixture values.\n- Placeholder line: composite scores are synthetic fixture values.\n- Placeholder line: composite scores are synthetic fixture values.\n\n## ML Market Map\nML Market Map (placeholder): 7 clusters; largest is 'low idio vol · low volatility (1y) · low volatility (3m)'.\n- Placeholder line 1: see the ml/clusters fixture for the numbers.\n- Placeholder line 2: see the ml/clusters fixture for the numbers.\n- Placeholder line 3: see the ml/clusters fixture for the numbers.\n\n## News & Sentiment\nNews & Sentiment (placeholder): 40 fixture articles, mean score +0.07.\n- Placeholder line: headlines are synthetic.\n- Placeholder line: scores are synthetic.\n",
+    "methodology_version": "daily_notes_v1_0",
+    "updated_at": "2026-10-07T01:20:37.448120+00:00",
+    "sections": [
+     {
+      "tab": "ma_breakthrough",
+      "label": "Price Momentum",
+      "ok": true,
+      "as_of_date": "2026-09-30",
+      "source_url": "https://surgeflows.capital/api/cn/screen?sort=trend_run&dir=desc&tab=ma_breakthrough&limit=300",
+      "tab_url": "https://surgeflows.capital/price",
+      "headline": "Price Momentum (placeholder): 540 fixture names pass the filter; top trend_run 1.19.",
+      "filter": "market_cap_usd >= 400M AND rsi_state != overbought AND price >= avwap",
+      "sort": "trend_run desc",
+      "top_rows": [
+       {
+        "ticker": "601885",
+        "name": "博联家电",
+        "sector": "Consumer Cyclical",
+        "industry": "Apparel - Retail",
+        "market_cap": 47523042687,
+        "market_cap_usd": 6676084891,
+        "price": 6.42,
+        "avwap": 5.6612,
+        "avwap_cushion": 0.134032,
+        "trend_run": 1.1931,
+        "rsi_14": 51.085,
+        "rsi_state": "neutral",
+        "change_pct": -0.000272,
+        "return_5d": 0.054959,
+        "ytd_return": 2.238187,
+        "ticker_url": "https://surgeflows.capital/stock/cn/601885",
+        "tab_url": "https://surgeflows.capital/price",
+        "trend_making_streak_days": 14,
+        "agent_rating": {
+         "schema_version": "notes_agent_rating_v1",
+         "as_of": "2026-09-30",
+         "state": "available",
+         "available_lenses": 6,
+         "total_lenses": 6,
+         "overall": 3.67,
+         "top_down": 3.67,
+         "bottom_up": 3.67,
+         "lenses": {
+          "macro": {
+           "value": 2,
+           "state": "available",
+           "as_of": "2026-09-30",
+           "source": "stock_sentiment_score_v1",
+           "explanation": null
+          },
+          "sentiment": {
+           "value": 4,
+           "state": "partial",
+           "as_of": "2026-09-30",
+           "source": "stock_sentiment_score_v1",
+           "explanation": "Uses 1 of 4 inputs; missing: industry rotation, news, management outlook."
+          },
+          "factor": {
+           "value": 5,
+           "state": "available",
+           "as_of": "2026-09-30",
+           "source": "stock_scores_latest_v1",
+           "explanation": "Derived from the available within-market momentum, value and quality percentiles."
+          },
+          "technical": {
+           "value": 5,
+           "state": "available",
+           "as_of": "2026-09-30",
+           "source": "stock_scores_latest_v1",
+           "explanation": null
+          },
+          "fundamental": {
+           "value": 3,
+           "state": "available",
+           "as_of": "2026-09-30",
+           "source": "stock_scores_latest_v1",
+           "explanation": null
+          },
+          "risk": {
+           "value": 3,
+           "state": "available",
+           "as_of": "2026-09-29",
+           "source": "ticker_risk_metrics_latest_v1",
+           "explanation": null
+          }
+         }
+        }
+       },
+       {
+        "ticker": "688386",
+        "name": "鼎达旅游",
+        "sector": "Consumer Cyclical",
+        "industry": "Apparel - Manufacturers",
+        "market_cap": 60877003282,
+        "market_cap_usd": 8552062722,
+        "price": 16.84,
+        "avwap": 15.4048,
+        "avwap_cushion": 0.093168,
+        "trend_run": 0.8978,
+        "rsi_14": 50.0899,
+        "rsi_state": "neutral",
+        "change_pct": 0.02958,
+        "return_5d": 0.048096,
+        "ytd_return": 1.530938,
+        "ticker_url": "https://surgeflows.capital/stock/cn/688386",
+        "tab_url": "https://surgeflows.capital/price",
+        "agent_rating": {
+         "schema_version": "notes_agent_rating_v1",
+         "as_of": "2026-09-30",
+         "state": "available",
+         "available_lenses": 6,
+         "total_lenses": 6,
+         "overall": 4.0,
+         "top_down": 4.67,
+         "bottom_up": 3.33,
+         "lenses": {
+          "macro": {
+           "value": 5,
+           "state": "available",
+           "as_of": "2026-09-30",
+           "source": "stock_sentiment_score_v1",
+           "explanation": null
+          },
+          "sentiment": {
+           "value": 5,
+           "state": "partial",
+           "as_of": "2026-09-30",
+           "source": "stock_sentiment_score_v1",
+           "explanation": "Uses 3 of 4 inputs; missing: management reputation."
+          },
+          "factor": {
+           "value": 4,
+           "state": "available",
+           "as_of": "2026-09-30",
+           "source": "stock_scores_latest_v1",
+           "explanation": "Derived from the available within-market momentum, value and quality percentiles."
+          },
+          "technical": {
+           "value": 5,
+           "state": "available",
+           "as_of": "2026-09-30",
+           "source": "stock_scores_latest_v1",
+           "explanation": null
+          },
+          "fundamental": {
+           "value": 2,
+           "state": "available",
+           "as_of": "2026-09-30",
+           "source": "stock_scores_latest_v1",
+           "explanation": null
+          },
+          "risk": {
+           "value": 3,
+           "state": "available",
+           "as_of": "2026-09-30",
+           "source": "ticker_risk_metrics_latest_v1",
+           "explanation": null
+          }
+         }
+        }
+       },
+       {
+        "ticker": "002745",
+        "name": "通恒芯片",
+        "sector": "Technology",
+        "industry": "Semiconductors",
+        "market_cap": 35818907495,
+        "market_cap_usd": 5031876193,
+        "price": 7.68,
+        "avwap": 7.3633,
+        "avwap_cushion": 0.043006,
+        "trend_run": 0.8897,
+        "rsi_14": 55.0443,
+        "rsi_state": "neutral",
+        "change_pct": 0.006433,
+        "return_5d": 0.04148,
+        "ytd_return": 1.099786,
+        "ticker_url": "https://surgeflows.capital/stock/cn/002745",
+        "tab_url": "https://surgeflows.capital/price",
+        "agent_rating": {
+         "schema_version": "notes_agent_rating_v1",
+         "as_of": "2026-09-30",
+         "state": "partial",
+         "available_lenses": 5,
+         "total_lenses": 6,
+         "overall": 3.83,
+         "top_down": 4.0,
+         "bottom_up": 3.67,
+         "lenses": {
+          "macro": {
+           "value": null,
+           "state": "available",
+           "as_of": "2026-09-30",
+           "source": "stock_sentiment_score_v1",
+           "explanation": null
+          },
+          "sentiment": {
+           "value": 4,
+           "state": "partial",
+           "as_of": "2026-09-30",
+           "source": "stock_sentiment_score_v1",
+           "explanation": "Uses 2 of 4 inputs; missing: management outlook, management reputation."
+          },
+          "factor": {
+           "value": 4,
+           "state": "available",
+           "as_of": "2026-09-30",
+           "source": "stock_scores_latest_v1",
+           "explanation": "Derived from the available within-market momentum, value and quality percentiles."
+          },
+          "technical": {
+           "value": 5,
+           "state": "available",
+           "as_of": "2026-09-30",
+           "source": "stock_scores_latest_v1",
+           "explanation": null
+          },
+          "fundamental": {
+           "value": 4,
+           "state": "available",
+           "as_of": "2026-09-30",
+           "source": "stock_scores_latest_v1",
+           "explanation": null
+          },
+          "risk": {
+           "value": 2,
+           "state": "available",
+           "as_of": "2026-09-30",
+           "source": "ticker_risk_metrics_latest_v1",
+           "explanation": null
+          }
+         }
+        }
+       },
+       {
+        "ticker": "002278",
+        "name": "达联医疗",
+        "sector": "Healthcare",
+        "industry": "Medical - Healthcare Information Services",
+        "market_cap": 60165307425,
+        "market_cap_usd": 8452082972,
+        "price": 7.87,
+        "avwap": 6.9966,
+        "avwap_cushion": 0.124829,
+        "trend_run": 0.8627,
+        "rsi_14": 63.1678,
+        "rsi_state": "neutral",
+        "change_pct": -0.014986,
+        "return_5d": 0.100012,
+        "ytd_return": 1.277265,
+        "ticker_url": "https://surgeflows.capital/stock/cn/002278",
+        "tab_url": "https://surgeflows.capital/price",
+        "agent_rating": {
+         "schema_version": "notes_agent_rating_v1",
+         "as_of": "2026-09-30",
+         "state": "available",
+         "available_lenses": 6,
+         "total_lenses": 6,
+         "overall": 4.0,
+         "top_down": 4.33,
+         "bottom_up": 3.67,
+         "lenses": {
+          "macro": {
+           "value": 4,
+           "state": "available",
+           "as_of": "2026-09-30",
+           "source": "stock_sentiment_score_v1",
+           "explanation": null
+          },
+          "sentiment": {
+           "value": 5,
+           "state": "partial",
+           "as_of": "2026-09-30",
+           "source": "stock_sentiment_score_v1",
+           "explanation": "Uses 3 of 4 inputs; missing: management reputation."
+          },
+          "factor": {
+           "value": 4,
+           "state": "available",
+           "as_of": "2026-09-30",
+           "source": "stock_scores_latest_v1",
+           "explanation": "Derived from the available within-market momentum, value and quality percentiles."
+          },
+          "technical": {
+           "value": 5,
+           "state": "available",
+           "as_of": "2026-09-30",
+           "source": "stock_scores_latest_v1",
+           "explanation": null
+          },
+          "fundamental": {
+           "value": 3,
+           "state": "available",
+           "as_of": "2026-09-30",
+           "source": "stock_scores_latest_v1",
+           "explanation": null
+          },
+          "risk": {
+           "value": 3,
+           "state": "available",
+           "as_of": "2026-09-29",
+           "source": "ticker_risk_metrics_latest_v1",
+           "explanation": null
+          }
+         }
+        }
+       },
+       {
+        "ticker": "300890",
+        "name": "永益电子",
+        "sector": "Technology",
+        "industry": "Semiconductors",
+        "market_cap": 37505117304,
+        "market_cap_usd": 5268756645,
+        "price": 5.36,
+        "avwap": 4.9248,
+        "avwap_cushion": 0.088376,
+        "trend_run": 0.8532,
+        "rsi_14": 53.7215,
+        "rsi_state": "neutral",
+        "change_pct": 0.038467,
+        "return_5d": 0.051313,
+        "ytd_return": 0.93122,
+        "ticker_url": "https://surgeflows.capital/stock/cn/300890",
+        "tab_url": "https://surgeflows.capital/price",
+        "agent_rating": {
+         "schema_version": "notes_agent_rating_v1",
+         "as_of": "2026-09-30",
+         "state": "available",
+         "available_lenses": 6,
+         "total_lenses": 6,
+         "overall": 4.0,
+         "top_down": 4.0,
+         "bottom_up": 4.0,
+         "lenses": {
+          "macro": {
+           "value": 3,
+           "state": "available",
+           "as_of": "2026-09-30",
+           "source": "stock_sentiment_score_v1",
+           "explanation": null
+          },
+          "sentiment": {
+           "value": 5,
+           "state": "partial",
+           "as_of": "2026-09-30",
+           "source": "stock_sentiment_score_v1",
+           "explanation": "Uses 2 of 4 inputs; missing: industry rotation, management reputation."
+          },
+          "factor": {
+           "value": 4,
+           "state": "available",
+           "as_of": "2026-09-30",
+           "source": "stock_scores_latest_v1",
+           "explanation": "Derived from the available within-market momentum, value and quality percentiles."
+          },
+          "technical": {
+           "value": 5,
+           "state": "available",
+           "as_of": "2026-09-30",
+           "source": "stock_scores_latest_v1",
+           "explanation": null
+          },
+          "fundamental": {
+           "value": 4,
+           "state": "available",
+           "as_of": "2026-09-30",
+           "source": "stock_scores_latest_v1",
+           "explanation": null
+          },
+          "risk": {
+           "value": 3,
+           "state": "available",
+           "as_of": "2026-09-29",
+           "source": "ticker_risk_metrics_latest_v1",
+           "explanation": null
+          }
+         }
+        }
+       }
+      ],
+      "error": null
+     },
+     {
+      "tab": "turnover",
+      "label": "Turnover Surge",
+      "ok": true,
+      "as_of_date": "2026-09-30",
+      "source_url": "https://surgeflows.capital/api/cn/screen?sort=to_yest_mult&dir=desc&tab=turnover&limit=300",
+      "tab_url": "https://surgeflows.capital/turnover",
+      "headline": "Turnover Surge (placeholder): no qualifying names this session.",
+      "filter": "market_cap_usd >= 400M AND turnover_usd >= 25M AND to_yest_mult >= 1.0",
+      "sort": "to_yest_mult desc",
+      "top_rows": [],
+      "error": null
+     },
+     {
+      "tab": "market_structure",
+      "label": "Market Structure",
+      "ok": true,
+      "as_of_date": "2026-09-30",
+      "source_url": "example_project.stock_data.v_sector_rolling_60d_v1 + example_project.stock_data.industry_rotation_latest_v1",
+      "tab_url": "https://surgeflows.capital/turnover",
+      "headline": "Market Structure (placeholder): Technology leads the fixture sector trend; Engineering & Construction shows the largest turnover-versus-cap inflow.",
+      "methodology": "Sector Trend = change in the 60-day moving average of sector excess returns; Industry Inflow = turnover weight minus market-cap weight.",
+      "top_rows": [
+       {
+        "structure_type": "Sector Trend",
+        "leader": "Technology",
+        "metric_label": "Trend",
+        "metric_value": 0.0017385834010265218,
+        "secondary_label": "60D Return",
+        "secondary_value": 0.07659712895451691,
+        "member_count": 204,
+        "as_of_date": "2026-09-30",
+        "source": "Excess Returns",
+        "tab_url": "https://surgeflows.capital/price"
+       },
+       {
+        "structure_type": "Industry Inflow",
+        "leader": "Engineering & Construction",
+        "metric_label": "Surprise",
+        "metric_value": 0.017022,
+        "secondary_label": "Turnover Ratio",
+        "secondary_value": 1.3722,
+        "turnover_weight_pct": 6.2751,
+        "market_cap_weight_pct": 4.5729,
+        "member_count": 62,
+        "as_of_date": "2026-09-16",
+        "source": "Industry Rotation",
+        "tab_url": "https://surgeflows.capital/turnover"
+       }
+      ],
+      "error": null
+     },
+     {
+      "tab": "whales",
+      "label": "Whales",
+      "ok": true,
+      "as_of_date": "2026-10-07",
+      "source_url": "https://surgeflows.capital/api/whales/signal-board?market=cn&limit=5",
+      "tab_url": "https://surgeflows.capital/whales",
+      "headline": "Whales (placeholder): consensus leader 300059 in the fixture boards.",
+      "lines": [
+       "Placeholder: conviction leader is 603515.",
+       "Placeholder: position_delta leader is 600309.",
+       "Placeholder: network leader is 600030."
+      ],
+      "leaders": {
+       "consensus": [
+        {
+         "market": "cn",
+         "ticker": "300059",
+         "quarter": "2026-Q2",
+         "as_of_date": "2026-06-30",
+         "n_funds_holding": 34,
+         "total_market_value": 72444033.0,
+         "aum_weighted_portfolio_pct": 87.530955291018,
+         "avg_portfolio_pct": 36.42909453490596,
+         "consensus_score": 13.764155357748717,
+         "consensus_percentile": 100.0,
+         "consensus_rank": 1,
+         "components_json": "{\"weights\": {\"aum_weighted_portfolio_pct\": 0.3, \"avg_portfolio_pct\": 0.1, \"log_total_market_value\": 0.2, \"n_funds_holding\": 0.4}, \"z_aum_weighted_portfolio_pct\": 10.178048015898106, \"z_avg_portfolio_pct\": 4.987137565272294, \"z_log_total_market_value\": 1.098137188967964, \"z_n_funds_holding\": 1.2074071337316303}",
+         "methodology_version": "whale_consensus_score_v1_0",
+         "updated_at": "2026-10-07T01:19:00.849517+00:00",
+         "stock_name": "东方财富"
+        },
+        {
+         "market": "cn",
+         "ticker": "603515",
+         "quarter": "2026-Q2",
+         "as_of_date": "2026-06-30",
+         "n_funds_holding": 1,
+         "total_market_value": 431313.0,
+         "aum_weighted_portfolio_pct": 79.0862255852533,
+         "avg_portfolio_pct": 59.334576734303866,
+         "consensus_score": 11.038592316393611,
+         "consensus_percentile": 99.975,
+         "consensus_rank": 2,
+         "components_json": "{\"weights\": {\"aum_weighted_portfolio_pct\": 0.3, \"avg_portfolio_pct\": 0.1, \"log_total_market_value\": 0.2, \"n_funds_holding\": 0.4}, \"z_aum_weighted_portfolio_pct\": 9.14542292414216, \"z_avg_portfolio_pct\": 8.50165824408095, \"z_log_total_market_value\": 0.42437351378374155, \"z_n_funds_holding\": -0.8311749140240533}",
+         "methodology_version": "whale_consensus_score_v1_0",
+         "updated_at": "2026-10-07T01:19:27.643748+00:00",
+         "stock_name": "安盛化工"
+        },
+        {
+         "market": "cn",
+         "ticker": "600052",
+         "quarter": "2026-Q2",
+         "as_of_date": "2026-06-30",
+         "n_funds_holding": 7,
+         "total_market_value": 3785587.0,
+         "aum_weighted_portfolio_pct": 39.698472154657466,
+         "avg_portfolio_pct": 62.96799740256205,
+         "consensus_score": 7.487285432172605,
+         "consensus_percentile": 99.95,
+         "consensus_rank": 3,
+         "components_json": "{\"weights\": {\"aum_weighted_portfolio_pct\": 0.3, \"avg_portfolio_pct\": 0.1, \"log_total_market_value\": 0.2, \"n_funds_holding\": 0.4}, \"z_aum_weighted_portfolio_pct\": 4.329071907890595, \"z_avg_portfolio_pct\": 9.059155002378395, \"z_log_total_market_value\": 0.7100042891571116, \"z_n_funds_holding\": -0.4605236326139291}",
+         "methodology_version": "whale_consensus_score_v1_0",
+         "updated_at": "2026-10-07T01:19:12.755343+00:00",
+         "stock_name": "盛联机械"
+        },
+        {
+         "market": "cn",
+         "ticker": "600519",
+         "quarter": "2026-Q2",
+         "as_of_date": "2026-06-30",
+         "n_funds_holding": 59,
+         "total_market_value": 1556453834.0,
+         "aum_weighted_portfolio_pct": 22.22706376782222,
+         "avg_portfolio_pct": 9.053005346547867,
+         "consensus_score": 7.4124330628265485,
+         "consensus_percentile": 99.925,
+         "consensus_rank": 4,
+         "components_json": "{\"weights\": {\"aum_weighted_portfolio_pct\": 0.3, \"avg_portfolio_pct\": 0.1, \"log_total_market_value\": 0.2, \"n_funds_holding\": 0.4}, \"z_aum_weighted_portfolio_pct\": 2.1926607594975818, \"z_avg_portfolio_pct\": 0.7866657865151667, \"z_log_total_market_value\": 1.5014894596593285, \"z_n_funds_holding\": 2.7517874729404816}",
+         "methodology_version": "whale_consensus_score_v1_0",
+         "updated_at": "2026-10-07T01:19:15.411152+00:00",
+         "stock_name": "贵州茅台"
+        },
+        {
+         "market": "cn",
+         "ticker": "605237",
+         "quarter": "2026-Q2",
+         "as_of_date": "2026-06-30",
+         "n_funds_holding": 28,
+         "total_market_value": 44980862.0,
+         "aum_weighted_portfolio_pct": 28.10664114081452,
+         "avg_portfolio_pct": 28.1943106009525,
+         "consensus_score": 6.362932061824035,
+         "consensus_percentile": 99.9,
+         "consensus_rank": 5,
+         "components_json": "{\"weights\": {\"aum_weighted_portfolio_pct\": 0.3, \"avg_portfolio_pct\": 0.1, \"log_total_market_value\": 0.2, \"n_funds_holding\": 0.4}, \"z_aum_weighted_portfolio_pct\": 2.91161794768654, \"z_avg_portfolio_pct\": 3.7236270148521196, \"z_log_total_market_value\": 1.0354679694411744, \"z_n_funds_holding\": 0.836755852321506}",
+         "methodology_version": "whale_consensus_score_v1_0",
+         "updated_at": "2026-10-07T01:19:24.231250+00:00",
+         "stock_name": "安远医疗"
+        }
+       ],
+       "conviction": [
+        {
+         "market": "cn",
+         "ticker": "603515",
+         "quarter": "2026年2季度股票投资明细",
+         "as_of_date": "2026-06-30",
+         "n_funds_holding": 1,
+         "ticker_conviction_score": 3.9774095279488137,
+         "ticker_conviction_percentile": 100.0,
+         "ticker_conviction_rank": 1,
+         "max_fund_conviction_z": 4.041722736325304,
+         "top_conviction_fund": "福和成长混合-C",
+         "components_json": "{\"max_fund_conviction_z\": 4.041722736325304, \"top_conviction_fund\": \"\\u798f\\u548c\\u6210\\u957f\\u6df7\\u5408-C\"}",
+         "methodology_version": "whale_conviction_index_v1_0",
+         "updated_at": "2026-10-07T01:20:19.516733+00:00",
+         "stock_name": "安盛化工"
+        },
+        {
+         "market": "cn",
+         "ticker": "605237",
+         "quarter": "2026年2季度股票投资明细",
+         "as_of_date": "2026-06-30",
+         "n_funds_holding": 28,
+         "ticker_conviction_score": 3.8153245667547253,
+         "ticker_conviction_percentile": 99.975,
+         "ticker_conviction_rank": 2,
+         "max_fund_conviction_z": 3.9880324260414555,
+         "top_conviction_fund": "华晨价值精选",
+         "components_json": "{\"max_fund_conviction_z\": 3.9880324260414555, \"top_conviction_fund\": \"\\u534e\\u6668\\u4ef7\\u503c\\u7cbe\\u9009\"}",
+         "methodology_version": "whale_conviction_index_v1_0",
+         "updated_at": "2026-10-07T01:20:20.106093+00:00",
+         "stock_name": "安远医疗"
+        },
+        {
+         "market": "cn",
+         "ticker": "300059",
+         "quarter": "2026年2季度股票投资明细",
+         "as_of_date": "2026-06-30",
+         "n_funds_holding": 34,
+         "ticker_conviction_score": 3.5360903678443227,
+         "ticker_conviction_percentile": 99.95,
+         "ticker_conviction_rank": 3,
+         "max_fund_conviction_z": 3.5481921411892436,
+         "top_conviction_fund": "华元成长混合",
+         "components_json": "{\"max_fund_conviction_z\": 3.5481921411892436, \"top_conviction_fund\": \"\\u534e\\u5143\\u6210\\u957f\\u6df7\\u5408\"}",
+         "methodology_version": "whale_conviction_index_v1_0",
+         "updated_at": "2026-10-07T01:20:09.632684+00:00",
+         "stock_name": "东方财富"
+        },
+        {
+         "market": "cn",
+         "ticker": "600052",
+         "quarter": "2026年2季度股票投资明细",
+         "as_of_date": "2026-06-30",
+         "n_funds_holding": 7,
+         "ticker_conviction_score": 3.5287579056253273,
+         "ticker_conviction_percentile": 99.925,
+         "ticker_conviction_rank": 4,
+         "max_fund_conviction_z": 3.657999680371131,
+         "top_conviction_fund": "航航价值精选",
+         "components_json": "{\"max_fund_conviction_z\": 3.657999680371131, \"top_conviction_fund\": \"\\u822a\\u822a\\u4ef7\\u503c\\u7cbe\\u9009\"}",
+         "methodology_version": "whale_conviction_index_v1_0",
+         "updated_at": "2026-10-07T01:20:26.296544+00:00",
+         "stock_name": "盛联机械"
+        },
+        {
+         "market": "cn",
+         "ticker": "601456",
+         "quarter": "2026年2季度股票投资明细",
+         "as_of_date": "2026-06-30",
+         "n_funds_holding": 2,
+         "ticker_conviction_score": 3.1528884226441383,
+         "ticker_conviction_percentile": 99.9,
+         "ticker_conviction_rank": 5,
+         "max_fund_conviction_z": 3.1822757292010038,
+         "top_conviction_fund": "通润均衡配置-C",
+         "components_json": "{\"max_fund_conviction_z\": 3.1822757292010038, \"top_conviction_fund\": \"\\u901a\\u6da6\\u5747\\u8861\\u914d\\u7f6e-C\"}",
+         "methodology_version": "whale_conviction_index_v1_0",
+         "updated_at": "2026-10-07T01:20:22.311740+00:00",
+         "stock_name": "宏宏环保"
+        }
+       ],
+       "crowdedness": [
+        {
+         "market": "cn",
+         "ticker": "601088",
+         "quarter": "2026-Q2",
+         "as_of_date": "2026-06-30",
+         "n_funds_holding": 60,
+         "n_funds_total": 25400,
+         "crowdedness_pct": 0.002362204724409449,
+         "crowdedness_quintile": 1,
+         "crowdedness_rank": 1,
+         "methodology_version": "whale_crowdedness_v1_0",
+         "updated_at": "2026-10-07T01:21:01.961430+00:00",
+         "stock_name": "中国神华"
+        },
+        {
+         "market": "cn",
+         "ticker": "600030",
+         "quarter": "2026年2季度股票投资明细",
+         "as_of_date": "2026-06-30",
+         "n_funds_holding": 60,
+         "n_funds_total": 25400,
+         "crowdedness_pct": 0.002362204724409449,
+         "crowdedness_quintile": 1,
+         "crowdedness_rank": 2,
+         "methodology_version": "whale_crowdedness_v1_0",
+         "updated_at": "2026-10-07T01:21:23.395210+00:00",
+         "stock_name": "中信证券"
+        },
+        {
+         "market": "cn",
+         "ticker": "002475",
+         "quarter": "2026-Q2",
+         "as_of_date": "2026-06-30",
+         "n_funds_holding": 60,
+         "n_funds_total": 25400,
+         "crowdedness_pct": 0.002362204724409449,
+         "crowdedness_quintile": 1,
+         "crowdedness_rank": 3,
+         "methodology_version": "whale_crowdedness_v1_0",
+         "updated_at": "2026-10-07T01:21:05.206758+00:00",
+         "stock_name": "立讯精密"
+        },
+        {
+         "market": "cn",
+         "ticker": "600887",
+         "quarter": "2026年2季度股票投资明细",
+         "as_of_date": "2026-06-30",
+         "n_funds_holding": 60,
+         "n_funds_total": 25400,
+         "crowdedness_pct": 0.002362204724409449,
+         "crowdedness_quintile": 1,
+         "crowdedness_rank": 4,
+         "methodology_version": "whale_crowdedness_v1_0",
+         "updated_at": "2026-10-07T01:21:25.015079+00:00",
+         "stock_name": "伊利股份"
+        },
+        {
+         "market": "cn",
+         "ticker": "600519",
+         "quarter": "2026-Q2",
+         "as_of_date": "2026-06-30",
+         "n_funds_holding": 59,
+         "n_funds_total": 25400,
+         "crowdedness_pct": 0.0023228346456692912,
+         "crowdedness_quintile": 1,
+         "crowdedness_rank": 5,
+         "methodology_version": "whale_crowdedness_v1_0",
+         "updated_at": "2026-10-07T01:21:04.661686+00:00",
+         "stock_name": "贵州茅台"
+        }
+       ],
+       "position_delta": [
+        {
+         "market": "cn",
+         "ticker": "600309",
+         "quarter": "2026-Q2",
+         "as_of_date": "2026-06-30",
+         "n_funds_buying": 5,
+         "n_funds_selling": 0,
+         "net_shares_change": 1154436537.0,
+         "gross_shares_buying": 1154436537.0,
+         "gross_shares_selling": 0.0,
+         "delta_z": 3.786581348871243,
+         "delta_rank": 1,
+         "delta_percentile": 100.0,
+         "methodology_version": "whale_position_delta_v1_0",
+         "updated_at": "2026-10-07T01:22:26.357620+00:00",
+         "stock_name": "万华化学"
+        },
+        {
+         "market": "cn",
+         "ticker": "601857",
+         "quarter": "2026年2季度股票投资明细",
+         "as_of_date": "2026-06-30",
+         "n_funds_buying": 3,
+         "n_funds_selling": 3,
+         "net_shares_change": 546503522.0,
+         "gross_shares_buying": 864137252.0,
+         "gross_shares_selling": -317633730.0,
+         "delta_z": 3.6368486508483184,
+         "delta_rank": 2,
+         "delta_percentile": 99.975,
+         "methodology_version": "whale_position_delta_v1_0",
+         "updated_at": "2026-10-07T01:22:04.991859+00:00",
+         "stock_name": "中国石油"
+        },
+        {
+         "market": "cn",
+         "ticker": "000651",
+         "quarter": "2026-Q2",
+         "as_of_date": "2026-06-30",
+         "n_funds_buying": 4,
+         "n_funds_selling": 2,
+         "net_shares_change": 322872012.0,
+         "gross_shares_buying": 439669984.0,
+         "gross_shares_selling": -116797972.0,
+         "delta_z": 3.5314739500675896,
+         "delta_rank": 3,
+         "delta_percentile": 99.95,
+         "methodology_version": "whale_position_delta_v1_0",
+         "updated_at": "2026-10-07T01:22:23.460879+00:00",
+         "stock_name": "格力电器"
+        },
+        {
+         "market": "cn",
+         "ticker": "688981",
+         "quarter": "2026年2季度股票投资明细",
+         "as_of_date": "2026-06-30",
+         "n_funds_buying": 8,
+         "n_funds_selling": 1,
+         "net_shares_change": 322740563.0,
+         "gross_shares_buying": 407556159.0,
+         "gross_shares_selling": -84815596.0,
+         "delta_z": 3.531392417673865,
+         "delta_rank": 4,
+         "delta_percentile": 99.925,
+         "methodology_version": "whale_position_delta_v1_0",
+         "updated_at": "2026-10-07T01:22:28.462448+00:00",
+         "stock_name": "中芯国际"
+        },
+        {
+         "market": "cn",
+         "ticker": "603972",
+         "quarter": "2026-Q2",
+         "as_of_date": "2026-06-30",
+         "n_funds_buying": 3,
+         "n_funds_selling": 0,
+         "net_shares_change": 302348517.0,
+         "gross_shares_buying": 302348517.0,
+         "gross_shares_selling": 0.0,
+         "delta_z": 3.5183241330956365,
+         "delta_rank": 5,
+         "delta_percentile": 99.9,
+         "methodology_version": "whale_position_delta_v1_0",
+         "updated_at": "2026-10-07T01:22:18.923499+00:00",
+         "stock_name": "海宇家电"
+        }
+       ],
+       "network": [
+        {
+         "market": "cn",
+         "ticker": "600030",
+         "quarter": "2026年2季度股票投资明细",
+         "as_of_date": "2026-06-30",
+         "degree": 1567,
+         "weighted_degree": 7573.0,
+         "eigenvector_centrality": 0.25362474612165103,
+         "community_id": 1,
+         "n_tickers_in_community": 120,
+         "n_communities": 3,
+         "modularity": 0.2361,
+         "methodology_version": "whale_network_v1_0",
+         "updated_at": "2026-10-06T23:59:04.041528+00:00",
+         "stock_name": "中信证券"
+        },
+        {
+         "market": "cn",
+         "ticker": "300308",
+         "quarter": "2026年2季度股票投资明细",
+         "as_of_date": "2026-06-30",
+         "degree": 1512,
+         "weighted_degree": 7008.0,
+         "eigenvector_centrality": 0.23471953138451823,
+         "community_id": 2,
+         "n_tickers_in_community": 101,
+         "n_communities": 3,
+         "modularity": 0.2361,
+         "methodology_version": "whale_network_v1_0",
+         "updated_at": "2026-10-06T23:59:29.970421+00:00",
+         "stock_name": "中际旭创"
+        },
+        {
+         "market": "cn",
+         "ticker": "002475",
+         "quarter": "2026年2季度股票投资明细",
+         "as_of_date": "2026-06-30",
+         "degree": 1617,
+         "weighted_degree": 5813.0,
+         "eigenvector_centrality": 0.19470020603673738,
+         "community_id": 0,
+         "n_tickers_in_community": 100,
+         "n_communities": 3,
+         "modularity": 0.2361,
+         "methodology_version": "whale_network_v1_0",
+         "updated_at": "2026-10-06T23:59:12.575664+00:00",
+         "stock_name": "立讯精密"
+        },
+        {
+         "market": "cn",
+         "ticker": "688425",
+         "quarter": "2026年2季度股票投资明细",
+         "as_of_date": "2026-06-30",
+         "degree": 1220,
+         "weighted_degree": 5623.0,
+         "eigenvector_centrality": 0.18832265534682968,
+         "community_id": 1,
+         "n_tickers_in_community": 120,
+         "n_communities": 3,
+         "modularity": 0.2361,
+         "methodology_version": "whale_network_v1_0",
+         "updated_at": "2026-10-06T23:59:21.984570+00:00",
+         "stock_name": "凯凯机械"
+        },
+        {
+         "market": "cn",
+         "ticker": "601088",
+         "quarter": "2026年2季度股票投资明细",
+         "as_of_date": "2026-06-30",
+         "degree": 1458,
+         "weighted_degree": 5207.0,
+         "eigenvector_centrality": 0.1743914377560156,
+         "community_id": 0,
+         "n_tickers_in_community": 100,
+         "n_communities": 3,
+         "modularity": 0.2361,
+         "methodology_version": "whale_network_v1_0",
+         "updated_at": "2026-10-06T23:59:13.621370+00:00",
+         "stock_name": "中国神华"
+        }
+       ],
+       "ll_predictive": [
+        {
+         "market": "cn",
+         "ticker": "688041",
+         "quarter": "2026-Q2",
+         "as_of_date": "2026-06-30",
+         "n_funds_holding_q": 54,
+         "n_funds_holding_q_minus_1": 0,
+         "owner_count_change": 54,
+         "portfolio_weight_change": 156.44427650310524,
+         "ll_score_z": 13.154469183777525,
+         "ll_rank": 1,
+         "ll_percentile": 100.0,
+         "methodology_version": "whale_ll_predictive_v1_0",
+         "updated_at": "2026-10-07T01:23:24.235450+00:00",
+         "stock_name": "海光信息"
+        },
+        {
+         "market": "cn",
+         "ticker": "600519",
+         "quarter": "2026年2季度股票投资明细",
+         "as_of_date": "2026-06-30",
+         "n_funds_holding_q": 59,
+         "n_funds_holding_q_minus_1": 0,
+         "owner_count_change": 59,
+         "portfolio_weight_change": 133.36973568745708,
+         "ll_score_z": 12.872983150587043,
+         "ll_rank": 2,
+         "ll_percentile": 99.975,
+         "methodology_version": "whale_ll_predictive_v1_0",
+         "updated_at": "2026-10-07T01:23:11.298689+00:00",
+         "stock_name": "贵州茅台"
+        },
+        {
+         "market": "cn",
+         "ticker": "002475",
+         "quarter": "2026-Q2",
+         "as_of_date": "2026-06-30",
+         "n_funds_holding_q": 60,
+         "n_funds_holding_q_minus_1": 0,
+         "owner_count_change": 60,
+         "portfolio_weight_change": 84.96992144791574,
+         "ll_score_z": 10.89329618339536,
+         "ll_rank": 3,
+         "ll_percentile": 99.95,
+         "methodology_version": "whale_ll_predictive_v1_0",
+         "updated_at": "2026-10-07T01:23:19.778634+00:00",
+         "stock_name": "立讯精密"
+        },
+        {
+         "market": "cn",
+         "ticker": "002230",
+         "quarter": "2026年2季度股票投资明细",
+         "as_of_date": "2026-06-30",
+         "n_funds_holding_q": 42,
+         "n_funds_holding_q_minus_1": 0,
+         "owner_count_change": 42,
+         "portfolio_weight_change": 123.09984685649259,
+         "ll_score_z": 9.932584346803168,
+         "ll_rank": 4,
+         "ll_percentile": 99.925,
+         "methodology_version": "whale_ll_predictive_v1_0",
+         "updated_at": "2026-10-07T01:23:03.133411+00:00",
+         "stock_name": "科大讯飞"
+        },
+        {
+         "market": "cn",
+         "ticker": "300308",
+         "quarter": "2026-Q2",
+         "as_of_date": "2026-06-30",
+         "n_funds_holding_q": 59,
+         "n_funds_holding_q_minus_1": 0,
+         "owner_count_change": 59,
+         "portfolio_weight_change": 59.68114754208658,
+         "ll_score_z": 9.635980068723379,
+         "ll_rank": 5,
+         "ll_percentile": 99.9,
+         "methodology_version": "whale_ll_predictive_v1_0",
+         "updated_at": "2026-10-07T01:23:14.073373+00:00",
+         "stock_name": "中际旭创"
+        }
+       ]
+      }
+     },
+     {
+      "tab": "fundamental",
+      "label": "Fundamental Valuation",
+      "ok": true,
+      "as_of_date": "2026-09-30",
+      "source_url": "https://surgeflows.capital/api/cn/screen?tab=fundamental&limit=300",
+      "tab_url": "https://surgeflows.capital/fundamentals",
+      "headline": "Fundamental Valuation (placeholder): 155 fixture names pass the strict filter.",
+      "filter": "market_cap_usd >= 400M; strict first: ytd_return >= 0 AND change_pct >= 0 AND revenue_growth > 0 AND profit_margin > 0; fill to 5 by composite_quality",
+      "sort": "strict_pass desc, composite_quality desc",
+      "top_rows": [
+       {
+        "ticker": "601569",
+        "name": "通华旅游股份",
+        "sector": "Consumer Cyclical",
+        "industry": "Furnishings, Fixtures & Appliances",
+        "market_cap": 40268424377,
+        "market_cap_usd": 5656948805,
+        "revenue_growth": 0.7569,
+        "profit_margin": 0.2606,
+        "composite_quality": 0.197213,
+        "change_pct": 0.031569,
+        "return_5d": -0.032684,
+        "ytd_return": 0.167534,
+        "ep": 0.0854,
+        "cfop": 0.0727,
+        "ticker_url": "https://surgeflows.capital/stock/cn/601569",
+        "tab_url": "https://surgeflows.capital/fundamentals",
+        "agent_rating": {
+         "schema_version": "notes_agent_rating_v1",
+         "as_of": "2026-09-30",
+         "state": "available",
+         "available_lenses": 6,
+         "total_lenses": 6,
+         "overall": 3.83,
+         "top_down": 3.67,
+         "bottom_up": 4.0,
+         "lenses": {
+          "macro": {
+           "value": 4,
+           "state": "available",
+           "as_of": "2026-09-30",
+           "source": "stock_sentiment_score_v1",
+           "explanation": null
+          },
+          "sentiment": {
+           "value": 3,
+           "state": "partial",
+           "as_of": "2026-09-30",
+           "source": "stock_sentiment_score_v1",
+           "explanation": "Uses 2 of 4 inputs; missing: news, management reputation."
+          },
+          "factor": {
+           "value": 4,
+           "state": "available",
+           "as_of": "2026-09-30",
+           "source": "stock_scores_latest_v1",
+           "explanation": "Derived from the available within-market momentum, value and quality percentiles."
+          },
+          "technical": {
+           "value": 3,
+           "state": "available",
+           "as_of": "2026-09-30",
+           "source": "stock_scores_latest_v1",
+           "explanation": null
+          },
+          "fundamental": {
+           "value": 5,
+           "state": "available",
+           "as_of": "2026-09-30",
+           "source": "stock_scores_latest_v1",
+           "explanation": null
+          },
+          "risk": {
+           "value": 4,
+           "state": "available",
+           "as_of": "2026-09-29",
+           "source": "ticker_risk_metrics_latest_v1",
+           "explanation": null
+          }
+         }
+        }
+       },
+       {
+        "ticker": "301542",
+        "name": "恒晨家电",
+        "sector": "Consumer Cyclical",
+        "industry": "Specialty Retail",
+        "market_cap": 91921280031,
+        "market_cap_usd": 12913193980,
+        "revenue_growth": 1.449,
+        "profit_margin": 0.1175,
+        "composite_quality": 0.170327,
+        "change_pct": 0.005955,
+        "return_5d": 0.060635,
+        "ytd_return": 0.031543,
+        "ep": 0.0594,
+        "cfop": 0.0338,
+        "ticker_url": "https://surgeflows.capital/stock/cn/301542",
+        "tab_url": "https://surgeflows.capital/fundamentals",
+        "agent_rating": {
+         "schema_version": "notes_agent_rating_v1",
+         "as_of": "2026-09-30",
+         "state": "available",
+         "available_lenses": 6,
+         "total_lenses": 6,
+         "overall": 3.0,
+         "top_down": 2.33,
+         "bottom_up": 3.67,
+         "lenses": {
+          "macro": {
+           "value": 1,
+           "state": "available",
+           "as_of": "2026-09-30",
+           "source": "stock_sentiment_score_v1",
+           "explanation": null
+          },
+          "sentiment": {
+           "value": 3,
+           "state": "partial",
+           "as_of": "2026-09-30",
+           "source": "stock_sentiment_score_v1",
+           "explanation": "Uses 3 of 4 inputs; missing: industry rotation."
+          },
+          "factor": {
+           "value": 3,
+           "state": "available",
+           "as_of": "2026-09-30",
+           "source": "stock_scores_latest_v1",
+           "explanation": "Derived from the available within-market momentum, value and quality percentiles."
+          },
+          "technical": {
+           "value": 4,
+           "state": "available",
+           "as_of": "2026-09-30",
+           "source": "stock_scores_latest_v1",
+           "explanation": null
+          },
+          "fundamental": {
+           "value": 4,
+           "state": "available",
+           "as_of": "2026-09-30",
+           "source": "stock_scores_latest_v1",
+           "explanation": null
+          },
+          "risk": {
+           "value": 3,
+           "state": "available",
+           "as_of": "2026-09-29",
+           "source": "ticker_risk_metrics_latest_v1",
+           "explanation": null
+          }
+         }
+        }
+       },
+       {
+        "ticker": "300133",
+        "name": "通远家电",
+        "sector": "Consumer Cyclical",
+        "industry": "Auto - Manufacturers",
+        "market_cap": 109450507403,
+        "market_cap_usd": 15375717493,
+        "revenue_growth": 0.6818,
+        "profit_margin": 0.2286,
+        "composite_quality": 0.155889,
+        "change_pct": 0.012454,
+        "return_5d": 0.029379,
+        "ytd_return": 0.08848,
+        "ep": 0.0445,
+        "cfop": 0.0348,
+        "ticker_url": "https://surgeflows.capital/stock/cn/300133",
+        "tab_url": "https://surgeflows.capital/fundamentals",
+        "agent_rating": {
+         "schema_version": "notes_agent_rating_v1",
+         "as_of": "2026-09-30",
+         "state": "available",
+         "available_lenses": 6,
+         "total_lenses": 6,
+         "overall": 3.33,
+         "top_down": 3.0,
+         "bottom_up": 3.67,
+         "lenses": {
+          "macro": {
+           "value": 2,
+           "state": "available",
+           "as_of": "2026-09-30",
+           "source": "stock_sentiment_score_v1",
+           "explanation": null
+          },
+          "sentiment": {
+           "value": 3,
+           "state": "partial",
+           "as_of": "2026-09-30",
+           "source": "stock_sentiment_score_v1",
+           "explanation": "Uses 1 of 4 inputs; missing: news, industry rotation, management reputation."
+          },
+          "factor": {
+           "value": 4,
+           "state": "available",
+           "as_of": "2026-09-30",
+           "source": "stock_scores_latest_v1",
+           "explanation": "Derived from the available within-market momentum, value and quality percentiles."
+          },
+          "technical": {
+           "value": 3,
+           "state": "available",
+           "as_of": "2026-09-30",
+           "source": "stock_scores_latest_v1",
+           "explanation": null
+          },
+          "fundamental": {
+           "value": 5,
+           "state": "available",
+           "as_of": "2026-09-30",
+           "source": "stock_scores_latest_v1",
+           "explanation": null
+          },
+          "risk": {
+           "value": 3,
+           "state": "available",
+           "as_of": "2026-09-30",
+           "source": "ticker_risk_metrics_latest_v1",
+           "explanation": null
+          }
+         }
+        }
+       },
+       {
+        "ticker": "605046",
+        "name": "星星电子股份",
+        "sector": "Technology",
+        "industry": "Communication Equipment",
+        "market_cap": 91876090168,
+        "market_cap_usd": 12906845663,
+        "revenue_growth": 0.6658,
+        "profit_margin": 0.1365,
+        "composite_quality": 0.090885,
+        "change_pct": 0.05774,
+        "return_5d": 0.014268,
+        "ytd_return": 0.207558,
+        "ep": 0.0284,
+        "cfop": 0.0445,
+        "ticker_url": "https://surgeflows.capital/stock/cn/605046",
+        "tab_url": "https://surgeflows.capital/fundamentals",
+        "agent_rating": {
+         "schema_version": "notes_agent_rating_v1",
+         "as_of": "2026-09-30",
+         "state": "available",
+         "available_lenses": 6,
+         "total_lenses": 6,
+         "overall": 3.5,
+         "top_down": 3.67,
+         "bottom_up": 3.33,
+         "lenses": {
+          "macro": {
+           "value": 3,
+           "state": "available",
+           "as_of": "2026-09-30",
+           "source": "stock_sentiment_score_v1",
+           "explanation": null
+          },
+          "sentiment": {
+           "value": 4,
+           "state": "partial",
+           "as_of": "2026-09-30",
+           "source": "stock_sentiment_score_v1",
+           "explanation": "Uses 3 of 4 inputs; missing: management outlook."
+          },
+          "factor": {
+           "value": 4,
+           "state": "available",
+           "as_of": "2026-09-30",
+           "source": "stock_scores_latest_v1",
+           "explanation": "Derived from the available within-market momentum, value and quality percentiles."
+          },
+          "technical": {
+           "value": 4,
+           "state": "available",
+           "as_of": "2026-09-30",
+           "source": "stock_scores_latest_v1",
+           "explanation": null
+          },
+          "fundamental": {
+           "value": 4,
+           "state": "available",
+           "as_of": "2026-09-30",
+           "source": "stock_scores_latest_v1",
+           "explanation": null
+          },
+          "risk": {
+           "value": 2,
+           "state": "available",
+           "as_of": "2026-09-29",
+           "source": "ticker_risk_metrics_latest_v1",
+           "explanation": null
+          }
+         }
+        }
+       },
+       {
+        "ticker": "000741",
+        "name": "正嘉汽车",
+        "sector": "Consumer Cyclical",
+        "industry": "Furnishings, Fixtures & Appliances",
+        "market_cap": 63552974045,
+        "market_cap_usd": 8927985790,
+        "revenue_growth": 0.1779,
+        "profit_margin": 0.3528,
+        "composite_quality": 0.062767,
+        "change_pct": 0.012689,
+        "return_5d": 0.003459,
+        "ytd_return": 0.159615,
+        "ep": 0.2057,
+        "cfop": 0.2771,
+        "ticker_url": "https://surgeflows.capital/stock/cn/000741",
+        "tab_url": "https://surgeflows.capital/fundamentals",
+        "agent_rating": {
+         "schema_version": "notes_agent_rating_v1",
+         "as_of": "2026-09-30",
+         "state": "available",
+         "available_lenses": 6,
+         "total_lenses": 6,
+         "overall": 3.67,
+         "top_down": 3.33,
+         "bottom_up": 4.0,
+         "lenses": {
+          "macro": {
+           "value": 3,
+           "state": "available",
+           "as_of": "2026-09-30",
+           "source": "stock_sentiment_score_v1",
+           "explanation": null
+          },
+          "sentiment": {
+           "value": 3,
+           "state": "partial",
+           "as_of": "2026-09-30",
+           "source": "stock_sentiment_score_v1",
+           "explanation": "Uses 1 of 4 inputs; missing: management reputation, news, management outlook."
+          },
+          "factor": {
+           "value": 4,
+           "state": "available",
+           "as_of": "2026-09-30",
+           "source": "stock_scores_latest_v1",
+           "explanation": "Derived from the available within-market momentum, value and quality percentiles."
+          },
+          "technical": {
+           "value": 3,
+           "state": "available",
+           "as_of": "2026-09-30",
+           "source": "stock_scores_latest_v1",
+           "explanation": null
+          },
+          "fundamental": {
+           "value": 5,
+           "state": "available",
+           "as_of": "2026-09-30",
+           "source": "stock_scores_latest_v1",
+           "explanation": null
+          },
+          "risk": {
+           "value": 4,
+           "state": "available",
+           "as_of": "2026-09-29",
+           "source": "ticker_risk_metrics_latest_v1",
+           "explanation": null
+          }
+         }
+        }
+       }
+      ],
+      "error": null
+     },
+     {
+      "tab": "macro",
+      "label": "Macro Risk",
+      "ok": true,
+      "as_of_date": "2026-09-30",
+      "source_url": "example_project.stock_data.macro_cycle_composites_v2",
+      "headline": "Macro Risk (placeholder): leading -0.86, coincident +0.11, lagging +0.65.",
+      "lines": [
+       "Placeholder line: composite scores are synthetic fixture values.",
+       "Placeholder line: composite scores are synthetic fixture values.",
+       "Placeholder line: composite scores are synthetic fixture values."
+      ],
+      "scores": {
+       "leading": -0.8601,
+       "coincident": 0.1142,
+       "lagging": 0.6533
+      }
+     },
+     {
+      "tab": "ml_clusters",
+      "label": "ML Market Map",
+      "ok": true,
+      "headline": "ML Market Map (placeholder): 7 clusters; largest is 'low idio vol · low volatility (1y) · low volatility (3m)'.",
+      "lines": [
+       "Placeholder line 1: see the ml/clusters fixture for the numbers.",
+       "Placeholder line 2: see the ml/clusters fixture for the numbers.",
+       "Placeholder line 3: see the ml/clusters fixture for the numbers."
+      ],
+      "tab_url": "https://surgeflows.capital/ml?market=cn",
+      "as_of_date": "2026-09-30"
+     },
+     {
+      "tab": "news",
+      "label": "News & Sentiment",
+      "ok": true,
+      "source_url": "https://surgeflows.capital/api/news/feed?market=cn&limit=3",
+      "tab_url": "https://surgeflows.capital/news",
+      "headline": "News & Sentiment (placeholder): 40 fixture articles, mean score +0.07.",
+      "lines": [
+       "Placeholder line: headlines are synthetic.",
+       "Placeholder line: scores are synthetic."
+      ],
+      "articles": [
+       {
+        "article_id": "d17fe8cc54ba4519bfb343cb39ec3f50",
+        "published_utc": "2026-10-06T15:28:18Z",
+        "title": "合成样例：两市指数窄幅震荡",
+        "description": "合成样例：两市指数窄幅震荡 (placeholder text, not a real article).",
+        "publisher_name": "同花顺",
+        "article_url": "https://example.com/cn/10jqka/d17fe8cc54ba4519bfb343cb39ec3f50",
+        "tickers": "[]",
+        "ticker_count": 0,
+        "keywords": "[]",
+        "sentiment_score": 0.0,
+        "sentiment_label": "neutral",
+        "provider": "10jqka",
+        "source_family": "tushare_news_10jqka",
+        "language": "zh",
+        "article_type": "stock",
+        "sentiment_available": true,
+        "content_available": true
+       },
+       {
+        "article_id": "2d62e552af765e00309e3dc41e88c7bd",
+        "published_utc": "2026-10-06T14:27:25Z",
+        "title": "合成样例：两市指数窄幅震荡",
+        "description": "合成样例：两市指数窄幅震荡 (placeholder text, not a real article).",
+        "publisher_name": "东方财富",
+        "article_url": "",
+        "tickers": "[]",
+        "ticker_count": 0,
+        "keywords": "[]",
+        "sentiment_score": -0.2,
+        "sentiment_label": "negative",
+        "provider": "eastmoney",
+        "source_family": "tushare_news_eastmoney",
+        "language": "zh",
+        "article_type": "market",
+        "sentiment_available": true,
+        "content_available": true
+       },
+       {
+        "article_id": "b27b943a9ba3e628349bf14738811490",
+        "published_utc": "2026-10-06T13:36:19Z",
+        "title": "合成样例：两市指数收跌",
+        "description": "合成样例：两市指数收跌 (placeholder text, not a real article).",
+        "publisher_name": "东方财富",
+        "article_url": "",
+        "tickers": "[]",
+        "ticker_count": 0,
+        "keywords": "[]",
+        "sentiment_score": -0.3,
+        "sentiment_label": "negative",
+        "provider": "eastmoney",
+        "source_family": "tushare_news_eastmoney",
+        "language": "zh",
+        "article_type": "market",
+        "sentiment_available": true,
+        "content_available": true
+       }
+      ],
+      "error": null
+     }
+    ],
+    "source_status": {
+     "market": "cn",
+     "section_count": 8,
+     "ok_sections": 8
+    }
+   }
+  ],
+  "methodology_version": "daily_notes_v1_0",
+  "agent_rating_contract": {
+   "schema_version": "notes_agent_rating_v1",
+   "status": "available",
+   "scale": {
+    "min": 1,
+    "max": 5
+   },
+   "top_down": [
+    "macro",
+    "sentiment",
+    "factor"
+   ],
+   "bottom_up": [
+    "technical",
+    "fundamental",
+    "risk"
+   ],
+   "method": "Deterministic within-market evidence lenses, materialised daily. Research diagnostics, not votes."
+  },
+  "disclosure": "Research context only. Notes summarise SurgeFlow dashboard data and are not investment advice. Fixture notes are synthetic placeholders."
+ }
+}

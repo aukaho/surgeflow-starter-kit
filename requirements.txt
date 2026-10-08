@@ -1,0 +1,13 @@
+# Google Colab already has these. For a local Jupyter run: pip install -r requirements.txt
+requests>=2.31
+pandas>=2.0
+numpy>=1.26
+plotly>=5.20
+scikit-learn>=1.4
+scipy>=1.11
+statsmodels>=0.14
+networkx>=3.2
+# Notebook build and test tools
+nbformat>=5.9
+nbclient>=0.10
+ipykernel>=6.29

@@ -1,0 +1,45 @@
+{
+ "ok": true,
+ "schema_version": "surgeflow.public_api.v1",
+ "key_prefix": "sf_live_xxxx",
+ "member_id": "m_000000000000000000000000",
+ "plan": "free",
+ "scopes": [
+  "factors",
+  "hotlist",
+  "macro",
+  "ml",
+  "news",
+  "notes",
+  "realtime",
+  "screen",
+  "summary",
+  "whales"
+ ],
+ "key_created_at": "2026-10-01T09:12:44.120518+00:00",
+ "founding_analyst_number": 99,
+ "is_founding_analyst": true,
+ "referral_code": "sfri_xxxxxxxxxxxxxxxxxxxx",
+ "invite_url": "https://surgeflows.capital/membership?utm_source=member_invite&utm_medium=referral&utm_campaign=member_referral&utm_content=quest&utm_id=sfri_xxxxxxxxxxxxxxxxxxxx#api-key",
+ "referrals": {
+  "registered": 0,
+  "first_value_reached": 0,
+  "repeat_value_reached": 0
+ },
+ "rate_limit": {
+  "X-RateLimit-Limit": "180",
+  "X-RateLimit-Remaining": "179",
+  "X-RateLimit-Daily-Limit": "2000",
+  "X-RateLimit-Daily-Remaining": "1912",
+  "X-SurgeFlow-RateLimit-Store": "gcs"
+ },
+ "usage": {
+  "used_7d": 88,
+  "used_30d": 241,
+  "last_used_at": "2026-10-07T05:14:09.551203+00:00",
+  "first_value_reached": true,
+  "value_days_30d": 6,
+  "repeat_value_reached": true,
+  "note": "Rolling request counts and distinct research days from the daily usage ledger; updated in batches, so the last few minutes may be missing."
+ }
+}

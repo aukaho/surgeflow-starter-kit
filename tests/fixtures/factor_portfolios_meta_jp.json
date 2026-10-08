@@ -1,0 +1,292 @@
+{
+ "ok": true,
+ "schema_version": "surgeflow.factor_portfolios_meta.v2",
+ "source": "/api/{market}/three-model/meta",
+ "market": "jp",
+ "note": "Automated research documentation, not investment advice or a solicitation.",
+ "data": {
+  "market": "jp",
+  "contract": "three_model_served_schema_v1",
+  "status": "available",
+  "reason_code": null,
+  "message": null,
+  "models": {
+   "portfolios": {
+    "state": "published",
+    "first_formation": "2017-01-09",
+    "last_formation": "2026-09-28",
+    "n_publications": 1,
+    "latest": {
+     "publication_id": "fixture_jp_A_20260928_01",
+     "phase": "A",
+     "kinds": [
+      "holdings",
+      "returns",
+      "universe"
+     ],
+     "published_at": "2026-10-06T09:05:44Z",
+     "first_formation": "2017-01-09",
+     "last_formation": "2026-09-28",
+     "data_through_session": "2026-10-05",
+     "code_commit": "5265d2bf341b03de8fcfebdbb9c7f517cbcbb201",
+     "image_digest": "sha256:406a22138b9a9a021fda0d395f54772401c05acfd41e4b8929d89a0c1c67a419",
+     "engine_run_id": "fixture_s6w_jp_20260928_01",
+     "s3_run_id": "fixture_s3m_jp_20260928_01",
+     "s3b_run_id": "fixture_s3b_jp_20260928_01",
+     "attempt": 1,
+     "checks_sha256": "9886b2f34292dc70debd296a1cffa294c69d90084088547dd975450d9f3a6e56"
+    },
+    "holdout_start": null,
+    "holdout_rule": "model A: no fitted parameter (parameters preregistered); model B/C hold-out recorded from their artefacts (fixture placeholder)",
+    "open_week": null,
+    "formation_panel": [
+     "entry_session"
+    ]
+   },
+   "pick": {
+    "state": "not_published"
+   },
+   "product": {
+    "state": "not_published"
+   }
+  },
+  "publications": [
+   {
+    "publication_id": "fixture_jp_A_20260928_01",
+    "phase": "A",
+    "kinds": [
+     "holdings",
+     "returns",
+     "universe"
+    ],
+    "published_at": "2026-10-06T09:05:44Z",
+    "first_formation": "2017-01-09",
+    "last_formation": "2026-09-28",
+    "data_through_session": "2026-10-05",
+    "code_commit": "5265d2bf341b03de8fcfebdbb9c7f517cbcbb201",
+    "image_digest": "sha256:406a22138b9a9a021fda0d395f54772401c05acfd41e4b8929d89a0c1c67a419",
+    "engine_run_id": "fixture_s6w_jp_20260928_01",
+    "s3_run_id": "fixture_s3m_jp_20260928_01",
+    "s3b_run_id": "fixture_s3b_jp_20260928_01",
+    "attempt": 1,
+    "checks_sha256": "9886b2f34292dc70debd296a1cffa294c69d90084088547dd975450d9f3a6e56"
+   }
+  ],
+  "n_publications": 1,
+  "universe": {
+   "rule": "complete_pit_v1",
+   "computed_as_of": "2026-10-05",
+   "as_of_date": "2026-09-25",
+   "n_in_universe": 900,
+   "n_evaluated": 1105,
+   "measured_state": "measured"
+  },
+  "holdout": {
+   "portfolios": {
+    "start": null,
+    "rule": "model A: no fitted parameter (parameters preregistered); model B/C hold-out recorded from their artefacts (fixture placeholder)"
+   }
+  },
+  "holdout_label": "Weeks formed on or after the hold-out start were not used to fit the models; earlier weeks are in-sample.",
+  "cost_basis": [
+   "gross_of_costs"
+  ],
+  "cost_label": "Gross of costs: transaction costs, spreads and taxes are not deducted; no cost model is applied yet.",
+  "model_versions": {
+   "A": "s6w_engine_db6955fd928d471c_pit_entry_session",
+   "C": null,
+   "B": null
+  },
+  "admission": null,
+  "filter_admitted": null,
+  "data_through_session": "2026-10-05",
+  "served_tables": [
+   "pure_factor_portfolios_weekly_v1",
+   "pure_factor_portfolio_returns_weekly_v1",
+   "factor_pick_weekly_v1",
+   "three_model_product_weekly_v1",
+   "three_model_meta_v1",
+   "three_model_universe_v1"
+  ],
+  "freshness": {
+   "portfolios": {
+    "latest_formation_date": "2026-09-28",
+    "latest_week_start": "2026-09-28",
+    "current_week_start": "2026-10-05",
+    "weeks_behind": 1,
+    "state": "current"
+   },
+   "pick": null,
+   "product": null
+  },
+  "formation_panel": [
+   "entry_session"
+  ],
+  "open_week": null,
+  "measurement": {
+   "pure_long_only": {
+    "basis": "investable_at_entry",
+    "label": "Measured after the fact on the names that were investable at the entry close, with characteristics known at that close; not a record of executed trades."
+   },
+   "s3b_ff_2x3_ew": {
+    "basis": "investable_at_entry",
+    "label": "Measured after the fact on the names that were investable at the entry close, with characteristics known at that close; not a record of executed trades."
+   },
+   "s3b_ff_2x3_rp126": {
+    "basis": "investable_at_entry",
+    "label": "Measured after the fact on the names that were investable at the entry close, with characteristics known at that close; not a record of executed trades."
+   }
+  },
+  "survivorship": {
+   "state": "estimated",
+   "label": "Survivorship: only names whose data survived can enter the history, and exits without surviving data are missed; a first-order estimate (fixture wording).",
+   "note": "a universe equal-weight lower bound: the survivor-only universe overstates returns by about 1.7 points a year (fixture placeholder)",
+   "source": "fixtures/jp/survivorship_estimate.json (synthetic)",
+   "points_per_year": -1.7,
+   "bound": "lower",
+   "estimate_label": "Survivorship effect estimate: about -1.7 points a year for an equal-weight universe; a lower bound, not per factor."
+  },
+  "market_caveats": null,
+  "served_caveats": {
+   "state": "declared",
+   "ruling": "fixture ruling 7",
+   "publication_id": "fixture_jp_A_20260928_01",
+   "label": "Caveats for every served history in this market:",
+   "items": [
+    {
+     "key": "formation_timing",
+     "state": "stated",
+     "state_label": "Stated: measured, or true by construction.",
+     "text": "Formation on the entry session: books are formed at the close of the session before the holding week, on the population and characteristics known at that close (fixture placeholder)."
+    },
+    {
+     "key": "measurement_costs_price",
+     "state": "stated",
+     "state_label": "Stated: measured, or true by construction.",
+     "text": "Retrospective measurement, gross of costs, price return, split-adjusted: no trade was executed and no transaction cost, spread or tax is deducted (fixture placeholder)."
+    },
+    {
+     "key": "vintage",
+     "state": "stated",
+     "state_label": "Stated: measured, or true by construction.",
+     "text": "Some sector labels and fundamentals are current-vintage for older formations, so they are not all dated on or before the entry close (fixture placeholder)."
+    },
+    {
+     "key": "survivorship",
+     "state": "stated",
+     "state_label": "Stated: measured, or true by construction.",
+     "text": "The survivorship estimate of -1.7 points a year is a universe equal-weight lower bound (fixture placeholder).",
+     "points_per_year": -1.7,
+     "bound": "lower"
+    },
+    {
+     "key": "coverage_threshold",
+     "state": "stated",
+     "state_label": "Stated: measured, or true by construction.",
+     "text": "A session is fitted only when its regression covers enough of the eligible market cap; weeks below the threshold are served as unavailable (fixture placeholder)."
+    },
+    {
+     "key": "liquidity_concentration",
+     "state": "stated",
+     "state_label": "Stated: measured, or true by construction.",
+     "text": "Some style books cannot meet every exposure band in some weeks; those weeks are served as no_holdings with the failed constraint named (fixture placeholder)."
+    }
+   ],
+   "n_to_be_measured": 0
+  },
+  "contract_revision": "fixture_contract_rev2",
+  "return_basis": {
+   "state": "declared",
+   "basis": "price_return_split_adjusted",
+   "label": "price return, split-adjusted",
+   "returns_label": "Weekly realised return of the long-only book (price return, split-adjusted), held buy-and-hold through the week, gross of costs.",
+   "twin_returns_label": "Weekly long-short return of the measurement portfolio (price return, split-adjusted), gross of costs.",
+   "publications": [
+    {
+     "publication_id": "fixture_jp_A_20260928_01",
+     "state": "declared",
+     "basis": "price_return_split_adjusted",
+     "sources": {
+      "receipt_json.return_basis_declared": "price_return_split_adjusted",
+      "caveats_json.measurement_costs_price.return_basis": "price_return_split_adjusted"
+     }
+    }
+   ],
+   "ruling": "fixture ruling 1",
+   "rule": "Every served row names its return basis, which must match the basis its publication declares; otherwise the returns are withheld (fixture wording)."
+  },
+  "degraded_rule": {
+   "state": "declared",
+   "rule": "max_session_carried_share_plus_max_session_invalid_share_plus_max_session_unwitnessed_exit_share_gt_0.05",
+   "rule_ruling": "fixture ruling 3",
+   "text": "carried + invalid + unwitnessed-exit weight shares, each the largest over the holding sessions, above 5 %",
+   "label": "Degraded when the largest carried + invalid + unwitnessed-exit shares exceed 5 %.",
+   "terms": [
+    "carried",
+    "invalid",
+    "unwitnessed_exit"
+   ],
+   "threshold": 0.05,
+   "publications": [
+    {
+     "publication_id": "fixture_jp_A_20260928_01",
+     "state": "declared",
+     "rule": "max_session_carried_share_plus_max_session_invalid_share_plus_max_session_unwitnessed_exit_share_gt_0.05",
+     "sources": {
+      "checks_json.R_weight_shares_status.predicate": "max_session_carried_share_plus_max_session_invalid_share_plus_max_session_unwitnessed_exit_share_gt_0.05"
+     },
+     "checks_degraded_weeks": 3
+    }
+   ],
+   "ruling": "fixture ruling 6",
+   "mechanism": "One degraded rule per served history, taken from the rows or from their publication's declaration; if they disagree the portfolios are withheld (fixture wording).",
+   "shares_note": "The three *_weight_share fields hold the largest share over the holding sessions; the *_max fields are null unless a row carries them (fixture wording).",
+   "declaration_keys": [
+    "receipt_json.degraded_rule_declared",
+    "checks_json.R_weight_shares_status.predicate",
+    "caveats_json.items.degraded_rule"
+   ]
+  },
+  "labels": {
+   "candidates": "Model candidates, not recommendations; no accuracy or performance claim is made.",
+   "cost": "Gross of costs: transaction costs, spreads and taxes are not deducted; no cost model is applied yet.",
+   "timing": "Measured after the fact on the names that were investable at the entry close, with characteristics known at that close; not a record of executed trades.",
+   "returns": "Weekly realised return of the long-only book (price return, split-adjusted), held buy-and-hold through the week, gross of costs.",
+   "status": {
+    "ok": "Realised: the carried + invalid + unwitnessed-exit shares are at most 5 %.",
+    "degraded": "Degraded: the carried + invalid + unwitnessed-exit shares exceed 5 %; excluded from inference.",
+    "unavailable": "No return: too little return data this week to measure it.",
+    "no_holdings": "No holdings: no book could be formed this week; the failed constraint is named.",
+    "shares_not_recorded": "The run did not record the weight shares; the week is not classified.",
+    "return_not_yet_realised": "Next week's candidates, formed at the entry close: not held yet, so there is no return (return not yet realised)."
+   },
+   "degraded_rule": "carried + invalid + unwitnessed-exit weight shares, each the largest over the holding sessions, above 5 %",
+   "degraded_rule_label": "Degraded when the largest carried + invalid + unwitnessed-exit shares exceed 5 %.",
+   "universe": "Tickers with a complete point-in-time history: continuous prices and the core fundamentals on every fiscal year, every row dated (fixture wording)."
+  },
+  "publication": {
+   "publication_id": "fixture_jp_A_20260928_01",
+   "phase": "A",
+   "kinds": [
+    "holdings",
+    "returns",
+    "universe"
+   ],
+   "published_at": "2026-10-06T09:05:44Z",
+   "first_formation": "2017-01-09",
+   "last_formation": "2026-09-28",
+   "data_through_session": "2026-10-05",
+   "code_commit": "5265d2bf341b03de8fcfebdbb9c7f517cbcbb201",
+   "image_digest": "sha256:406a22138b9a9a021fda0d395f54772401c05acfd41e4b8929d89a0c1c67a419",
+   "engine_run_id": "fixture_s6w_jp_20260928_01",
+   "s3_run_id": "fixture_s3m_jp_20260928_01",
+   "s3b_run_id": "fixture_s3b_jp_20260928_01",
+   "attempt": 1,
+   "checks_sha256": "9886b2f34292dc70debd296a1cffa294c69d90084088547dd975450d9f3a6e56"
+  },
+  "cache": {
+   "state": "fresh",
+   "age_seconds": 363.8
+  }
+ }
+}

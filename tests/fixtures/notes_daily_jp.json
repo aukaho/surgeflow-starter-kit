@@ -1,0 +1,1829 @@
+{
+ "ok": true,
+ "schema_version": "surgeflow.daily_notes.v1",
+ "source": "/api/notes/daily",
+ "market": "jp",
+ "data": {
+  "ok": true,
+  "count": 1,
+  "as_of_date": "2026-10-07",
+  "market": "jp",
+  "notes": [
+   {
+    "as_of_date": "2026-10-07",
+    "generated_at": "2026-10-07T01:20:37.448120+00:00",
+    "scope": "market",
+    "market": "jp",
+    "title": "Japan Daily Notes — 2026-10-07",
+    "subtitle": "Daily conclusion for Japan, ready to copy.",
+    "website_url": "https://surgeflows.capital/notes",
+    "x_post": "Japan market watch - 2026-10-07\nPlaceholder post generated from fixture data.\nPrice Momentum (placeholder): 499 fixture names pass the filter; top trend_run 1.13.\nTurnover Surge (placeholder): 255 fixture names trade at least their prior-day turnover.\nMarket Structure (placeholder): Healthcare leads the fixture sector trend; Internet Conten\nhttps://surgeflows.capital/notes",
+    "reddit_post": "# Japan Daily Notes — 2026-10-07\n\nSource dashboard: https://surgeflows.capital/notes\n\n## Price Momentum\nPrice Momentum (placeholder): 499 fixture names pass the filter; top trend_run 1.13.\n\n## Turnover Surge\nTurnover Surge (placeholder): 255 fixture names trade at least their prior-day turnover.\n\n## Market Structure\nMarket Structure (placeholder): Healthcare leads the fixture sector trend; Internet Content & Information shows the largest turnover-versus-cap inflow.\n\n## Whales\nWhales (placeholder): consensus leader 8001 in the fixture boards.\n- Placeholder: conviction leader is 1921.\n- Placeholder: position_delta leader is 8035.\n- Placeholder: network leader is 3897.\n\n## Fundamental Valuation\nFundamental Valuation (placeholder): 168 fixture names pass the strict filter.\n\n## Macro Risk\nMacro Risk (placeholder): leading -0.78, coincident +0.73, lagging +0.50.\n- Placeholder line: composite scores are synthetic fixture values.\n- Placeholder line: composite scores are synthetic fixture values.\n- Placeholder line: composite scores are synthetic fixture values.\n\n## ML Market Map\nML Market Map (placeholder): 9 clusters; largest is 'low idio vol · low volatility (1y) · low volatility (3m)'.\n- Placeholder line 1: see the ml/clusters fixture for the numbers.\n- Placeholder line 2: see the ml/clusters fixture for the numbers.\n- Placeholder line 3: see the ml/clusters fixture for the numbers.\n\n## News & Sentiment\nNews & Sentiment (placeholder): 40 fixture articles, mean score +0.10.\n- Placeholder line: headlines are synthetic.\n- Placeholder line: scores are synthetic.\n",
+    "copy_markdown": "# Japan Daily Notes — 2026-10-07\n\nSource dashboard: https://surgeflows.capital/notes\n\n## Price Momentum\nPrice Momentum (placeholder): 499 fixture names pass the filter; top trend_run 1.13.\n\n## Turnover Surge\nTurnover Surge (placeholder): 255 fixture names trade at least their prior-day turnover.\n\n## Market Structure\nMarket Structure (placeholder): Healthcare leads the fixture sector trend; Internet Content & Information shows the largest turnover-versus-cap inflow.\n\n## Whales\nWhales (placeholder): consensus leader 8001 in the fixture boards.\n- Placeholder: conviction leader is 1921.\n- Placeholder: position_delta leader is 8035.\n- Placeholder: network leader is 3897.\n\n## Fundamental Valuation\nFundamental Valuation (placeholder): 168 fixture names pass the strict filter.\n\n## Macro Risk\nMacro Risk (placeholder): leading -0.78, coincident +0.73, lagging +0.50.\n- Placeholder line: composite scores are synthetic fixture values.\n- Placeholder line: composite scores are synthetic fixture values.\n- Placeholder line: composite scores are synthetic fixture values.\n\n## ML Market Map\nML Market Map (placeholder): 9 clusters; largest is 'low idio vol · low volatility (1y) · low volatility (3m)'.\n- Placeholder line 1: see the ml/clusters fixture for the numbers.\n- Placeholder line 2: see the ml/clusters fixture for the numbers.\n- Placeholder line 3: see the ml/clusters fixture for the numbers.\n\n## News & Sentiment\nNews & Sentiment (placeholder): 40 fixture articles, mean score +0.10.\n- Placeholder line: headlines are synthetic.\n- Placeholder line: scores are synthetic.\n",
+    "methodology_version": "daily_notes_v1_0",
+    "updated_at": "2026-10-07T01:20:37.448120+00:00",
+    "sections": [
+     {
+      "tab": "ma_breakthrough",
+      "label": "Price Momentum",
+      "ok": true,
+      "as_of_date": "2026-10-06",
+      "source_url": "https://surgeflows.capital/api/jp/screen?sort=trend_run&dir=desc&tab=ma_breakthrough&limit=300",
+      "tab_url": "https://surgeflows.capital/price",
+      "headline": "Price Momentum (placeholder): 499 fixture names pass the filter; top trend_run 1.13.",
+      "filter": "market_cap_usd >= 400M AND rsi_state != overbought AND price >= avwap",
+      "sort": "trend_run desc",
+      "top_rows": [
+       {
+        "ticker": "7288",
+        "name": "SHINWA NIPPON INDUSTRIES,LTD.",
+        "sector": "Industrials",
+        "industry": "Conglomerates",
+        "market_cap": 595164214595,
+        "market_cap_usd": 3972528465,
+        "price": 13472.5,
+        "avwap": 12572.8389,
+        "avwap_cushion": 0.071556,
+        "trend_run": 1.1251,
+        "rsi_14": 45.4775,
+        "rsi_state": "neutral",
+        "change_pct": 0.020854,
+        "return_5d": 0.041041,
+        "ytd_return": 1.726629,
+        "ticker_url": "https://surgeflows.capital/stock/jp/7288",
+        "tab_url": "https://surgeflows.capital/price",
+        "trend_making_streak_days": 22,
+        "agent_rating": {
+         "schema_version": "notes_agent_rating_v1",
+         "as_of": "2026-10-06",
+         "state": "available",
+         "available_lenses": 6,
+         "total_lenses": 6,
+         "overall": 4.0,
+         "top_down": 4.0,
+         "bottom_up": 4.0,
+         "lenses": {
+          "macro": {
+           "value": 3,
+           "state": "available",
+           "as_of": "2026-10-06",
+           "source": "stock_sentiment_score_v1",
+           "explanation": null
+          },
+          "sentiment": {
+           "value": 4,
+           "state": "partial",
+           "as_of": "2026-10-06",
+           "source": "stock_sentiment_score_v1",
+           "explanation": "Uses 3 of 4 inputs; missing: news."
+          },
+          "factor": {
+           "value": 5,
+           "state": "available",
+           "as_of": "2026-10-06",
+           "source": "stock_scores_latest_v1",
+           "explanation": "Derived from the available within-market momentum, value and quality percentiles."
+          },
+          "technical": {
+           "value": 5,
+           "state": "available",
+           "as_of": "2026-10-06",
+           "source": "stock_scores_latest_v1",
+           "explanation": null
+          },
+          "fundamental": {
+           "value": 4,
+           "state": "available",
+           "as_of": "2026-10-06",
+           "source": "stock_scores_latest_v1",
+           "explanation": null
+          },
+          "risk": {
+           "value": 3,
+           "state": "available",
+           "as_of": "2026-10-05",
+           "source": "ticker_risk_metrics_latest_v1",
+           "explanation": null
+          }
+         }
+        }
+       },
+       {
+        "ticker": "2656",
+        "name": "TSUBASA DENKI RETAILING CO.,LTD.",
+        "sector": "Consumer Cyclical",
+        "industry": "Apparel - Manufacturers",
+        "market_cap": 469648496967,
+        "market_cap_usd": 3134751682,
+        "price": 1273.5,
+        "avwap": 1236.271,
+        "avwap_cushion": 0.030114,
+        "trend_run": 1.0065,
+        "rsi_14": 57.8499,
+        "rsi_state": "neutral",
+        "change_pct": 0.022995,
+        "return_5d": 0.083656,
+        "ytd_return": 1.192942,
+        "ticker_url": "https://surgeflows.capital/stock/jp/2656",
+        "tab_url": "https://surgeflows.capital/price",
+        "agent_rating": {
+         "schema_version": "notes_agent_rating_v1",
+         "as_of": "2026-10-06",
+         "state": "available",
+         "available_lenses": 6,
+         "total_lenses": 6,
+         "overall": 3.83,
+         "top_down": 4.0,
+         "bottom_up": 3.67,
+         "lenses": {
+          "macro": {
+           "value": 4,
+           "state": "available",
+           "as_of": "2026-10-06",
+           "source": "stock_sentiment_score_v1",
+           "explanation": null
+          },
+          "sentiment": {
+           "value": 4,
+           "state": "available",
+           "as_of": "2026-10-06",
+           "source": "stock_sentiment_score_v1",
+           "explanation": null
+          },
+          "factor": {
+           "value": 4,
+           "state": "available",
+           "as_of": "2026-10-06",
+           "source": "stock_scores_latest_v1",
+           "explanation": "Derived from the available within-market momentum, value and quality percentiles."
+          },
+          "technical": {
+           "value": 5,
+           "state": "available",
+           "as_of": "2026-10-06",
+           "source": "stock_scores_latest_v1",
+           "explanation": null
+          },
+          "fundamental": {
+           "value": 3,
+           "state": "available",
+           "as_of": "2026-10-06",
+           "source": "stock_scores_latest_v1",
+           "explanation": null
+          },
+          "risk": {
+           "value": 3,
+           "state": "available",
+           "as_of": "2026-10-05",
+           "source": "ticker_risk_metrics_latest_v1",
+           "explanation": null
+          }
+         }
+        }
+       },
+       {
+        "ticker": "9061",
+        "name": "TSUBASA NIPPON LOGISTICS CO.,LTD.",
+        "sector": "Industrials",
+        "industry": "Industrial - Machinery",
+        "market_cap": 786100641444,
+        "market_cap_usd": 5246967304,
+        "price": 5613.0,
+        "avwap": 4994.3293,
+        "avwap_cushion": 0.123875,
+        "trend_run": 0.9863,
+        "rsi_14": 60.6463,
+        "rsi_state": "neutral",
+        "change_pct": -0.008893,
+        "return_5d": 0.077764,
+        "ytd_return": 1.34378,
+        "ticker_url": "https://surgeflows.capital/stock/jp/9061",
+        "tab_url": "https://surgeflows.capital/price",
+        "agent_rating": {
+         "schema_version": "notes_agent_rating_v1",
+         "as_of": "2026-10-06",
+         "state": "partial",
+         "available_lenses": 5,
+         "total_lenses": 6,
+         "overall": 3.83,
+         "top_down": 4.0,
+         "bottom_up": 3.67,
+         "lenses": {
+          "macro": {
+           "value": null,
+           "state": "available",
+           "as_of": "2026-10-06",
+           "source": "stock_sentiment_score_v1",
+           "explanation": null
+          },
+          "sentiment": {
+           "value": 4,
+           "state": "partial",
+           "as_of": "2026-10-06",
+           "source": "stock_sentiment_score_v1",
+           "explanation": "Uses 3 of 4 inputs; missing: management outlook."
+          },
+          "factor": {
+           "value": 4,
+           "state": "available",
+           "as_of": "2026-10-06",
+           "source": "stock_scores_latest_v1",
+           "explanation": "Derived from the available within-market momentum, value and quality percentiles."
+          },
+          "technical": {
+           "value": 5,
+           "state": "available",
+           "as_of": "2026-10-06",
+           "source": "stock_scores_latest_v1",
+           "explanation": null
+          },
+          "fundamental": {
+           "value": 3,
+           "state": "available",
+           "as_of": "2026-10-06",
+           "source": "stock_scores_latest_v1",
+           "explanation": null
+          },
+          "risk": {
+           "value": 3,
+           "state": "available",
+           "as_of": "2026-10-06",
+           "source": "ticker_risk_metrics_latest_v1",
+           "explanation": null
+          }
+         }
+        }
+       },
+       {
+        "ticker": "2255",
+        "name": "YAMATO TECHNO LOGISTICS CO.,LTD.",
+        "sector": "Industrials",
+        "industry": "Conglomerates",
+        "market_cap": 854821822471,
+        "market_cap_usd": 5705658941,
+        "price": 2563.0,
+        "avwap": 2328.1738,
+        "avwap_cushion": 0.100863,
+        "trend_run": 0.9375,
+        "rsi_14": 45.3057,
+        "rsi_state": "neutral",
+        "change_pct": 0.009361,
+        "return_5d": 0.011786,
+        "ytd_return": 1.162355,
+        "ticker_url": "https://surgeflows.capital/stock/jp/2255",
+        "tab_url": "https://surgeflows.capital/price",
+        "agent_rating": {
+         "schema_version": "notes_agent_rating_v1",
+         "as_of": "2026-10-06",
+         "state": "available",
+         "available_lenses": 6,
+         "total_lenses": 6,
+         "overall": 4.0,
+         "top_down": 4.33,
+         "bottom_up": 3.67,
+         "lenses": {
+          "macro": {
+           "value": 3,
+           "state": "available",
+           "as_of": "2026-10-06",
+           "source": "stock_sentiment_score_v1",
+           "explanation": null
+          },
+          "sentiment": {
+           "value": 5,
+           "state": "partial",
+           "as_of": "2026-10-06",
+           "source": "stock_sentiment_score_v1",
+           "explanation": "Uses 3 of 4 inputs; missing: industry rotation."
+          },
+          "factor": {
+           "value": 5,
+           "state": "available",
+           "as_of": "2026-10-06",
+           "source": "stock_scores_latest_v1",
+           "explanation": "Derived from the available within-market momentum, value and quality percentiles."
+          },
+          "technical": {
+           "value": 5,
+           "state": "available",
+           "as_of": "2026-10-06",
+           "source": "stock_scores_latest_v1",
+           "explanation": null
+          },
+          "fundamental": {
+           "value": 2,
+           "state": "available",
+           "as_of": "2026-10-06",
+           "source": "stock_scores_latest_v1",
+           "explanation": null
+          },
+          "risk": {
+           "value": 4,
+           "state": "available",
+           "as_of": "2026-10-05",
+           "source": "ticker_risk_metrics_latest_v1",
+           "explanation": null
+          }
+         }
+        }
+       },
+       {
+        "ticker": "7871",
+        "name": "FUJIMI TECHNO INDUSTRIES,LTD.",
+        "sector": "Industrials",
+        "industry": "Engineering & Construction",
+        "market_cap": 425850694057,
+        "market_cap_usd": 2842415526,
+        "price": 3184.0,
+        "avwap": 2840.1463,
+        "avwap_cushion": 0.121069,
+        "trend_run": 0.8394,
+        "rsi_14": 67.3183,
+        "rsi_state": "neutral",
+        "change_pct": 0.007205,
+        "return_5d": 0.0324,
+        "ytd_return": 1.15623,
+        "ticker_url": "https://surgeflows.capital/stock/jp/7871",
+        "tab_url": "https://surgeflows.capital/price",
+        "agent_rating": {
+         "schema_version": "notes_agent_rating_v1",
+         "as_of": "2026-10-06",
+         "state": "available",
+         "available_lenses": 6,
+         "total_lenses": 6,
+         "overall": 3.83,
+         "top_down": 4.0,
+         "bottom_up": 3.67,
+         "lenses": {
+          "macro": {
+           "value": 3,
+           "state": "available",
+           "as_of": "2026-10-06",
+           "source": "stock_sentiment_score_v1",
+           "explanation": null
+          },
+          "sentiment": {
+           "value": 4,
+           "state": "partial",
+           "as_of": "2026-10-06",
+           "source": "stock_sentiment_score_v1",
+           "explanation": "Uses 2 of 4 inputs; missing: management outlook, industry rotation."
+          },
+          "factor": {
+           "value": 5,
+           "state": "available",
+           "as_of": "2026-10-06",
+           "source": "stock_scores_latest_v1",
+           "explanation": "Derived from the available within-market momentum, value and quality percentiles."
+          },
+          "technical": {
+           "value": 5,
+           "state": "available",
+           "as_of": "2026-10-06",
+           "source": "stock_scores_latest_v1",
+           "explanation": null
+          },
+          "fundamental": {
+           "value": 3,
+           "state": "available",
+           "as_of": "2026-10-06",
+           "source": "stock_scores_latest_v1",
+           "explanation": null
+          },
+          "risk": {
+           "value": 3,
+           "state": "available",
+           "as_of": "2026-10-05",
+           "source": "ticker_risk_metrics_latest_v1",
+           "explanation": null
+          }
+         }
+        }
+       }
+      ],
+      "error": null
+     },
+     {
+      "tab": "turnover",
+      "label": "Turnover Surge",
+      "ok": true,
+      "as_of_date": "2026-10-06",
+      "source_url": "https://surgeflows.capital/api/jp/screen?sort=to_yest_mult&dir=desc&tab=turnover&limit=300",
+      "tab_url": "https://surgeflows.capital/turnover",
+      "headline": "Turnover Surge (placeholder): 255 fixture names trade at least their prior-day turnover.",
+      "filter": "market_cap_usd >= 400M AND turnover_usd >= 25M AND to_yest_mult >= 1.0",
+      "sort": "to_yest_mult desc",
+      "top_rows": [
+       {
+        "ticker": "1390",
+        "name": "DAITO SEIKI FINANCIAL GROUP,INC.",
+        "sector": "Financial Services",
+        "industry": "Banks - Regional",
+        "turnover": 46021145369.0,
+        "turnover_usd": 307176247.0,
+        "market_cap": 497133917664,
+        "market_cap_usd": 3318207967,
+        "turnover_ratio": 0.092573,
+        "to_yest_mult": 6.1899,
+        "change_pct": 0.017119,
+        "return_5d": -0.031296,
+        "ytd_return": -0.308554,
+        "ticker_url": "https://surgeflows.capital/stock/jp/1390",
+        "tab_url": "https://surgeflows.capital/turnover",
+        "agent_rating": {
+         "schema_version": "notes_agent_rating_v1",
+         "as_of": "2026-10-06",
+         "state": "partial",
+         "available_lenses": 5,
+         "total_lenses": 6,
+         "overall": 2.08,
+         "top_down": 2.5,
+         "bottom_up": 1.67,
+         "lenses": {
+          "macro": {
+           "value": null,
+           "state": "available",
+           "as_of": "2026-10-06",
+           "source": "stock_sentiment_score_v1",
+           "explanation": null
+          },
+          "sentiment": {
+           "value": 3,
+           "state": "partial",
+           "as_of": "2026-10-06",
+           "source": "stock_sentiment_score_v1",
+           "explanation": "Uses 1 of 4 inputs; missing: management reputation, news, industry rotation."
+          },
+          "factor": {
+           "value": 2,
+           "state": "available",
+           "as_of": "2026-10-06",
+           "source": "stock_scores_latest_v1",
+           "explanation": "Derived from the available within-market momentum, value and quality percentiles."
+          },
+          "technical": {
+           "value": 2,
+           "state": "available",
+           "as_of": "2026-10-06",
+           "source": "stock_scores_latest_v1",
+           "explanation": null
+          },
+          "fundamental": {
+           "value": 2,
+           "state": "available",
+           "as_of": "2026-10-06",
+           "source": "stock_scores_latest_v1",
+           "explanation": null
+          },
+          "risk": {
+           "value": 1,
+           "state": "available",
+           "as_of": "2026-10-05",
+           "source": "ticker_risk_metrics_latest_v1",
+           "explanation": null
+          }
+         }
+        }
+       },
+       {
+        "ticker": "2736",
+        "name": "KANTO GIKEN MACHINERY CO.,LTD.",
+        "sector": "Industrials",
+        "industry": "Railroads",
+        "turnover": 26579734959.0,
+        "turnover_usd": 177411126.0,
+        "market_cap": 397274473486,
+        "market_cap_usd": 2651678504,
+        "turnover_ratio": 0.066905,
+        "to_yest_mult": 4.0806,
+        "change_pct": 0.013575,
+        "return_5d": 0.014123,
+        "ytd_return": -0.455148,
+        "ticker_url": "https://surgeflows.capital/stock/jp/2736",
+        "tab_url": "https://surgeflows.capital/turnover",
+        "agent_rating": {
+         "schema_version": "notes_agent_rating_v1",
+         "as_of": "2026-10-06",
+         "state": "available",
+         "available_lenses": 6,
+         "total_lenses": 6,
+         "overall": 2.83,
+         "top_down": 3.33,
+         "bottom_up": 2.33,
+         "lenses": {
+          "macro": {
+           "value": 3,
+           "state": "available",
+           "as_of": "2026-10-06",
+           "source": "stock_sentiment_score_v1",
+           "explanation": null
+          },
+          "sentiment": {
+           "value": 4,
+           "state": "partial",
+           "as_of": "2026-10-06",
+           "source": "stock_sentiment_score_v1",
+           "explanation": "Uses 2 of 4 inputs; missing: news, industry rotation."
+          },
+          "factor": {
+           "value": 3,
+           "state": "available",
+           "as_of": "2026-10-06",
+           "source": "stock_scores_latest_v1",
+           "explanation": "Derived from the available within-market momentum, value and quality percentiles."
+          },
+          "technical": {
+           "value": 2,
+           "state": "available",
+           "as_of": "2026-10-06",
+           "source": "stock_scores_latest_v1",
+           "explanation": null
+          },
+          "fundamental": {
+           "value": 2,
+           "state": "available",
+           "as_of": "2026-10-06",
+           "source": "stock_scores_latest_v1",
+           "explanation": null
+          },
+          "risk": {
+           "value": 3,
+           "state": "available",
+           "as_of": "2026-10-06",
+           "source": "ticker_risk_metrics_latest_v1",
+           "explanation": null
+          }
+         }
+        }
+       },
+       {
+        "ticker": "8965",
+        "name": "KYUSHU SHOJI CO.,LTD.",
+        "sector": "Consumer Defensive",
+        "industry": "Packaged Foods",
+        "turnover": 65036060067.0,
+        "turnover_usd": 434094647.0,
+        "market_cap": 910498541273,
+        "market_cap_usd": 6077283015,
+        "turnover_ratio": 0.071429,
+        "to_yest_mult": 4.0606,
+        "change_pct": 0.001219,
+        "return_5d": 0.014122,
+        "ytd_return": 0.548767,
+        "ticker_url": "https://surgeflows.capital/stock/jp/8965",
+        "tab_url": "https://surgeflows.capital/turnover",
+        "agent_rating": {
+         "schema_version": "notes_agent_rating_v1",
+         "as_of": "2026-10-06",
+         "state": "available",
+         "available_lenses": 6,
+         "total_lenses": 6,
+         "overall": 3.33,
+         "top_down": 4.0,
+         "bottom_up": 2.67,
+         "lenses": {
+          "macro": {
+           "value": 4,
+           "state": "available",
+           "as_of": "2026-10-06",
+           "source": "stock_sentiment_score_v1",
+           "explanation": null
+          },
+          "sentiment": {
+           "value": 5,
+           "state": "partial",
+           "as_of": "2026-10-06",
+           "source": "stock_sentiment_score_v1",
+           "explanation": "Uses 1 of 4 inputs; missing: industry rotation, news, management outlook."
+          },
+          "factor": {
+           "value": 3,
+           "state": "available",
+           "as_of": "2026-10-06",
+           "source": "stock_scores_latest_v1",
+           "explanation": "Derived from the available within-market momentum, value and quality percentiles."
+          },
+          "technical": {
+           "value": 4,
+           "state": "available",
+           "as_of": "2026-10-06",
+           "source": "stock_scores_latest_v1",
+           "explanation": null
+          },
+          "fundamental": {
+           "value": 2,
+           "state": "available",
+           "as_of": "2026-10-06",
+           "source": "stock_scores_latest_v1",
+           "explanation": null
+          },
+          "risk": {
+           "value": 2,
+           "state": "available",
+           "as_of": "2026-10-05",
+           "source": "ticker_risk_metrics_latest_v1",
+           "explanation": null
+          }
+         }
+        }
+       },
+       {
+        "ticker": "5834",
+        "name": "SHIKOKU PRECISION CO.,LTD.",
+        "sector": "Technology",
+        "industry": "Software - Application",
+        "turnover": 53104744601.0,
+        "turnover_usd": 354456979.0,
+        "market_cap": 511159437117,
+        "market_cap_usd": 3411823769,
+        "turnover_ratio": 0.103891,
+        "to_yest_mult": 3.7426,
+        "change_pct": 0.008865,
+        "return_5d": 0.061669,
+        "ytd_return": -0.504384,
+        "ticker_url": "https://surgeflows.capital/stock/jp/5834",
+        "tab_url": "https://surgeflows.capital/turnover",
+        "agent_rating": {
+         "schema_version": "notes_agent_rating_v1",
+         "as_of": "2026-10-06",
+         "state": "partial",
+         "available_lenses": 5,
+         "total_lenses": 6,
+         "overall": 1.67,
+         "top_down": 2.0,
+         "bottom_up": 1.33,
+         "lenses": {
+          "macro": {
+           "value": null,
+           "state": "available",
+           "as_of": "2026-10-06",
+           "source": "stock_sentiment_score_v1",
+           "explanation": null
+          },
+          "sentiment": {
+           "value": 3,
+           "state": "partial",
+           "as_of": "2026-10-06",
+           "source": "stock_sentiment_score_v1",
+           "explanation": "Uses 2 of 4 inputs; missing: management outlook, news."
+          },
+          "factor": {
+           "value": 1,
+           "state": "available",
+           "as_of": "2026-10-06",
+           "source": "stock_scores_latest_v1",
+           "explanation": "Derived from the available within-market momentum, value and quality percentiles."
+          },
+          "technical": {
+           "value": 1,
+           "state": "available",
+           "as_of": "2026-10-06",
+           "source": "stock_scores_latest_v1",
+           "explanation": null
+          },
+          "fundamental": {
+           "value": 2,
+           "state": "available",
+           "as_of": "2026-10-06",
+           "source": "stock_scores_latest_v1",
+           "explanation": null
+          },
+          "risk": {
+           "value": 1,
+           "state": "available",
+           "as_of": "2026-10-05",
+           "source": "ticker_risk_metrics_latest_v1",
+           "explanation": null
+          }
+         }
+        }
+       },
+       {
+        "ticker": "5327",
+        "name": "SHIKOKU SEIKI BROADCASTING CO.,LTD.",
+        "sector": "Communication Services",
+        "industry": "Internet Content & Information",
+        "turnover": 20358026830.0,
+        "turnover_usd": 135883239.0,
+        "market_cap": 417332855675,
+        "market_cap_usd": 2785561712,
+        "turnover_ratio": 0.048781,
+        "to_yest_mult": 3.4855,
+        "change_pct": -0.025877,
+        "return_5d": -0.025796,
+        "ytd_return": -0.291604,
+        "ticker_url": "https://surgeflows.capital/stock/jp/5327",
+        "tab_url": "https://surgeflows.capital/turnover",
+        "agent_rating": {
+         "schema_version": "notes_agent_rating_v1",
+         "as_of": "2026-10-06",
+         "state": "available",
+         "available_lenses": 6,
+         "total_lenses": 6,
+         "overall": 2.5,
+         "top_down": 3.0,
+         "bottom_up": 2.0,
+         "lenses": {
+          "macro": {
+           "value": 4,
+           "state": "available",
+           "as_of": "2026-10-06",
+           "source": "stock_sentiment_score_v1",
+           "explanation": null
+          },
+          "sentiment": {
+           "value": 3,
+           "state": "partial",
+           "as_of": "2026-10-06",
+           "source": "stock_sentiment_score_v1",
+           "explanation": "Uses 3 of 4 inputs; missing: news."
+          },
+          "factor": {
+           "value": 2,
+           "state": "available",
+           "as_of": "2026-10-06",
+           "source": "stock_scores_latest_v1",
+           "explanation": "Derived from the available within-market momentum, value and quality percentiles."
+          },
+          "technical": {
+           "value": 1,
+           "state": "available",
+           "as_of": "2026-10-06",
+           "source": "stock_scores_latest_v1",
+           "explanation": null
+          },
+          "fundamental": {
+           "value": 4,
+           "state": "available",
+           "as_of": "2026-10-06",
+           "source": "stock_scores_latest_v1",
+           "explanation": null
+          },
+          "risk": {
+           "value": 1,
+           "state": "available",
+           "as_of": "2026-10-06",
+           "source": "ticker_risk_metrics_latest_v1",
+           "explanation": null
+          }
+         }
+        }
+       }
+      ],
+      "error": null
+     },
+     {
+      "tab": "market_structure",
+      "label": "Market Structure",
+      "ok": true,
+      "as_of_date": "2026-10-06",
+      "source_url": "example_project.stock_data.v_sector_rolling_60d_v1 + example_project.stock_data.industry_rotation_latest_v1",
+      "tab_url": "https://surgeflows.capital/turnover",
+      "headline": "Market Structure (placeholder): Healthcare leads the fixture sector trend; Internet Content & Information shows the largest turnover-versus-cap inflow.",
+      "methodology": "Sector Trend = change in the 60-day moving average of sector excess returns; Industry Inflow = turnover weight minus market-cap weight.",
+      "top_rows": [
+       {
+        "structure_type": "Sector Trend",
+        "leader": "Healthcare",
+        "metric_label": "Trend",
+        "metric_value": 0.007504668952106681,
+        "secondary_label": "60D Return",
+        "secondary_value": 0.09718286117841146,
+        "member_count": 23,
+        "as_of_date": "2026-10-06",
+        "source": "Excess Returns",
+        "tab_url": "https://surgeflows.capital/price"
+       },
+       {
+        "structure_type": "Industry Inflow",
+        "leader": "Internet Content & Information",
+        "metric_label": "Surprise",
+        "metric_value": 0.025715,
+        "secondary_label": "Turnover Ratio",
+        "secondary_value": 2.2735,
+        "turnover_weight_pct": 4.5908,
+        "market_cap_weight_pct": 2.0193,
+        "member_count": 33,
+        "as_of_date": "2026-09-17",
+        "source": "Industry Rotation",
+        "tab_url": "https://surgeflows.capital/turnover"
+       }
+      ],
+      "error": null
+     },
+     {
+      "tab": "whales",
+      "label": "Whales",
+      "ok": true,
+      "as_of_date": "2026-10-07",
+      "source_url": "https://surgeflows.capital/api/whales/signal-board?market=jp&limit=5",
+      "tab_url": "https://surgeflows.capital/whales",
+      "headline": "Whales (placeholder): consensus leader 8001 in the fixture boards.",
+      "lines": [
+       "Placeholder: conviction leader is 1921.",
+       "Placeholder: position_delta leader is 8035.",
+       "Placeholder: network leader is 3897."
+      ],
+      "leaders": {
+       "consensus": [
+        {
+         "market": "jp",
+         "ticker": "8001",
+         "quarter": "2026-10-07",
+         "as_of_date": "2026-10-07",
+         "n_funds_holding": 4,
+         "total_market_value": 246411108172.0,
+         "aum_weighted_portfolio_pct": 48.25525832220419,
+         "avg_portfolio_pct": 23.042432709347267,
+         "consensus_score": 10.87239434290742,
+         "consensus_percentile": 100.0,
+         "consensus_rank": 1,
+         "components_json": "{\"weights\": {\"aum_weighted_portfolio_pct\": 0.3, \"avg_portfolio_pct\": 0.1, \"log_total_market_value\": 0.2, \"n_funds_holding\": 0.4}, \"z_aum_weighted_portfolio_pct\": 6.531890465142711, \"z_avg_portfolio_pct\": 3.1169624594360097, \"z_log_total_market_value\": 1.6886678102760035, \"z_n_funds_holding\": 1.7045029169021466}",
+         "methodology_version": "whale_consensus_score_v1_0",
+         "updated_at": "2026-10-07T01:18:27.247558+00:00",
+         "stock_name": "ITOCHU Corporation"
+        },
+        {
+         "market": "jp",
+         "ticker": "4502",
+         "quarter": "2026-10-07",
+         "as_of_date": "2026-10-07",
+         "n_funds_holding": 6,
+         "total_market_value": 213113641321.0,
+         "aum_weighted_portfolio_pct": 30.964647949787036,
+         "avg_portfolio_pct": 27.099665101035626,
+         "consensus_score": 10.564163964832485,
+         "consensus_percentile": 99.96,
+         "consensus_rank": 2,
+         "components_json": "{\"weights\": {\"aum_weighted_portfolio_pct\": 0.3, \"avg_portfolio_pct\": 0.1, \"log_total_market_value\": 0.2, \"n_funds_holding\": 0.4}, \"z_aum_weighted_portfolio_pct\": 3.992480921299322, \"z_avg_portfolio_pct\": 3.771553583439435, \"z_log_total_market_value\": 1.5842747389263498, \"z_n_funds_holding\": 3.2407501810628796}",
+         "methodology_version": "whale_consensus_score_v1_0",
+         "updated_at": "2026-10-07T01:18:07.594646+00:00",
+         "stock_name": "Takeda Pharmaceutical Company Limited"
+        },
+        {
+         "market": "jp",
+         "ticker": "8035",
+         "quarter": "2026-10-07",
+         "as_of_date": "2026-10-07",
+         "n_funds_holding": 6,
+         "total_market_value": 575096139951.0,
+         "aum_weighted_portfolio_pct": 4.187842281273485,
+         "avg_portfolio_pct": 3.150981929576442,
+         "consensus_score": 6.293956955778972,
+         "consensus_percentile": 99.92,
+         "consensus_rank": 3,
+         "components_json": "{\"weights\": {\"aum_weighted_portfolio_pct\": 0.3, \"avg_portfolio_pct\": 0.1, \"log_total_market_value\": 0.2, \"n_funds_holding\": 0.4}, \"z_aum_weighted_portfolio_pct\": 0.05986810985481204, \"z_avg_portfolio_pct\": -0.09231072655730736, \"z_log_total_market_value\": 2.29811442933563, \"z_n_funds_holding\": 3.2407501810628796}",
+         "methodology_version": "whale_consensus_score_v1_0",
+         "updated_at": "2026-10-07T01:18:06.070995+00:00",
+         "stock_name": "Tokyo Electron Limited"
+        },
+        {
+         "market": "jp",
+         "ticker": "7203",
+         "quarter": "2026-10-07",
+         "as_of_date": "2026-10-07",
+         "n_funds_holding": 5,
+         "total_market_value": 1913917454028.0,
+         "aum_weighted_portfolio_pct": 3.0457850610872472,
+         "avg_portfolio_pct": 4.220053391795977,
+         "consensus_score": 5.791757382474268,
+         "consensus_percentile": 99.88,
+         "consensus_rank": 4,
+         "components_json": "{\"weights\": {\"aum_weighted_portfolio_pct\": 0.3, \"avg_portfolio_pct\": 0.1, \"log_total_market_value\": 0.2, \"n_funds_holding\": 0.4}, \"z_aum_weighted_portfolio_pct\": -0.10786171240656098, \"z_avg_portfolio_pct\": 0.08017253851961786, \"z_log_total_market_value\": 3.1627155055087846, \"z_n_funds_holding\": 2.472626548982513}",
+         "methodology_version": "whale_consensus_score_v1_0",
+         "updated_at": "2026-10-07T01:18:15.616568+00:00",
+         "stock_name": "TOYOTA MOTOR CORPORATION"
+        },
+        {
+         "market": "jp",
+         "ticker": "8411",
+         "quarter": "2026-10-07",
+         "as_of_date": "2026-10-07",
+         "n_funds_holding": 5,
+         "total_market_value": 464804666484.0,
+         "aum_weighted_portfolio_pct": 7.331816339982861,
+         "avg_portfolio_pct": 4.472451448375739,
+         "consensus_score": 5.759875832707531,
+         "consensus_percentile": 99.84,
+         "consensus_rank": 5,
+         "components_json": "{\"weights\": {\"aum_weighted_portfolio_pct\": 0.3, \"avg_portfolio_pct\": 0.1, \"log_total_market_value\": 0.2, \"n_funds_holding\": 0.4}, \"z_aum_weighted_portfolio_pct\": 0.5216122333022317, \"z_avg_portfolio_pct\": 0.12089426988785071, \"z_log_total_market_value\": 2.1450078049835835, \"z_n_funds_holding\": 2.472626548982513}",
+         "methodology_version": "whale_consensus_score_v1_0",
+         "updated_at": "2026-10-07T01:18:07.327439+00:00",
+         "stock_name": "Mizuho Financial Group,Inc."
+        }
+       ],
+       "conviction": [
+        {
+         "market": "jp",
+         "ticker": "1921",
+         "quarter": "2026-10-07",
+         "as_of_date": "2026-10-07",
+         "n_funds_holding": 1,
+         "ticker_conviction_score": 2.8603204730968477,
+         "ticker_conviction_percentile": 100.0,
+         "ticker_conviction_rank": 1,
+         "max_fund_conviction_z": 2.9487059958332167,
+         "top_conviction_fund": "SEIWA ASSET MANAGEMENT CO.,LTD.",
+         "components_json": "{\"max_fund_conviction_z\": 2.9487059958332167, \"top_conviction_fund\": \"SEIWA ASSET MANAGEMENT CO.,LTD.\"}",
+         "methodology_version": "whale_conviction_index_v1_0",
+         "updated_at": "2026-10-07T01:19:12.120869+00:00",
+         "stock_name": "HIGASHIYAMA SEIKI SHOJI CO.,LTD."
+        },
+        {
+         "market": "jp",
+         "ticker": "9378",
+         "quarter": "2026-10-07",
+         "as_of_date": "2026-10-07",
+         "n_funds_holding": 1,
+         "ticker_conviction_score": 2.7104715734121507,
+         "ticker_conviction_percentile": 99.96,
+         "ticker_conviction_rank": 2,
+         "max_fund_conviction_z": 2.794351562016652,
+         "top_conviction_fund": "MARUYAMA TRUST BANK,LTD.",
+         "components_json": "{\"max_fund_conviction_z\": 2.794351562016652, \"top_conviction_fund\": \"MARUYAMA TRUST BANK,LTD.\"}",
+         "methodology_version": "whale_conviction_index_v1_0",
+         "updated_at": "2026-10-07T01:19:06.516850+00:00",
+         "stock_name": "ISHIDA TECHNO SYSTEMS CORPORATION"
+        },
+        {
+         "market": "jp",
+         "ticker": "7208",
+         "quarter": "2026-10-07",
+         "as_of_date": "2026-10-07",
+         "n_funds_holding": 1,
+         "ticker_conviction_score": 2.6679411470620686,
+         "ticker_conviction_percentile": 99.92,
+         "ticker_conviction_rank": 3,
+         "max_fund_conviction_z": 2.753988990789408,
+         "top_conviction_fund": "NICHIEI LIFE INSURANCE COMPANY",
+         "components_json": "{\"max_fund_conviction_z\": 2.753988990789408, \"top_conviction_fund\": \"NICHIEI LIFE INSURANCE COMPANY\"}",
+         "methodology_version": "whale_conviction_index_v1_0",
+         "updated_at": "2026-10-07T01:19:28.668889+00:00",
+         "stock_name": "TOYO NIPPON CONSTRUCTION CO.,LTD."
+        },
+        {
+         "market": "jp",
+         "ticker": "2513",
+         "quarter": "2026-10-07",
+         "as_of_date": "2026-10-07",
+         "n_funds_holding": 1,
+         "ticker_conviction_score": 2.4024838491806797,
+         "ticker_conviction_percentile": 99.88,
+         "ticker_conviction_rank": 4,
+         "max_fund_conviction_z": 2.4472544395580926,
+         "top_conviction_fund": "MINAMI CAPITAL PARTNERS",
+         "components_json": "{\"max_fund_conviction_z\": 2.4472544395580926, \"top_conviction_fund\": \"MINAMI CAPITAL PARTNERS\"}",
+         "methodology_version": "whale_conviction_index_v1_0",
+         "updated_at": "2026-10-07T01:19:30.642146+00:00",
+         "stock_name": "SUMIDA SANGYO PAPER CO.,LTD."
+        },
+        {
+         "market": "jp",
+         "ticker": "4502",
+         "quarter": "2026-10-07",
+         "as_of_date": "2026-10-07",
+         "n_funds_holding": 6,
+         "ticker_conviction_score": 2.1708938630554733,
+         "ticker_conviction_percentile": 99.84,
+         "ticker_conviction_rank": 5,
+         "max_fund_conviction_z": 2.2643789093906928,
+         "top_conviction_fund": "AOBA ASSET MANAGEMENT CO.,LTD.",
+         "components_json": "{\"max_fund_conviction_z\": 2.2643789093906928, \"top_conviction_fund\": \"AOBA ASSET MANAGEMENT CO.,LTD.\"}",
+         "methodology_version": "whale_conviction_index_v1_0",
+         "updated_at": "2026-10-07T01:19:07.053264+00:00",
+         "stock_name": "Takeda Pharmaceutical Company Limited"
+        }
+       ],
+       "crowdedness": [
+        {
+         "market": "jp",
+         "ticker": "8035",
+         "quarter": "2026-10-07",
+         "as_of_date": "2026-10-07",
+         "n_funds_holding": 6,
+         "n_funds_total": 19800,
+         "crowdedness_pct": 0.00030303030303030303,
+         "crowdedness_quintile": 1,
+         "crowdedness_rank": 1,
+         "methodology_version": "whale_crowdedness_v1_0",
+         "updated_at": "2026-10-07T01:20:08.667094+00:00",
+         "stock_name": "Tokyo Electron Limited"
+        },
+        {
+         "market": "jp",
+         "ticker": "4502",
+         "quarter": "2026-10-07",
+         "as_of_date": "2026-10-07",
+         "n_funds_holding": 6,
+         "n_funds_total": 19800,
+         "crowdedness_pct": 0.00030303030303030303,
+         "crowdedness_quintile": 1,
+         "crowdedness_rank": 2,
+         "methodology_version": "whale_crowdedness_v1_0",
+         "updated_at": "2026-10-07T01:20:25.290169+00:00",
+         "stock_name": "Takeda Pharmaceutical Company Limited"
+        },
+        {
+         "market": "jp",
+         "ticker": "7203",
+         "quarter": "2026-10-07",
+         "as_of_date": "2026-10-07",
+         "n_funds_holding": 5,
+         "n_funds_total": 19800,
+         "crowdedness_pct": 0.0002525252525252525,
+         "crowdedness_quintile": 1,
+         "crowdedness_rank": 3,
+         "methodology_version": "whale_crowdedness_v1_0",
+         "updated_at": "2026-10-07T01:20:21.447593+00:00",
+         "stock_name": "TOYOTA MOTOR CORPORATION"
+        },
+        {
+         "market": "jp",
+         "ticker": "8411",
+         "quarter": "2026-10-07",
+         "as_of_date": "2026-10-07",
+         "n_funds_holding": 5,
+         "n_funds_total": 19800,
+         "crowdedness_pct": 0.0002525252525252525,
+         "crowdedness_quintile": 1,
+         "crowdedness_rank": 4,
+         "methodology_version": "whale_crowdedness_v1_0",
+         "updated_at": "2026-10-07T01:20:23.153251+00:00",
+         "stock_name": "Mizuho Financial Group,Inc."
+        },
+        {
+         "market": "jp",
+         "ticker": "9273",
+         "quarter": "2026-10-07",
+         "as_of_date": "2026-10-07",
+         "n_funds_holding": 5,
+         "n_funds_total": 19800,
+         "crowdedness_pct": 0.0002525252525252525,
+         "crowdedness_quintile": 1,
+         "crowdedness_rank": 5,
+         "methodology_version": "whale_crowdedness_v1_0",
+         "updated_at": "2026-10-07T01:20:29.994933+00:00",
+         "stock_name": "KAEDE NIPPON LOGISTICS CO.,LTD."
+        }
+       ],
+       "position_delta": [
+        {
+         "market": "jp",
+         "ticker": "8035",
+         "quarter": "2026-10-07",
+         "as_of_date": "2026-10-07",
+         "n_funds_buying": 2,
+         "n_funds_selling": 0,
+         "net_shares_change": 4467274826.0,
+         "gross_shares_buying": 4467274826.0,
+         "gross_shares_selling": 0.0,
+         "delta_z": 3.818675500846438,
+         "delta_rank": 1,
+         "delta_percentile": 100.0,
+         "methodology_version": "whale_position_delta_v1_0",
+         "updated_at": "2026-10-07T01:21:18.601919+00:00",
+         "stock_name": "Tokyo Electron Limited"
+        },
+        {
+         "market": "jp",
+         "ticker": "7203",
+         "quarter": "2026-10-07",
+         "as_of_date": "2026-10-07",
+         "n_funds_buying": 1,
+         "n_funds_selling": 0,
+         "net_shares_change": 2549903404.0,
+         "gross_shares_buying": 2549903404.0,
+         "gross_shares_selling": 0.0,
+         "delta_z": 3.6401782410859305,
+         "delta_rank": 2,
+         "delta_percentile": 99.96,
+         "methodology_version": "whale_position_delta_v1_0",
+         "updated_at": "2026-10-07T01:21:09.339868+00:00",
+         "stock_name": "TOYOTA MOTOR CORPORATION"
+        },
+        {
+         "market": "jp",
+         "ticker": "6124",
+         "quarter": "2026-10-07",
+         "as_of_date": "2026-10-07",
+         "n_funds_buying": 3,
+         "n_funds_selling": 0,
+         "net_shares_change": 1385378081.0,
+         "gross_shares_buying": 1385378081.0,
+         "gross_shares_selling": 0.0,
+         "delta_z": 3.4459682328907584,
+         "delta_rank": 3,
+         "delta_percentile": 99.92,
+         "methodology_version": "whale_position_delta_v1_0",
+         "updated_at": "2026-10-07T01:21:24.021525+00:00",
+         "stock_name": "AOBA TECHNO OIL CO.,LTD."
+        },
+        {
+         "market": "jp",
+         "ticker": "6217",
+         "quarter": "2026-10-07",
+         "as_of_date": "2026-10-07",
+         "n_funds_buying": 2,
+         "n_funds_selling": 0,
+         "net_shares_change": 1208639254.0,
+         "gross_shares_buying": 1208639254.0,
+         "gross_shares_selling": 0.0,
+         "delta_z": 3.4025226548385916,
+         "delta_rank": 4,
+         "delta_percentile": 99.88,
+         "methodology_version": "whale_position_delta_v1_0",
+         "updated_at": "2026-10-07T01:21:29.719381+00:00",
+         "stock_name": "TOHOKU KOGYO CONSTRUCTION CO.,LTD."
+        },
+        {
+         "market": "jp",
+         "ticker": "8624",
+         "quarter": "2026-10-07",
+         "as_of_date": "2026-10-07",
+         "n_funds_buying": 2,
+         "n_funds_selling": 0,
+         "net_shares_change": 999632496.0,
+         "gross_shares_buying": 999632496.0,
+         "gross_shares_selling": 0.0,
+         "delta_z": 3.3420828848759268,
+         "delta_rank": 5,
+         "delta_percentile": 99.84,
+         "methodology_version": "whale_position_delta_v1_0",
+         "updated_at": "2026-10-07T01:21:07.054898+00:00",
+         "stock_name": "HOKURIKU GIKEN SECURITIES CO.,LTD."
+        }
+       ],
+       "network": [
+        {
+         "market": "jp",
+         "ticker": "3897",
+         "quarter": "2026-10-06",
+         "as_of_date": "2026-10-06",
+         "degree": 3139,
+         "weighted_degree": 15229.0,
+         "eigenvector_centrality": 0.21069306922383688,
+         "community_id": 5,
+         "n_tickers_in_community": 20,
+         "n_communities": 172,
+         "modularity": 0.1712,
+         "methodology_version": "whale_network_v1_0",
+         "updated_at": "2026-10-06T23:58:07.074197+00:00",
+         "stock_name": "SUMIDA CHEMICAL CO.,LTD."
+        },
+        {
+         "market": "jp",
+         "ticker": "8035",
+         "quarter": "2026-10-06",
+         "as_of_date": "2026-10-06",
+         "degree": 3784,
+         "weighted_degree": 15090.0,
+         "eigenvector_centrality": 0.20877164071740767,
+         "community_id": 2,
+         "n_tickers_in_community": 14,
+         "n_communities": 172,
+         "modularity": 0.1712,
+         "methodology_version": "whale_network_v1_0",
+         "updated_at": "2026-10-06T23:58:27.703450+00:00",
+         "stock_name": "Tokyo Electron Limited"
+        },
+        {
+         "market": "jp",
+         "ticker": "3253",
+         "quarter": "2026-10-06",
+         "as_of_date": "2026-10-06",
+         "degree": 3123,
+         "weighted_degree": 14861.0,
+         "eigenvector_centrality": 0.2056075029360458,
+         "community_id": 2,
+         "n_tickers_in_community": 14,
+         "n_communities": 172,
+         "modularity": 0.1712,
+         "methodology_version": "whale_network_v1_0",
+         "updated_at": "2026-10-06T23:58:03.135585+00:00",
+         "stock_name": "KOWA DENKI LOGISTICS CO.,LTD."
+        },
+        {
+         "market": "jp",
+         "ticker": "7203",
+         "quarter": "2026-10-06",
+         "as_of_date": "2026-10-06",
+         "degree": 2834,
+         "weighted_degree": 13170.0,
+         "eigenvector_centrality": 0.18220588245615635,
+         "community_id": 1,
+         "n_tickers_in_community": 18,
+         "n_communities": 172,
+         "modularity": 0.1712,
+         "methodology_version": "whale_network_v1_0",
+         "updated_at": "2026-10-06T23:58:06.496933+00:00",
+         "stock_name": "TOYOTA MOTOR CORPORATION"
+        },
+        {
+         "market": "jp",
+         "ticker": "4452",
+         "quarter": "2026-10-06",
+         "as_of_date": "2026-10-06",
+         "degree": 2915,
+         "weighted_degree": 13020.0,
+         "eigenvector_centrality": 0.1801328778649369,
+         "community_id": 3,
+         "n_tickers_in_community": 22,
+         "n_communities": 172,
+         "modularity": 0.1712,
+         "methodology_version": "whale_network_v1_0",
+         "updated_at": "2026-10-06T23:58:22.560656+00:00",
+         "stock_name": "NISHIKAWA KOGYO ENERGY CORPORATION"
+        }
+       ],
+       "ll_predictive": [
+        {
+         "market": "jp",
+         "ticker": "4502",
+         "quarter": "2026-10-07",
+         "as_of_date": "2026-10-07",
+         "n_funds_holding_q": 6,
+         "n_funds_holding_q_minus_1": 0,
+         "owner_count_change": 6,
+         "portfolio_weight_change": 13.252921984461,
+         "ll_score_z": 11.579203939129165,
+         "ll_rank": 1,
+         "ll_percentile": 100.0,
+         "methodology_version": "whale_ll_predictive_v1_0",
+         "updated_at": "2026-10-07T01:22:04.887616+00:00",
+         "stock_name": "Takeda Pharmaceutical Company Limited"
+        },
+        {
+         "market": "jp",
+         "ticker": "8035",
+         "quarter": "2026-10-07",
+         "as_of_date": "2026-10-07",
+         "n_funds_holding_q": 6,
+         "n_funds_holding_q_minus_1": 0,
+         "owner_count_change": 6,
+         "portfolio_weight_change": 11.97128983740827,
+         "ll_score_z": 11.046626960160104,
+         "ll_rank": 2,
+         "ll_percentile": 99.96,
+         "methodology_version": "whale_ll_predictive_v1_0",
+         "updated_at": "2026-10-07T01:22:04.987581+00:00",
+         "stock_name": "Tokyo Electron Limited"
+        },
+        {
+         "market": "jp",
+         "ticker": "7203",
+         "quarter": "2026-10-07",
+         "as_of_date": "2026-10-07",
+         "n_funds_holding_q": 5,
+         "n_funds_holding_q_minus_1": 0,
+         "owner_count_change": 5,
+         "portfolio_weight_change": 13.745046926072824,
+         "ll_score_z": 10.398551452091997,
+         "ll_rank": 3,
+         "ll_percentile": 99.92,
+         "methodology_version": "whale_ll_predictive_v1_0",
+         "updated_at": "2026-10-07T01:22:24.186078+00:00",
+         "stock_name": "TOYOTA MOTOR CORPORATION"
+        },
+        {
+         "market": "jp",
+         "ticker": "9273",
+         "quarter": "2026-10-07",
+         "as_of_date": "2026-10-07",
+         "n_funds_holding_q": 5,
+         "n_funds_holding_q_minus_1": 0,
+         "owner_count_change": 5,
+         "portfolio_weight_change": 11.781067756545703,
+         "ll_score_z": 9.582427968243486,
+         "ll_rank": 4,
+         "ll_percentile": 99.88,
+         "methodology_version": "whale_ll_predictive_v1_0",
+         "updated_at": "2026-10-07T01:22:27.219464+00:00",
+         "stock_name": "KAEDE NIPPON LOGISTICS CO.,LTD."
+        },
+        {
+         "market": "jp",
+         "ticker": "8411",
+         "quarter": "2026-10-07",
+         "as_of_date": "2026-10-07",
+         "n_funds_holding_q": 5,
+         "n_funds_holding_q_minus_1": 0,
+         "owner_count_change": 5,
+         "portfolio_weight_change": 7.1852181580066175,
+         "ll_score_z": 7.6726415286517655,
+         "ll_rank": 5,
+         "ll_percentile": 99.84,
+         "methodology_version": "whale_ll_predictive_v1_0",
+         "updated_at": "2026-10-07T01:22:16.496503+00:00",
+         "stock_name": "Mizuho Financial Group,Inc."
+        }
+       ]
+      }
+     },
+     {
+      "tab": "fundamental",
+      "label": "Fundamental Valuation",
+      "ok": true,
+      "as_of_date": "2026-10-06",
+      "source_url": "https://surgeflows.capital/api/jp/screen?tab=fundamental&limit=300",
+      "tab_url": "https://surgeflows.capital/fundamentals",
+      "headline": "Fundamental Valuation (placeholder): 168 fixture names pass the strict filter.",
+      "filter": "market_cap_usd >= 400M; strict first: ytd_return >= 0 AND change_pct >= 0 AND revenue_growth > 0 AND profit_margin > 0; fill to 5 by composite_quality",
+      "sort": "strict_pass desc, composite_quality desc",
+      "top_rows": [
+       {
+        "ticker": "8662",
+        "name": "TOHOKU KOGYO SECURITIES CO.,LTD.",
+        "sector": "Financial Services",
+        "industry": "Insurance - Diversified",
+        "market_cap": 949270516533,
+        "market_cap_usd": 6336073398,
+        "revenue_growth": 3.0374,
+        "profit_margin": 0.3384,
+        "composite_quality": 1.027992,
+        "change_pct": 0.01194,
+        "return_5d": -0.015177,
+        "ytd_return": 0.027639,
+        "ep": 0.4443,
+        "cfop": 0.5855,
+        "ticker_url": "https://surgeflows.capital/stock/jp/8662",
+        "tab_url": "https://surgeflows.capital/fundamentals",
+        "agent_rating": {
+         "schema_version": "notes_agent_rating_v1",
+         "as_of": "2026-10-06",
+         "state": "available",
+         "available_lenses": 6,
+         "total_lenses": 6,
+         "overall": 3.83,
+         "top_down": 3.67,
+         "bottom_up": 4.0,
+         "lenses": {
+          "macro": {
+           "value": 3,
+           "state": "available",
+           "as_of": "2026-10-06",
+           "source": "stock_sentiment_score_v1",
+           "explanation": null
+          },
+          "sentiment": {
+           "value": 3,
+           "state": "partial",
+           "as_of": "2026-10-06",
+           "source": "stock_sentiment_score_v1",
+           "explanation": "Uses 1 of 4 inputs; missing: industry rotation, news, management outlook."
+          },
+          "factor": {
+           "value": 5,
+           "state": "available",
+           "as_of": "2026-10-06",
+           "source": "stock_scores_latest_v1",
+           "explanation": "Derived from the available within-market momentum, value and quality percentiles."
+          },
+          "technical": {
+           "value": 3,
+           "state": "available",
+           "as_of": "2026-10-06",
+           "source": "stock_scores_latest_v1",
+           "explanation": null
+          },
+          "fundamental": {
+           "value": 5,
+           "state": "available",
+           "as_of": "2026-10-06",
+           "source": "stock_scores_latest_v1",
+           "explanation": null
+          },
+          "risk": {
+           "value": 4,
+           "state": "available",
+           "as_of": "2026-10-06",
+           "source": "ticker_risk_metrics_latest_v1",
+           "explanation": null
+          }
+         }
+        }
+       },
+       {
+        "ticker": "8624",
+        "name": "HOKURIKU GIKEN SECURITIES CO.,LTD.",
+        "sector": "Financial Services",
+        "industry": "Banks - Regional",
+        "market_cap": 2514892491807,
+        "market_cap_usd": 16786093257,
+        "revenue_growth": 2.2826,
+        "profit_margin": 0.2914,
+        "composite_quality": 0.665168,
+        "change_pct": 0.000144,
+        "return_5d": 0.029583,
+        "ytd_return": 0.25819,
+        "ep": 0.448,
+        "cfop": 0.3932,
+        "ticker_url": "https://surgeflows.capital/stock/jp/8624",
+        "tab_url": "https://surgeflows.capital/fundamentals",
+        "agent_rating": {
+         "schema_version": "notes_agent_rating_v1",
+         "as_of": "2026-10-06",
+         "state": "partial",
+         "available_lenses": 5,
+         "total_lenses": 6,
+         "overall": 3.0,
+         "top_down": 3.0,
+         "bottom_up": 3.0,
+         "lenses": {
+          "macro": {
+           "value": 3,
+           "state": "available",
+           "as_of": "2026-10-06",
+           "source": "stock_sentiment_score_v1",
+           "explanation": null
+          },
+          "sentiment": {
+           "value": 2,
+           "state": "partial",
+           "as_of": "2026-10-06",
+           "source": "stock_sentiment_score_v1",
+           "explanation": "Uses 1 of 4 inputs; missing: news, management reputation, industry rotation."
+          },
+          "factor": {
+           "value": 4,
+           "state": "available",
+           "as_of": "2026-10-06",
+           "source": "stock_scores_latest_v1",
+           "explanation": "Derived from the available within-market momentum, value and quality percentiles."
+          },
+          "technical": {
+           "value": 3,
+           "state": "available",
+           "as_of": "2026-10-06",
+           "source": "stock_scores_latest_v1",
+           "explanation": null
+          },
+          "fundamental": {
+           "value": null,
+           "state": "available",
+           "as_of": "2026-10-06",
+           "source": "stock_scores_latest_v1",
+           "explanation": null
+          },
+          "risk": {
+           "value": 3,
+           "state": "available",
+           "as_of": "2026-10-05",
+           "source": "ticker_risk_metrics_latest_v1",
+           "explanation": null
+          }
+         }
+        }
+       },
+       {
+        "ticker": "8302",
+        "name": "HIKARI CONSTRUCTION CO.,LTD.",
+        "sector": "Industrials",
+        "industry": "Electrical Equipment & Parts",
+        "market_cap": 651640412849,
+        "market_cap_usd": 4349488806,
+        "revenue_growth": 3.7754,
+        "profit_margin": 0.1326,
+        "composite_quality": 0.500719,
+        "change_pct": 0.013501,
+        "return_5d": 0.010474,
+        "ytd_return": 0.203575,
+        "ep": 0.04,
+        "cfop": 0.0526,
+        "ticker_url": "https://surgeflows.capital/stock/jp/8302",
+        "tab_url": "https://surgeflows.capital/fundamentals",
+        "agent_rating": {
+         "schema_version": "notes_agent_rating_v1",
+         "as_of": "2026-10-06",
+         "state": "available",
+         "available_lenses": 6,
+         "total_lenses": 6,
+         "overall": 3.0,
+         "top_down": 2.67,
+         "bottom_up": 3.33,
+         "lenses": {
+          "macro": {
+           "value": 2,
+           "state": "available",
+           "as_of": "2026-10-06",
+           "source": "stock_sentiment_score_v1",
+           "explanation": null
+          },
+          "sentiment": {
+           "value": 3,
+           "state": "partial",
+           "as_of": "2026-10-06",
+           "source": "stock_sentiment_score_v1",
+           "explanation": "Uses 1 of 4 inputs; missing: management outlook, industry rotation, news."
+          },
+          "factor": {
+           "value": 3,
+           "state": "available",
+           "as_of": "2026-10-06",
+           "source": "stock_scores_latest_v1",
+           "explanation": "Derived from the available within-market momentum, value and quality percentiles."
+          },
+          "technical": {
+           "value": 3,
+           "state": "available",
+           "as_of": "2026-10-06",
+           "source": "stock_scores_latest_v1",
+           "explanation": null
+          },
+          "fundamental": {
+           "value": 4,
+           "state": "available",
+           "as_of": "2026-10-06",
+           "source": "stock_scores_latest_v1",
+           "explanation": null
+          },
+          "risk": {
+           "value": 3,
+           "state": "available",
+           "as_of": "2026-10-05",
+           "source": "ticker_risk_metrics_latest_v1",
+           "explanation": null
+          }
+         }
+        }
+       },
+       {
+        "ticker": "2157",
+        "name": "TAISEI TECHNO BANK,LTD.",
+        "sector": "Financial Services",
+        "industry": "Financial - Credit Services",
+        "market_cap": 2133764397559,
+        "market_cap_usd": 14242186608,
+        "revenue_growth": 2.1757,
+        "profit_margin": 0.0428,
+        "composite_quality": 0.093229,
+        "change_pct": 0.018712,
+        "return_5d": 0.001139,
+        "ytd_return": 0.038325,
+        "ep": 0.0736,
+        "cfop": 0.0614,
+        "ticker_url": "https://surgeflows.capital/stock/jp/2157",
+        "tab_url": "https://surgeflows.capital/fundamentals",
+        "agent_rating": {
+         "schema_version": "notes_agent_rating_v1",
+         "as_of": "2026-10-06",
+         "state": "available",
+         "available_lenses": 6,
+         "total_lenses": 6,
+         "overall": 2.67,
+         "top_down": 3.0,
+         "bottom_up": 2.33,
+         "lenses": {
+          "macro": {
+           "value": 4,
+           "state": "available",
+           "as_of": "2026-10-06",
+           "source": "stock_sentiment_score_v1",
+           "explanation": null
+          },
+          "sentiment": {
+           "value": 2,
+           "state": "partial",
+           "as_of": "2026-10-06",
+           "source": "stock_sentiment_score_v1",
+           "explanation": "Uses 1 of 4 inputs; missing: industry rotation, news, management outlook."
+          },
+          "factor": {
+           "value": 3,
+           "state": "available",
+           "as_of": "2026-10-06",
+           "source": "stock_scores_latest_v1",
+           "explanation": "Derived from the available within-market momentum, value and quality percentiles."
+          },
+          "technical": {
+           "value": 3,
+           "state": "available",
+           "as_of": "2026-10-06",
+           "source": "stock_scores_latest_v1",
+           "explanation": null
+          },
+          "fundamental": {
+           "value": 1,
+           "state": "available",
+           "as_of": "2026-10-06",
+           "source": "stock_scores_latest_v1",
+           "explanation": null
+          },
+          "risk": {
+           "value": 3,
+           "state": "available",
+           "as_of": "2026-10-06",
+           "source": "ticker_risk_metrics_latest_v1",
+           "explanation": null
+          }
+         }
+        }
+       },
+       {
+        "ticker": "6506",
+        "name": "HINODE TECHNO INDUSTRIES,LTD.",
+        "sector": "Industrials",
+        "industry": "Railroads",
+        "market_cap": 599877205574,
+        "market_cap_usd": 4003986154,
+        "revenue_growth": 0.2695,
+        "profit_margin": 0.1958,
+        "composite_quality": 0.052773,
+        "change_pct": 0.003017,
+        "return_5d": -0.004386,
+        "ytd_return": 0.103752,
+        "ep": 0.0673,
+        "cfop": 0.0576,
+        "ticker_url": "https://surgeflows.capital/stock/jp/6506",
+        "tab_url": "https://surgeflows.capital/fundamentals",
+        "agent_rating": {
+         "schema_version": "notes_agent_rating_v1",
+         "as_of": "2026-10-06",
+         "state": "available",
+         "available_lenses": 6,
+         "total_lenses": 6,
+         "overall": 3.33,
+         "top_down": 3.33,
+         "bottom_up": 3.33,
+         "lenses": {
+          "macro": {
+           "value": 4,
+           "state": "available",
+           "as_of": "2026-10-06",
+           "source": "stock_sentiment_score_v1",
+           "explanation": null
+          },
+          "sentiment": {
+           "value": 3,
+           "state": "partial",
+           "as_of": "2026-10-06",
+           "source": "stock_sentiment_score_v1",
+           "explanation": "Uses 1 of 4 inputs; missing: news, management reputation, management outlook."
+          },
+          "factor": {
+           "value": 3,
+           "state": "available",
+           "as_of": "2026-10-06",
+           "source": "stock_scores_latest_v1",
+           "explanation": "Derived from the available within-market momentum, value and quality percentiles."
+          },
+          "technical": {
+           "value": 2,
+           "state": "available",
+           "as_of": "2026-10-06",
+           "source": "stock_scores_latest_v1",
+           "explanation": null
+          },
+          "fundamental": {
+           "value": 5,
+           "state": "available",
+           "as_of": "2026-10-06",
+           "source": "stock_scores_latest_v1",
+           "explanation": null
+          },
+          "risk": {
+           "value": 3,
+           "state": "available",
+           "as_of": "2026-10-06",
+           "source": "ticker_risk_metrics_latest_v1",
+           "explanation": null
+          }
+         }
+        }
+       }
+      ],
+      "error": null
+     },
+     {
+      "tab": "macro",
+      "label": "Macro Risk",
+      "ok": true,
+      "as_of_date": "2026-09-30",
+      "source_url": "example_project.stock_data.macro_cycle_composites_v2",
+      "headline": "Macro Risk (placeholder): leading -0.78, coincident +0.73, lagging +0.50.",
+      "lines": [
+       "Placeholder line: composite scores are synthetic fixture values.",
+       "Placeholder line: composite scores are synthetic fixture values.",
+       "Placeholder line: composite scores are synthetic fixture values."
+      ],
+      "scores": {
+       "leading": -0.7844,
+       "coincident": 0.7303,
+       "lagging": 0.4986
+      }
+     },
+     {
+      "tab": "ml_clusters",
+      "label": "ML Market Map",
+      "ok": true,
+      "headline": "ML Market Map (placeholder): 9 clusters; largest is 'low idio vol · low volatility (1y) · low volatility (3m)'.",
+      "lines": [
+       "Placeholder line 1: see the ml/clusters fixture for the numbers.",
+       "Placeholder line 2: see the ml/clusters fixture for the numbers.",
+       "Placeholder line 3: see the ml/clusters fixture for the numbers."
+      ],
+      "tab_url": "https://surgeflows.capital/ml?market=jp",
+      "as_of_date": "2026-10-06"
+     },
+     {
+      "tab": "news",
+      "label": "News & Sentiment",
+      "ok": true,
+      "source_url": "https://surgeflows.capital/api/news/feed?market=jp&limit=3",
+      "tab_url": "https://surgeflows.capital/news",
+      "headline": "News & Sentiment (placeholder): 40 fixture articles, mean score +0.10.",
+      "lines": [
+       "Placeholder line: headlines are synthetic.",
+       "Placeholder line: scores are synthetic."
+      ],
+      "articles": [
+       {
+        "article_id": "c9c634d69f3626dd3c65aafc7d053882",
+        "published_utc": "2026-10-07T04:38:34Z",
+        "title": "合成サンプル：東証は小動き",
+        "description": "合成サンプル：東証は小動き (placeholder text, not a real article).",
+        "publisher_name": "Yahoo!ニュース 経済",
+        "article_url": "https://example.com/jp/yahoo_jp_business/c9c634d69f3626dd3c65aafc7d053882",
+        "tickers": "[]",
+        "ticker_count": 0,
+        "keywords": "[\"no_ticker_match\"]",
+        "sentiment_score": -0.1,
+        "sentiment_label": "neutral",
+        "provider": "yahoo_jp_business",
+        "source_family": "media_rss_yahoo_jp_business",
+        "language": "ja",
+        "article_type": "media",
+        "sentiment_available": true,
+        "content_available": true
+       },
+       {
+        "article_id": "27a2f683368ef184ca846586c8aed855",
+        "published_utc": "2026-10-07T04:08:27Z",
+        "title": "KOTOBUKI GIKEN PRECISION CO.,LTD.：合成サンプルの適時開示",
+        "description": "KOTOBUKI GIKEN PRECISION CO.,LTD.：合成サンプルの適時開示",
+        "publisher_name": "TDnet",
+        "article_url": "https://example.com/jp/tdnet/27a2f683368ef184ca846586c8aed855",
+        "tickers": "[\"6955\"]",
+        "ticker_count": 1,
+        "keywords": "[\"ticker_matched\"]",
+        "sentiment_score": -0.1,
+        "sentiment_label": "neutral",
+        "provider": "tdnet",
+        "source_family": "tdnet_disclosures",
+        "language": "ja",
+        "article_type": "disclosure",
+        "sentiment_available": true,
+        "content_available": true
+       },
+       {
+        "article_id": "4d6cbaa371c1e3fa1113a8aee270ba37",
+        "published_utc": "2026-10-07T03:42:20Z",
+        "title": "合成サンプル：日経平均は下落",
+        "description": "合成サンプル：日経平均は下落 (placeholder text, not a real article).",
+        "publisher_name": "NHK ビジネス",
+        "article_url": "https://example.com/jp/nhk_business/4d6cbaa371c1e3fa1113a8aee270ba37",
+        "tickers": "[]",
+        "ticker_count": 0,
+        "keywords": "[\"no_ticker_match\"]",
+        "sentiment_score": -0.3,
+        "sentiment_label": "negative",
+        "provider": "nhk_business",
+        "source_family": "media_rss_nhk_business",
+        "language": "ja",
+        "article_type": "media",
+        "sentiment_available": true,
+        "content_available": true
+       }
+      ],
+      "error": null
+     }
+    ],
+    "source_status": {
+     "market": "jp",
+     "section_count": 8,
+     "ok_sections": 8
+    }
+   }
+  ],
+  "methodology_version": "daily_notes_v1_0",
+  "agent_rating_contract": {
+   "schema_version": "notes_agent_rating_v1",
+   "status": "available",
+   "scale": {
+    "min": 1,
+    "max": 5
+   },
+   "top_down": [
+    "macro",
+    "sentiment",
+    "factor"
+   ],
+   "bottom_up": [
+    "technical",
+    "fundamental",
+    "risk"
+   ],
+   "method": "Deterministic within-market evidence lenses, materialised daily. Research diagnostics, not votes."
+  },
+  "disclosure": "Research context only. Notes summarise SurgeFlow dashboard data and are not investment advice. Fixture notes are synthetic placeholders."
+ }
+}
