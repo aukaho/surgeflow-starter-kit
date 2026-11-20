@@ -1,0 +1,73 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>SurgeFlow</title>
+  <link rel="stylesheet" href="popup.css">
+</head>
+<body>
+  <header class="brand">
+    <img src="icons/icon-32.png" width="32" height="32" alt="">
+    <h1>SurgeFlow</h1>
+  </header>
+  <main>
+    <section class="market-section" aria-labelledby="market-label">
+      <h2 id="market-label" class="section-label">Market</h2>
+      <div class="market-switch" role="group" aria-labelledby="market-label">
+        <button type="button" data-market="us" aria-pressed="true">US</button>
+        <button type="button" data-market="cn" aria-pressed="false">China</button>
+        <button type="button" data-market="jp" aria-pressed="false">Japan</button>
+        <button type="button" data-market="hk" aria-pressed="false">Hong Kong</button>
+      </div>
+    </section>
+    <div class="tabs" role="tablist" aria-label="Research views">
+      <button type="button" id="hotlist-tab" role="tab" aria-selected="true" aria-controls="hotlist-panel" data-view="hotlist">Hotlist</button>
+      <button type="button" id="macro-tab" role="tab" aria-selected="false" aria-controls="macro-panel" data-view="macro" tabindex="-1">Macro</button>
+    </div>
+    <p id="status" class="status" role="status" aria-live="polite">Loading SurgeFlow data…</p>
+    <section id="hotlist-panel" role="tabpanel" aria-labelledby="hotlist-tab">
+      <article class="card" aria-labelledby="hotlist-title">
+        <h2 id="hotlist-title">Hotlist</h2>
+        <dl class="status-grid">
+          <div><dt>Market</dt><dd id="hotlist-market"></dd></div>
+          <div><dt>Phase</dt><dd id="hotlist-phase"></dd></div>
+          <div><dt>Status</dt><dd id="hotlist-status"></dd></div>
+        </dl>
+        <p id="hotlist-count" class="count"></p>
+        <p id="hotlist-truncated" class="as-of"></p>
+        <p id="hotlist-preview" class="preview"></p>
+        <p class="as-of">As of <time id="hotlist-as-of"></time></p>
+        <ul id="hotlist-rows" class="hotlist-rows"></ul>
+        <p id="hotlist-footer" class="hotlist-footer"></p>
+        <a id="open-hotlist" class="primary-button" target="_blank" rel="noopener noreferrer">Open the Hotlist</a>
+      </article>
+      <section id="freshness-section" class="freshness" aria-labelledby="freshness-title" hidden>
+        <h2 id="freshness-title">Data freshness</h2>
+        <p id="data-freshness"></p>
+        <p class="credit">Status computed by SurgeFlow.</p>
+      </section>
+    </section>
+    <section id="macro-panel" role="tabpanel" aria-labelledby="macro-tab" hidden>
+      <h2>Macro indicators</h2>
+      <div class="table-scroll" tabindex="0" role="region" aria-label="Macro indicators table">
+        <table>
+          <caption class="visually-hidden">Allowed macro indicator rows</caption>
+          <thead><tr><th scope="col">Indicator</th><th scope="col">Country</th><th scope="col">Value</th><th scope="col">Date</th><th scope="col">Source</th></tr></thead>
+          <tbody id="macro-rows"></tbody>
+        </table>
+      </div>
+      <div id="macro-credits" class="credits" aria-label="Publisher credits"></div>
+    </section>
+  </main>
+  <footer>
+    <p>Research data only; not investment advice. Market data may be delayed.</p>
+    <nav aria-label="SurgeFlow links">
+      <a href="https://surgeflows.capital/" target="_blank" rel="noopener noreferrer">SurgeFlow</a>
+      <a href="https://surgeflows.capital/privacy" target="_blank" rel="noopener noreferrer">Privacy</a>
+    </nav>
+  </footer>
+  <script src="policy.js"></script>
+  <script src="popup.js"></script>
+</body>
+</html>

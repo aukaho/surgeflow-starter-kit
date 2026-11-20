@@ -1,0 +1,206 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <base target="_top">
+    <meta name="color-scheme" content="light dark">
+    <style>
+      :root {
+        color-scheme: light dark;
+        font-family: Arial, sans-serif;
+        font-size: 14px;
+      }
+      body {
+        margin: 0;
+        padding: 18px;
+        color: #242424;
+        background: #ffffff;
+      }
+      h1 {
+        margin: 0 0 8px;
+        font-size: 22px;
+      }
+      p {
+        line-height: 1.45;
+      }
+      [hidden] {
+        display: none !important;
+      }
+      label {
+        display: block;
+        margin: 16px 0 6px;
+        font-weight: 600;
+      }
+      select,
+      button {
+        box-sizing: border-box;
+        width: 100%;
+        min-height: 40px;
+        border: 1px solid #8a8a8a;
+        border-radius: 4px;
+        padding: 8px 10px;
+        font: inherit;
+      }
+      select {
+        color: inherit;
+        background: Canvas;
+      }
+      button {
+        margin-top: 18px;
+        border-color: #805500;
+        color: #ffffff;
+        background: #805500;
+        font-weight: 600;
+        cursor: pointer;
+      }
+      button:disabled {
+        cursor: wait;
+        opacity: 0.65;
+      }
+      button:focus-visible,
+      select:focus-visible,
+      a:focus-visible {
+        outline: 3px solid #b88a05;
+        outline-offset: 2px;
+      }
+      #status {
+        min-height: 40px;
+        margin: 16px 0;
+        padding: 10px;
+        border-left: 3px solid #b88a05;
+        background: rgba(128, 128, 128, 0.12);
+        line-height: 1.45;
+      }
+      nav {
+        display: grid;
+        gap: 10px;
+        margin-top: 20px;
+      }
+      a {
+        color: #805500;
+      }
+      .note {
+        color: #525252;
+      }
+      @media (prefers-color-scheme: dark) {
+        body {
+          color: #f5f5f5;
+          background: #1f1f1f;
+        }
+        button {
+          border-color: #d9a916;
+          color: #1f1f1f;
+          background: #d9a916;
+        }
+        a {
+          color: #e5bc42;
+        }
+        .note {
+          color: #c5c5c5;
+        }
+      }
+    </style>
+  </head>
+  <body>
+    <main>
+      <h1>SurgeFlow</h1>
+      <p>Insert a no-key public research snapshot into a new sheet. No sign-in is required.</p>
+      <form id="snapshot-form">
+        <label for="dataset">Dataset</label>
+        <select id="dataset" name="dataset" disabled></select>
+        <label for="market" id="market-label">Market</label>
+        <select id="market" name="market" disabled></select>
+        <button id="insert" type="submit" disabled>Insert</button>
+      </form>
+      <div id="status" role="status" aria-live="polite">Choose a snapshot, then select Insert.</div>
+      <p class="note">Research data only; not investment advice. Market data may be delayed.</p>
+      <nav aria-label="SurgeFlow links">
+        <a href="https://surgeflows.capital/" target="_blank" rel="noopener noreferrer">Open SurgeFlow</a>
+        <a href="https://surgeflows.capital/privacy" target="_blank" rel="noopener noreferrer">Privacy</a>
+        <a href="https://surgeflows.capital/contact" target="_blank" rel="noopener noreferrer">Help</a>
+      </nav>
+    </main>
+    <script>
+      const form = document.getElementById('snapshot-form');
+      const dataset = document.getElementById('dataset');
+      const market = document.getElementById('market');
+      const marketLabel = document.getElementById('market-label');
+      const insert = document.getElementById('insert');
+      const status = document.getElementById('status');
+      const datasetLabels = {
+        'momentum-hotlist': 'Momentum hotlist',
+        'factor-overview': 'Factor overview',
+        'macro-indicators': 'Macro indicators',
+        'data-freshness': 'Data freshness'
+      };
+      const marketLabels = { us: 'United States', cn: 'China', jp: 'Japan', hk: 'Hong Kong' };
+      let pickerDatasets = [];
+
+      function appendOption(select, value, label) {
+        const option = document.createElement('option');
+        option.value = value;
+        option.textContent = label;
+        select.appendChild(option);
+      }
+
+      function selectedDataset() {
+        return pickerDatasets.find(entry => entry.id === dataset.value);
+      }
+
+      function updateMarket() {
+        const selected = selectedDataset();
+        const takesMarket = Boolean(selected && selected.takesMarket);
+        const previousMarket = market.value;
+        market.textContent = '';
+        if (takesMarket) {
+          selected.markets.forEach(marketId => appendOption(market, marketId, marketLabels[marketId]));
+          if (selected.markets.includes(previousMarket)) market.value = previousMarket;
+        }
+        market.hidden = !takesMarket;
+        marketLabel.hidden = !takesMarket;
+        market.disabled = !takesMarket;
+        insert.disabled = !selected;
+      }
+
+      function setFormBusy(busy) {
+        insert.disabled = busy || !dataset.value;
+        dataset.disabled = busy || pickerDatasets.length === 0;
+        market.disabled = busy || market.hidden;
+      }
+
+      dataset.addEventListener('change', updateMarket);
+      google.script.run
+        .withSuccessHandler(config => {
+          pickerDatasets = config;
+          pickerDatasets.forEach(entry => appendOption(dataset, entry.id, datasetLabels[entry.id]));
+          if (!pickerDatasets.length) {
+            status.textContent = 'SurgeFlow data could not be loaded. Try again later.';
+            return;
+          }
+          dataset.disabled = false;
+          updateMarket();
+        })
+        .withFailureHandler(() => {
+          status.textContent = 'SurgeFlow data could not be loaded. Try again later.';
+        })
+        .getAddinPickerConfig();
+
+      form.addEventListener('submit', event => {
+        event.preventDefault();
+        setFormBusy(true);
+        status.textContent = 'Loading SurgeFlow data…';
+        google.script.run
+          .withSuccessHandler(result => {
+            setFormBusy(false);
+            updateMarket();
+            status.textContent = 'Inserted ' + result.rowCount + (result.rowCount === 1 ? ' row' : ' rows') + ' into ' + result.sheetName + '.';
+          })
+          .withFailureHandler(() => {
+            setFormBusy(false);
+            updateMarket();
+            status.textContent = 'SurgeFlow data could not be loaded. Try again later.';
+          })
+          .insertSnapshot(dataset.value, market.value);
+      });
+    </script>
+  </body>
+</html>
