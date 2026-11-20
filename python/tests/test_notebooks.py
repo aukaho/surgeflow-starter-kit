@@ -34,7 +34,9 @@ def test_committed_notebook_template_has_no_outputs():
     for path in notebook_paths():
         notebook = json.loads(path.read_text(encoding="utf-8"))
         assert notebook["nbformat"] == 4
+        nbformat.validate(nbformat.reads(path.read_text(encoding="utf-8"), as_version=4))
         for cell in notebook["cells"]:
+            assert cell.get("id")
             if cell["cell_type"] == "code":
                 assert cell["outputs"] == []
                 assert cell["execution_count"] is None
