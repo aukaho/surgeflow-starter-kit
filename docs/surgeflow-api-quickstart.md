@@ -1,177 +1,136 @@
-# SurgeFlow API Beginner Quickstart
+# SurgeFlow API quickstart
 
-Status: free public API beta.
+Use this guide with the [authoritative OpenAPI document](https://surgeflows.capital/api/public/openapi.json).
+SurgeFlow supports the United States (`us`), China (`cn`), Japan (`jp`), and Hong Kong (`hk`).
 
-Best first path: create a key on the website and run one read-only request.
-You do **not** need to install Python, Jupyter, VS Code, Postman, or another
-developer tool.
+## 1. Read a public snapshot
 
-## First Successful Use
+Public snapshots need no API key. Request JSON or CSV with a plain GET request.
 
-1. Open `https://surgeflows.capital/membership#api-key`.
-2. Enter your email and optional name.
-3. Agree to the terms.
-4. Click **Create key**.
-5. Copy the key when it appears. It starts with `sf_live_`.
-6. Use the website preview or the Colab notebook to load a current-session
-   turnover table or momentum hotlist.
-
-The full key is displayed once. Keep it private.
-
-## What The Key Can Access
-
-The authenticated API currently exposes 15 read-only endpoint families:
-
-- identity and plan metadata;
-- market summaries and screens;
-- current-session turnover boards and momentum hotlists;
-- AI ratings and the AI grade book;
-- ML clusters;
-- whale, sector, news, factor-portfolio, Notes, macro-calendar, and bond-ETF
-  research.
-
-Markets: `us`, `cn`, `jp`, `hk`, `tw`, `kr`, `uk`, `in`.
-
-The live catalogue is authoritative:
-
-```text
-https://surgeflows.capital/api/v1/catalog
+```bash
+curl "https://surgeflows.capital/api/public/snapshots/data-freshness.json"
+curl "https://surgeflows.capital/api/public/snapshots/momentum-hotlist.csv?market=us"
 ```
 
-## Free Beta Limits
-
-- 2,000 requests per day per key
-- 180 requests per minute per key
-- read-only market research data
-
-## Recommended Paths
-
-### Path A: Website Preview
-
-Create a key at `https://surgeflows.capital/membership#api-key`, then use the
-preview to confirm that the key works and inspect the response shape.
-
-### Path B: Google Colab
-
-1. Open the notebook directly in Colab:
-   `https://colab.research.google.com/github/aukaho/surgeflow-starter-kit/blob/main/notebooks/surgeflow-realtime-hotlist-60s.ipynb`
-2. Run the cells from top to bottom.
-3. Paste your `sf_live_` key when asked.
-4. Select any of the eight supported markets.
-
-Colab runs in your browser. You do not need to install Python.
-
-### Path C: Google Sheets
-
-The included Apps Script wrapper refreshes current-session and hotlist tables
-for `us`, `cn`, `jp`, `hk`, `tw`, `kr`, `uk`, and `in`. The authenticated API
-and Colab notebook support the same eight markets.
-
-The Google Sheets add-on has been submitted for Google authentication and
-Workspace Marketplace review. It is **not yet available for public one-click
-installation**. Before resubmission, synchronize the included source into the
-linked Apps Script project and re-run the eight-market contract test.
-
-Current status:
+The public snapshot paths are:
 
 ```text
-https://surgeflows.capital/membership/google-sheets
+GET /api/public/snapshots/momentum-hotlist.json?market={market}
+GET /api/public/snapshots/momentum-hotlist.csv?market={market}
+GET /api/public/snapshots/macro-indicators.json
+GET /api/public/snapshots/macro-indicators.csv
+GET /api/public/snapshots/news-sentiment.json?days=30
+GET /api/public/snapshots/news-sentiment.csv?days=30
+GET /api/public/snapshots/factor-overview.json?market={market}
+GET /api/public/snapshots/factor-overview.csv?market={market}
+GET /api/public/snapshots/data-freshness.json
+GET /api/public/snapshots/data-freshness.csv
 ```
 
-### Path D: Developers
+Use `us`, `cn`, `jp`, or `hk` for `{market}`.
+The `days` parameter accepts an integer from 1 through 365.
 
-API base URL:
+The [public manifest](https://surgeflows.capital/api/public/manifest.json) lists snapshot URLs, coverage, and caveats.
+The `generated_at` field records package creation time. It does not replace an observation date.
+
+## 2. Inspect the response
+
+JSON snapshots include `ok`, `snapshot`, `market`, `generated_at`, `row_count`, `source`, and `data` fields.
+Check `ok` and the fields inside `data` before using a result.
+
+The momentum Hotlist sample includes `data.rows`, `data.total_count`, and `data.truncated`.
+Rows are ordered by `selection_rank`. The public sample can contain at most three rows.
+The full board requires the signed-in site or member API.
+
+Data freshness includes `data.status`, `data.timezone`, and `data.rows`.
+Freshness rows include `market`, `latest_date`, `expected_latest`, `trading_days_stale`, and `status`.
+
+CSV snapshots flatten nested fields and can encode complex cells.
+Check the header row instead of assuming that JSON and CSV have identical structures.
+
+## 3. Run the examples
+
+Run the cURL example:
+
+```bash
+bash examples/curl/public.sh
+```
+
+Run the Python example with `requests` installed:
+
+```bash
+python examples/python/public.py
+```
+
+The Python example reads a public snapshot and one market Hotlist.
+It also loads public CSV into `pandas` when that optional package is installed.
+
+Run the JavaScript example with Node 18 or later:
+
+```bash
+node examples/javascript/public.mjs
+```
+
+Use this formula in a Google Sheets cell for a public CSV snapshot:
 
 ```text
-https://stock-api-c4qdowjxva-uc.a.run.app
+=IMPORTDATA("https://surgeflows.capital/api/public/snapshots/momentum-hotlist.csv?market=us")
 ```
 
-Authentication:
+The formula needs no API key. Google Sheets controls the refresh schedule.
 
-```text
-Authorization: Bearer sf_live_...
-```
+## 4. Use a member endpoint
 
-Authenticated endpoints:
+1. Join or sign in to SurgeFlow.
+2. Open [your account](https://surgeflows.capital/account).
+3. Create a member API key.
+4. Copy the key when it appears and store it privately.
+
+The member beta allows 2,000 requests per day and 180 requests per minute for each key.
+Do not commit a key or save it in an example file.
+
+This starter kit uses these member endpoints:
 
 ```text
 GET /api/v1/me
-GET /api/v1/summary
-GET /api/v1/markets/{market}/screen
-GET /api/v1/markets/{market}/realtime
 GET /api/v1/markets/{market}/hotlist
-GET /api/v1/ai/ratings
-GET /api/v1/ai/grade-book
-GET /api/v1/markets/{market}/ml/clusters
-GET /api/v1/markets/{market}/whales
-GET /api/v1/markets/{market}/sector
-GET /api/v1/markets/{market}/news
-GET /api/v1/markets/{market}/factor-portfolios
-GET /api/v1/notes/daily
-GET /api/v1/macro/calendar
-GET /api/v1/bond/etfs
 ```
 
-Open utility endpoints:
-
-```text
-GET /api/v1/health
-GET /api/v1/catalog
-POST /api/v1/keys
-```
-
-## cURL Example
+Set `SURGEFLOW_API_KEY` in your shell and run the member cURL example:
 
 ```bash
-export SURGEFLOW_API_KEY="sf_live_..."
-
-curl -H "Authorization: Bearer ${SURGEFLOW_API_KEY}" \
-  "https://stock-api-c4qdowjxva-uc.a.run.app/api/v1/me"
-
-curl -H "Authorization: Bearer ${SURGEFLOW_API_KEY}" \
-  "https://stock-api-c4qdowjxva-uc.a.run.app/api/v1/markets/us/realtime?limit=25"
+export SURGEFLOW_API_KEY="sf_live_REPLACE_WITH_YOUR_KEY"
+bash examples/curl/member.sh
 ```
 
-## Python Example
+The example sends this header:
 
-```python
-import requests
-
-base_url = "https://stock-api-c4qdowjxva-uc.a.run.app"
-api_key = "sf_live_..."  # use only in a private notebook or environment variable
-headers = {"Authorization": f"Bearer {api_key}"}
-
-response = requests.get(
-    f"{base_url}/api/v1/markets/us/hotlist",
-    headers=headers,
-    timeout=30,
-)
-response.raise_for_status()
-payload = response.json()
-rows = payload["data"]["rows"]
-print(rows[:5])
+```text
+Authorization: Bearer sf_live_REPLACE_WITH_YOUR_KEY
 ```
 
-## Response Shape
+See the [member API catalogue](https://surgeflows.capital/api/v1/catalog) for the authoritative member contract.
+Do not use the placeholder as a real key.
 
-Most endpoint payloads include an `ok` flag, freshness metadata, and a
-`data` object. The market screen is the legacy exception:
+## 5. Install a client or app
 
-```python
-screen_rows = payload["rows"]
-realtime_or_hotlist_rows = payload["data"]["rows"]
-```
+- Install the Python client with `python -m pip install ./python`.
+- Install the JavaScript client with `npm install ./javascript`.
+- Install the [Google Sheets source](../apps/google-sheets-add-on/README.md) as a bound script.
+- Sideload the [Excel manifest](../apps/excel-add-in/README.md) in Excel on the web.
+- Load the [Chrome extension](../apps/chrome-extension/README.md) as an unpacked extension.
 
-## Data Boundary
+The app products are not yet in their stores.
+They show only SurgeFlow tickers and ranks, data freshness, and official open-licence macro statistics with credits. These official statistics can include economies beyond the four equity markets (for example the United Kingdom, Taiwan, and World Bank country series), each with its publisher credit.
+They show no prices, returns, or company names.
 
-Endpoint names such as `realtime` describe the current-session board. SurgeFlow
-does not claim a live-tick feed across all eight markets. Historical, factor,
-and fundamental outputs may be current to the last completed market session.
-Inspect each response's freshness and evidence fields before use.
+## Data boundaries
 
-SurgeFlow is research software. It does not place orders and is not investment
-advice.
+Read the source date, market, currency, and measurement window in every response.
+Data can be delayed, stale, historical, or unavailable.
+Coverage depth differs by market and source.
 
-## Support
+Free access does not grant redistribution rights. Source materials can have separate provider terms.
+SurgeFlow provides research data only, not investment advice.
 
-`support@surgeflows.capital`
+Email [support@surgeflows.capital](mailto:support@surgeflows.capital) for help.

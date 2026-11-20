@@ -1,127 +1,119 @@
 # SurgeFlow Starter Kit
 
-Working examples for the free SurgeFlow Public API v1 and Google Sheets.
+Examples, clients, and app sources for SurgeFlow research data.
 
-The member API covers equity research data across eight markets: the US,
-China, Japan, Hong Kong, Taiwan, Korea, the UK, and India. These files take a
-new user from a free membership to a current market table without brokerage
-credentials or access to private spreadsheet data.
+SurgeFlow covers four equity markets: the United States (`us`), China (`cn`), Japan (`jp`), and Hong Kong (`hk`).
+The API provides research data only, not investment advice.
 
-[Create a free API key and run the first example](https://surgeflows.capital/membership?utm_source=github&utm_medium=referral&utm_campaign=github_colab_quickstart_v1&utm_content=readme_hero#api-key)
+## Start without a key
 
-## What Is Included
+Read public research snapshots as JSON or CSV. No API key is required.
 
-- `templates/surgeflow-google-sheets-starter.xlsx` - a starter workbook with a
-  dashboard, sample `Surgeflow_US` output, and API endpoint map.
-- `docs/surgeflow-api-quickstart.md` - a beginner guide for the website,
-  Sheets, Colab, cURL, and Python paths.
-- `notebooks/surgeflow-realtime-hotlist-60s.ipynb` - a browser-based Colab
-  notebook for the current-session turnover board and momentum hotlist. It
-  supports all eight API markets and never saves the key to disk.
-- `apps-script/appsscript.json`, `apps-script/Code.gs`, and
-  `apps-script/Sidebar.html` - the submitted Google Sheets wrapper source. Its
-  current source covers all eight markets (`us`, `cn`, `jp`, `hk`, `tw`, `kr`,
-  `uk`, `in`). The Marketplace listing remains under review; synchronize this
-  source into the linked Apps Script project and re-test before resubmission.
-
-## Website Downloads
-
-- Membership and API key: https://surgeflows.capital/membership#api-key
-- Google Sheets guide: https://surgeflows.capital/membership/google-sheets
-- Starter workbook: https://surgeflows.capital/templates/surgeflow-google-sheets-starter.xlsx
-- API quickstart: https://surgeflows.capital/templates/surgeflow-api-quickstart.txt
-- Open notebook in Colab: https://colab.research.google.com/github/aukaho/surgeflow-starter-kit/blob/main/notebooks/surgeflow-realtime-hotlist-60s.ipynb
-
-## API Beta
-
-Create a free beta key from the Membership page:
-
-```text
-https://surgeflows.capital/membership#api-key
+```bash
+curl "https://surgeflows.capital/api/public/snapshots/momentum-hotlist.json?market=us"
 ```
 
-The form asks for an email address, terms agreement, and an optional name. The
-key appears once. Store it privately: SurgeFlow stores only its hash and
-cannot display the full key again.
+Public snapshots cover momentum Hotlist samples, macro indicators, news sentiment, factor overviews, and data freshness.
+Data can be delayed or historical. Free access does not grant redistribution rights.
 
-Use the direct API base URL for authenticated calls:
+Use these resources:
 
-```text
-https://stock-api-c4qdowjxva-uc.a.run.app
+- [Public manifest](https://surgeflows.capital/api/public/manifest.json)
+- [OpenAPI 3.1 document](https://surgeflows.capital/api/public/openapi.json), the authoritative public contract
+- [API documentation](https://surgeflows.capital/membership/api)
+- [Postman collection](https://surgeflows.capital/data/surgeflow.postman_collection.json)
+- [Member API catalogue](https://surgeflows.capital/api/v1/catalog)
+- [llms.txt](https://surgeflows.capital/llms.txt)
+- [Quickstart](docs/surgeflow-api-quickstart.md)
+
+## Create a member API key
+
+1. Join or sign in to SurgeFlow.
+2. Open the [account page](https://surgeflows.capital/account).
+3. Create a key and copy it when it appears.
+4. Store the key privately because SurgeFlow cannot display the full key again.
+
+The member beta allows 2,000 requests per day and 180 requests per minute for each key.
+Member endpoints provide read-only market research data.
+
+Send the key as a bearer token:
+
+```bash
+curl \
+  -H "Authorization: Bearer sf_live_REPLACE_WITH_YOUR_KEY" \
+  "https://surgeflows.capital/api/v1/markets/us/hotlist"
 ```
 
-Send your issued key as:
+Use `us`, `cn`, `jp`, or `hk` in member market paths.
+The [member API catalogue](https://surgeflows.capital/api/v1/catalog) is authoritative for member endpoints and plans.
 
-```text
-Authorization: Bearer sf_live_...
+## Install and run
+
+### Examples
+
+The [examples](examples/) include cURL, Python, JavaScript, and Google Sheets versions.
+
+```bash
+bash examples/curl/public.sh
+python examples/python/public.py
+node examples/javascript/public.mjs
 ```
 
-Open endpoints:
+The Python example requires `requests`. It uses `pandas` when that optional package is installed.
+The JavaScript example requires Node 18 or later.
 
-```text
-GET /api/v1/health
-GET /api/v1/catalog
-POST /api/v1/keys
+### Python client
+
+Install the local `surgeflow` package:
+
+```bash
+python -m pip install ./python
 ```
 
-Authenticated endpoint families:
+See the [Python client guide](python/README.md). The package is not yet on PyPI.
 
-```text
-GET /api/v1/me
-GET /api/v1/summary
-GET /api/v1/markets/{market}/screen
-GET /api/v1/markets/{market}/realtime
-GET /api/v1/markets/{market}/hotlist
-GET /api/v1/ai/ratings
-GET /api/v1/ai/grade-book
-GET /api/v1/markets/{market}/ml/clusters
-GET /api/v1/markets/{market}/whales
-GET /api/v1/markets/{market}/sector
-GET /api/v1/markets/{market}/news
-GET /api/v1/markets/{market}/factor-portfolios
-GET /api/v1/notes/daily
-GET /api/v1/macro/calendar
-GET /api/v1/bond/etfs
+### JavaScript client
+
+Install the local `surgeflow` package:
+
+```bash
+npm install ./javascript
 ```
 
-Markets: `us`, `cn`, `jp`, `hk`, `tw`, `kr`, `uk`, `in`.
+See the [JavaScript client guide](javascript/README.md). The package is not yet on npm.
 
-Free beta limits:
+### Google Sheets add-on
 
-- 2,000 requests per day per key
-- 180 requests per minute per key
-- Read-only market research endpoints
+Install the source as a bound script by following [these steps](apps/google-sheets-add-on/README.md).
+A public CSV snapshot also works with `IMPORTDATA` and needs no add-on.
 
-The live catalogue is authoritative for endpoint and plan changes:
+### Excel add-in
 
-```text
-https://stock-api-c4qdowjxva-uc.a.run.app/api/v1/catalog
-```
+Sideload the hosted manifest by following [these steps](apps/excel-add-in/README.md).
+The site serves the panel files.
 
-## Google Sheets Beta
+### Chrome extension
 
-The Google Sheets add-on has been submitted for Google review. It is not
-currently installable from Google Workspace Marketplace.
+Load the unpacked extension by following [these steps](apps/chrome-extension/README.md).
 
-Today, use the starter workbook with the included Apps Script source, or use
-the Colab notebook. The current Sheets wrapper source and authenticated API
-cover all eight markets. Synchronize the included source into the linked Apps
-Script project and re-run the contract test before Marketplace resubmission.
+These three app products are not yet in their stores.
 
-## Important Release Note
+## Data dates and limits
 
-Use the direct Cloud Run API base above for scripts and notebooks. Endpoint
-names such as `realtime` describe the current-session board; SurgeFlow does
-not claim a live-tick feed across all eight markets. Historical, factor, and
-valuation datasets are daily or tied to their disclosed source cadence.
+Check the source date, market, currency, and measurement window in each response.
+Historical, factor, and valuation datasets follow their disclosed source cadence.
+A current-session board is not a live-tick feed across every market.
+
+The app sources show only SurgeFlow tickers and ranks, data freshness, and official open-licence macro statistics with credits. These official statistics can include economies beyond the four equity markets (for example the United Kingdom, Taiwan, and World Bank country series), each with its publisher credit.
+They show no prices, returns, or company names.
 
 ## Support
 
-Email: support@surgeflows.capital
+Email [support@surgeflows.capital](mailto:support@surgeflows.capital) or open an issue.
 
-## Disclaimer
+## Licence and disclaimer
 
-SurgeFlow is research software. This starter kit and API are for educational
-and research use only. They are not investment advice, broker-dealer services,
-order routing, portfolio management, or a recommendation to buy or sell
-securities.
+Code is available under the [MIT licence](LICENSE).
+
+SurgeFlow is research software. This starter kit and API provide research data only.
+They do not provide investment advice, broker-dealer services, order routing, portfolio management, or securities recommendations.

@@ -1,0 +1,1 @@
+=IMPORTDATA("https://surgeflows.capital/api/public/snapshots/momentum-hotlist.csv?market=us")
