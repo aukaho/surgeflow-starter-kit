@@ -71,7 +71,7 @@ def test_momentum_hotlist_uses_recorded_fixture_and_user_agent():
     assert call["timeout"] == 30
     assert call["headers"] == {
         "Accept": "application/json",
-        "User-Agent": "surgeflow-python/0.1.0",
+        "User-Agent": "surgeflow-python/0.2.0",
     }
 
 

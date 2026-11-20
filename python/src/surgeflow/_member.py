@@ -7,6 +7,12 @@ Params = Dict[str, Union[str, int, bool]]
 
 
 class MemberMethods:
+    @staticmethod
+    def _validate_us_only(market: str) -> None:
+        # The macro vote routes declare market pattern ^us$.
+        if market != "us":
+            raise ValueError("market must be us for the macro vote routes")
+
     def _member_get(
         self, path: str, api_key: str, params: Optional[Params] = None
     ) -> JsonObject:
@@ -18,6 +24,7 @@ class MemberMethods:
     def member_macro_model_votes(
         self, api_key: str, market: str = "us"
     ) -> JsonObject:
+        self._validate_us_only(market)
         return self._member_get(
             "/api/macro/model-votes", api_key, {"market": market}
         )
@@ -25,6 +32,7 @@ class MemberMethods:
     def member_macro_index_votes(
         self, api_key: str, market: str = "us", horizon: int = 21
     ) -> JsonObject:
+        self._validate_us_only(market)
         if horizon not in (1, 21):
             raise ValueError("horizon must be 1 or 21")
         return self._member_get(

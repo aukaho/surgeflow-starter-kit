@@ -166,3 +166,23 @@ def test_all_four_market_paths_preserve_market_and_header(market):
     for call in session.calls:
         assert call["headers"]["Authorization"] == f"Bearer {KEY}"
         assert KEY not in call["url"]
+
+
+@pytest.mark.parametrize("market", ["cn", "jp", "hk"])
+def test_macro_vote_methods_reject_non_us_market_before_request(market):
+    session = FakeSession()
+    client = SurgeFlow(base_url=BASE, session=session)
+
+    with pytest.raises(ValueError):
+        client.member_macro_model_votes(KEY, market=market)
+    with pytest.raises(ValueError):
+        client.member_macro_index_votes(KEY, market=market)
+    assert session.calls == []
+
+
+def test_user_agent_matches_package_version():
+    import surgeflow
+
+    session = FakeSession()
+    SurgeFlow(base_url=BASE, session=session).member_watchlists(KEY)
+    assert session.calls[0]["headers"]["User-Agent"] == f"surgeflow-python/{surgeflow.__version__}"

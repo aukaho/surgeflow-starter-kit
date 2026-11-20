@@ -116,7 +116,7 @@ The default timeout is 30 seconds. Set `timeout` in seconds when constructing th
 - `NotAvailableYet` identifies an offering that has no key-reachable route.
 - `SurgeFlowError` is the base class for these errors.
 
-Every request uses the `surgeflow-python/0.1.0` user agent.
+Every request uses the `surgeflow-python/0.2.0` user agent.
 
 ## Test
 
