@@ -46,6 +46,9 @@ def test_all_eleven_notebooks_execute_in_fixture_mode(monkeypatch):
             for panel in default_panels(None, "key"):
                 assert f"{panel.offering} — {panel.name}\n" in text, panel.name
             assert "monitor task stopped" not in text
+            # me.json reports 1,400 remaining, so the 1,500 budget is seeded to 100 used.
+            assert "Key daily requests remaining across all processes: 1400" in text
+            assert "local budget used: 100 / 1500" in text
         if path.name[:2] not in ("03", "09"):
             assert "Unavailable by member key" not in text, path.name
 
