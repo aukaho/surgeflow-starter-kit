@@ -72,6 +72,43 @@ python -m pip install ./python
 
 See the [Python client guide](python/README.md). The package is not yet on PyPI.
 
+### Member notebooks
+
+Install the optional notebook dependencies and open the quickstart:
+
+```bash
+python -m pip install './python[notebooks]'
+jupyter notebook notebooks/00_quickstart.ipynb
+```
+
+The eleven notebooks cover the quickstart, nine member offerings, and the live monitor. Offerings 03 and 09 explain their unavailable key routes without calling them.
+The notebooks read `SURGEFLOW_API_KEY`, with a hidden `getpass` prompt as fallback. They never print the key or put it in a URL.
+The catalogue supplies `base_url`; `SURGEFLOW_BASE_URL` overrides it. Set `SURGEFLOW_FIXTURES=1` to use synthetic responses without network requests.
+
+Each panel refreshes on a schedule; each panel shows its source date. Only a response marked as session-live describes the current session.
+The monitor uses fixed weekday exchange hours and does not handle holidays. Changed rows receive a highlight, and 429 responses honour `Retry-After`.
+
+The member beta permits 2,000 requests per day and 180 per minute for each key. The monitor budget defaults to 1,500 per day.
+This table gives the maximum projected requests on a full active weekday:
+
+| Offering | Requests per fetch | Cadence | Requests per day |
+|---|---:|---:|---:|
+| 01 Macro model votes | 5 routes | 30 min | 240 |
+| 02 Bull & bear sentiment picks | 2 routes | 30 min | 96 |
+| 03 Technical cohorts | Unavailable by key | None | 0 |
+| 04 Pure factor portfolios | 3 routes | 6 h | 12 |
+| 05 Fundamental rankings | 2 routes | 6 h | 8 |
+| 06 Watchlists | 1 route | 5 min | 288 |
+| 06 Screens, alerts, and portfolio | 3 routes | 30 min | 144 |
+| 07 Hotlist and session board, US | 2 routes | 120 s during 6.5 session hours | 390 |
+| 08 Daily actionable insights | 1 route | 30 min | 48 |
+| 09 Layoffs | Unavailable by key | None | 0 |
+| **Scheduled total** | | | **1,226** |
+| One startup account check | 1 route | Once | 1 |
+| **Projected total** | | | **1,227** |
+
+Free access grants no redistribution rights. **Do not republish the data you fetch.**
+
 ### JavaScript client
 
 Install the local `surgeflow` package:

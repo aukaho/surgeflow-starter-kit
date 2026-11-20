@@ -124,6 +124,30 @@ The app products are not yet in their stores.
 They show only SurgeFlow tickers and ranks, data freshness, and official open-licence macro statistics with credits. These official statistics can include economies beyond the four equity markets (for example the United Kingdom, Taiwan, and World Bank country series), each with its publisher credit.
 They show no prices, returns, or company names.
 
+## 6. Run the member notebooks
+
+Install the local package with notebook dependencies:
+
+```bash
+python -m pip install './python[notebooks]'
+jupyter notebook notebooks/00_quickstart.ipynb
+```
+
+The notebooks read `SURGEFLOW_API_KEY`, with a hidden `getpass` prompt as fallback.
+They use the catalogue `base_url`; set `SURGEFLOW_BASE_URL` to override it.
+They send the key only in the `Authorization: Bearer` header and never print it.
+Set `SURGEFLOW_FIXTURES=1` to run every notebook with synthetic responses and no network request.
+
+The quickstart shows plan and usage without showing the key. Notebooks 01 through 09 cover the nine offerings.
+Technical cohorts and Layoffs are not reachable by member key yet. Their notebooks show no member response.
+The Hotlist notebook supports `us`, `cn`, `jp`, and `hk`. The monitor defaults to `us` during fixed exchange hours.
+
+Each panel refreshes on a schedule; each panel shows its source date. Only a session-live response describes the current session.
+The free beta permits 2,000 requests per day and 180 per minute for each key. The monitor defaults to 1,500 per day.
+Its full weekday projection is 1,226 scheduled requests plus one startup account check.
+
+Free access grants no redistribution rights. **Do not republish the data you fetch.**
+
 ## Data boundaries
 
 Read the source date, market, currency, and measurement window in every response.

@@ -1,7 +1,8 @@
 # surgeflow Python client
 
-`surgeflow` 0.1.0 reads SurgeFlow public snapshots and two member research endpoints.
-It requires Python 3.9 or later and uses `requests` as its only runtime dependency.
+`surgeflow` 0.2.0 reads SurgeFlow public snapshots and member research endpoints.
+It requires Python 3.9 or later and uses `requests` as its only core dependency.
+The client and member API remain in beta.
 
 The package is not yet on PyPI. Install it from this local folder:
 
@@ -27,31 +28,82 @@ Public methods return decoded JSON objects by default. Use `response_format="csv
 Market arguments accept `us`, `cn`, `jp`, or `hk`. The `days` argument accepts 1 through 365.
 
 Use `public_snapshot(snapshot_id, market=None, days=None, response_format="json")` for the generic snapshot method.
-The [public OpenAPI document](https://surgeflows.capital/api/public/openapi.json) defines the live contract.
+The [public OpenAPI document](https://surgeflows.capital/api/public/openapi.json) defines the live public contract.
 
 ## Member methods
 
 Create a key on the [account page](https://surgeflows.capital/account).
-Pass the key directly to each member method:
+Read the catalogue to get the external `base_url`, or set `SURGEFLOW_BASE_URL` to override it.
+Pass your own key directly to each member method. The client sends it only in the bearer header.
 
 ```python
+import os
 from surgeflow import SurgeFlow
 
-client = SurgeFlow()
+catalogue = SurgeFlow().catalog()
+base_url = os.environ.get("SURGEFLOW_BASE_URL", catalogue["base_url"])
+client = SurgeFlow(base_url=base_url)
 key = "sf_live_REPLACE_WITH_YOUR_KEY"
 plan = client.member_me(key)
 hotlist = client.member_hotlist("us", key)
+insights = client.member_daily_insights(key)
 ```
 
-These methods call:
+The member methods map these routes:
 
-```text
-GET /api/v1/me
-GET /api/v1/markets/{market}/hotlist
+| Offering | Method | Route |
+|---|---|---|
+| Account | `member_me` | `/api/v1/me` |
+| 01 | `member_macro_model_votes` | `/api/macro/model-votes` |
+| 01 | `member_macro_index_votes` | `/api/macro/index-votes` |
+| 01 | `member_macro_cycle_composites` | `/api/macro/cycle-composites` |
+| 01 | `member_macro_recession_probability` | `/api/macro/recession-probability` |
+| 01 | `member_fund_hmm_regime` | `/api/fund/hmm-regime` |
+| 02 | `member_sentiment_scores` | `/api/{market}/stock-scores` |
+| 02 | `member_sentiment_whale_picks` | `/api/{market}/sentiment-whale-picks` |
+| 03 | `member_technical_cohorts` | Stub only; no key-reachable route |
+| 04 | `member_weekly_pure_books` | `/api/us/weekly-pure-books` |
+| 04 | `member_historical_pure_books` | `/api/us/historical-pure-books` |
+| 04 | `member_three_model_portfolios` | `/api/{market}/three-model/portfolios` |
+| 05 | `member_fundamental_picks` | `/api/us/fundamental-picks` |
+| 05 | `member_fundamental_peers` | `/api/us/fundamental-peers` |
+| 06 | `member_watchlists` | `/api/watchlists` |
+| 06 | `member_screens` | `/api/screens` |
+| 06 | `member_alerts` | `/api/alerts` |
+| 06 | `member_portfolio` | `/api/portfolio` |
+| 07 | `member_hotlist` | `/api/v1/markets/{market}/hotlist` |
+| 07 | `member_realtime` | `/api/v1/markets/{market}/realtime` |
+| 08 | `member_daily_insights` | `/api/us/daily-insights` |
+| 09 | `member_layoffs` | Stub only; no stock-api route |
+
+The sentiment score method defaults to `basis="news_led"`.
+The weekly and historical book handlers accept no query parameters. The three-model method exposes its `holdings` limit.
+The Managerial Control methods use GET only. The notebooks never change member data.
+
+The free plan grants all scopes used by these routes. It permits 2,000 requests per day and 180 per minute for each key.
+The [member API catalogue](https://surgeflows.capital/api/v1/catalog) defines the catalogued member contract.
+
+## Notebooks and monitor
+
+Install the optional dependencies and open the quickstart:
+
+```bash
+python -m pip install './python[notebooks]'
+jupyter notebook notebooks/00_quickstart.ipynb
 ```
 
-The [member API catalogue](https://surgeflows.capital/api/v1/catalog) defines the live member contract.
-The member beta allows 2,000 requests per day and 180 requests per minute for each key.
+The `notebooks` extra adds pandas, IPython, and ipywidgets. The core client still needs only `requests`.
+The notebooks read `SURGEFLOW_API_KEY`, with hidden `getpass` entry as fallback. They never print the key.
+Set `SURGEFLOW_FIXTURES=1` to read the local synthetic fixtures without network requests.
+
+`surgeflow.monitor` provides panels, a scheduler, fixed session gates, change detection, and a request counter.
+The default budget is 1,500 requests per day. The full weekday projection is 1,226 scheduled requests plus one account check.
+Hotlist requests run every 120 seconds during the fixed US session. Watchlists run every five minutes.
+Sentiment, insights, and macro votes run every 30 minutes. Fundamentals and factor books run every six hours.
+Screens, alerts, and portfolio also run every 30 minutes.
+
+Each panel refreshes on a schedule; each panel shows its source date. Only a session-live response describes the current session.
+Fixed exchange hours do not include holidays. The scheduler honours 429 `Retry-After` values.
 
 ## Errors and timeouts
 
@@ -59,20 +111,24 @@ The default timeout is 30 seconds. Set `timeout` in seconds when constructing th
 
 - `SurgeFlowTimeoutError` identifies a timeout.
 - `SurgeFlowConnectionError` identifies a transport failure.
-- `SurgeFlowApiError` identifies a non-success HTTP status and includes `status_code` and `payload`.
+- `SurgeFlowApiError` identifies a non-success HTTP status and includes `status_code`, `payload`, and `retry_after`.
 - `SurgeFlowResponseError` identifies invalid JSON or a response with `ok=false`.
+- `NotAvailableYet` identifies an offering that has no key-reachable route.
 - `SurgeFlowError` is the base class for these errors.
 
 Every request uses the `surgeflow-python/0.1.0` user agent.
 
 ## Test
 
-Install `pytest`, then run from this folder:
+Install the test dependencies, then run from this folder:
 
 ```bash
+python -m pip install './python[test]'
 PYTHONPATH=src python -m pytest
 ```
 
-Tests use recorded public fixtures and a fake session. They make no network requests.
+Tests use synthetic fixtures and fake sessions. They make no network requests.
+The notebook test uses `nbclient` to execute all eleven notebooks in fixture mode.
 
-Research data only, not investment advice. Free access does not grant redistribution rights.
+Research data only, not investment advice. Free access grants no redistribution rights.
+**Do not republish the data you fetch.**
