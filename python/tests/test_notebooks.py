@@ -28,6 +28,18 @@ def test_all_eleven_notebooks_execute_in_fixture_mode(monkeypatch):
             resources={"metadata": {"path": str(NOTEBOOKS)}},
         )
         client.execute()
+        # fetch_panel swallows exceptions into printed text, so check the printed text.
+        text = "".join(
+            output.get("text", "")
+            for cell in notebook.cells if cell.cell_type == "code"
+            for output in cell.outputs if output.get("output_type") == "stream"
+        )
+        lines = text.splitlines()
+        assert not [line for line in lines if line.startswith("Error ")], path.name
+        assert not any(o.get("output_type") == "error" for c in notebook.cells
+                       if c.cell_type == "code" for o in c.outputs), path.name
+        if path.name[:2] not in ("03", "09"):
+            assert "Unavailable by member key" not in text, path.name
 
 
 def test_committed_notebook_template_has_no_outputs():
