@@ -1,0 +1,37 @@
+{
+  "synthetic": true,
+  "ok": true,
+  "schema_version": "surgeflow.market_hotlist.v1",
+  "source_schema_version": "addin.hotlist.v1",
+  "total_count": 1,
+  "truncated": false,
+  "data": {
+    "schema_version": "addin.hotlist.v1",
+    "market": "us",
+    "as_of_utc": "2026-11-20T15:00:00+00:00",
+    "as_of_local": "2026-11-20T10:00:00-05:00",
+    "market_status": "OPEN",
+    "source": "synthetic_session_snapshot",
+    "cache_ttl_seconds": 60,
+    "data_quality": "ok",
+    "stale_reason": null,
+    "count": 1,
+    "rows": [
+      {
+        "hotlist_rank": 1,
+        "market": "us",
+        "ticker": "SYNTH",
+        "company_name": "Synthetic Company",
+        "industry": "Software",
+        "factor_style": "value",
+        "price": 11.0,
+        "intraday_return_pct": 1.0,
+        "turnover_per_second": 100.0,
+        "market_cap_usd": 1000000.0,
+        "projected_turnover_usd": 200000.0,
+        "projected_vs_yesterday": 2.0,
+        "previous_day_turnover_usd": 100000.0
+      }
+    ]
+  }
+}

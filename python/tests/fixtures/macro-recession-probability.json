@@ -1,0 +1,15 @@
+{
+  "synthetic": true,
+  "version": "v2",
+  "rows": [
+    {
+      "market": "us",
+      "date": "2026-10-31",
+      "recession_prob_1m": 0.1,
+      "recession_prob_3m": 0.2,
+      "recession_prob_12m": 0.3,
+      "target_source": "synthetic_logistic",
+      "methodology_version": "synthetic_recession_v2"
+    }
+  ]
+}

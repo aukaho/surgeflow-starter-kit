@@ -1,0 +1,13 @@
+{
+  "synthetic": true,
+  "count": 1,
+  "watchlists": [
+    {
+      "watchlist_id": "synthetic-list",
+      "name": "Synthetic research list",
+      "created_at": "2026-11-01T00:00:00+00:00",
+      "updated_at": "2026-11-20T00:00:00+00:00",
+      "items": [{"market": "us", "ticker": "SYNTH", "note": "Synthetic note", "added_at": "2026-11-20T00:00:00+00:00", "sort_order": 0}]
+    }
+  ]
+}

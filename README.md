@@ -72,6 +72,45 @@ python -m pip install ./python
 
 See the [Python client guide](python/README.md). The package is not yet on PyPI.
 
+### Member notebooks
+
+Install the optional notebook dependencies and open the quickstart:
+
+```bash
+python -m pip install './python[notebooks]'
+jupyter notebook notebooks/00_quickstart.ipynb
+```
+
+The eleven notebooks cover the quickstart, nine member offerings, and the live monitor. Offerings 03 and 09 explain their unavailable key routes without calling them.
+The offering 01, 02, 04, 05, 06, and 08 routes are member research routes (beta). They are not yet listed in `/api/v1/catalog`.
+The notebooks read `SURGEFLOW_API_KEY`, with a hidden `getpass` prompt as fallback. They never print the key or put it in a URL.
+The catalogue supplies `base_url`; `SURGEFLOW_BASE_URL` overrides it. Set `SURGEFLOW_FIXTURES=1` to use synthetic responses without network requests.
+Fixture mode reads `python/tests/fixtures` from a repository checkout; for an installed package, set `SURGEFLOW_FIXTURE_DIR` to that folder.
+
+Each panel refreshes on a schedule; each panel shows its source date. Only a response marked as session-live describes the current session.
+The monitor uses fixed weekday exchange hours and does not handle holidays. Changed rows receive a highlight, and 429 responses honour `Retry-After`.
+
+The member beta permits 2,000 requests per day and 180 per minute for each key, shared by every process using it. The monitor budget defaults to 1,500 per day for each running monitor; a restart starts it from zero and spends about 20 requests on the first full refresh. In notebook 10, the budget is capped once at startup from the key's remaining daily count reported by `/api/v1/me`; requests made later by other processes are not tracked.
+This table gives the maximum projected requests on a full active weekday:
+
+| Offering | Requests per fetch | Cadence | Requests per day |
+|---|---:|---:|---:|
+| 01 Macro model votes | 5 routes | 30 min | 240 |
+| 02 Bull & bear sentiment picks | 2 routes | 30 min | 96 |
+| 03 Technical cohorts | Unavailable by key | None | 0 |
+| 04 Pure factor portfolios | 3 routes | 6 h | 12 |
+| 05 Fundamental rankings | 2 routes | 6 h | 8 |
+| 06 Watchlists | 1 route | 5 min | 288 |
+| 06 Screens, alerts, and portfolios | 3 routes | 30 min | 144 |
+| 07 Hotlist and session board, US | 2 routes | 120 s during 6.5 session hours | 390 |
+| 08 Daily actionable insights | 1 route | 30 min | 48 |
+| 09 Layoffs | Unavailable by key | None | 0 |
+| **Scheduled total** | | | **1,226** |
+| One startup account check | 1 route | Once | 1 |
+| **Projected total** | | | **1,227** |
+
+Free access grants no redistribution rights. **Do not republish the data you fetch.**
+
 ### JavaScript client
 
 Install the local `surgeflow` package:

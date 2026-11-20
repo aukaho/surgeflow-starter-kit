@@ -1,0 +1,24 @@
+{
+  "synthetic": true,
+  "ok": true,
+  "schema_version": "fundamental_peers_v1",
+  "market": "us",
+  "as_of": "2026-11-20",
+  "statement_watermark": "2026-10-30",
+  "generated_at": "2026-11-20T00:00:00+00:00",
+  "ticker": "SYNTH",
+  "group": "industry",
+  "group_label": "Software",
+  "peer_count": 10,
+  "state": "available",
+  "reason": null,
+  "limitation": "Synthetic annual peer comparisons.",
+  "rankings": [
+    {"id": "profitability", "label": "Profitability", "formula": "Net income / total equity", "direction": "higher", "state": "available", "scored_count": 10, "exclusions": {}, "rows": [{"ticker": "SYNTH", "name": "Synthetic Company", "industry": "Software", "sector": "Technology", "fiscal_year": 2025, "value": 0.2, "score": 1.0, "raw_zscore": 1.0, "peer_count": 10}]}
+  ],
+  "history_years": [2025, 2024],
+  "peers": [
+    {"ticker": "SYNTH", "name": "Synthetic Company", "industry": "Software", "years": [{"fiscal_year": 2025, "report_period_end_date": "2025-12-31", "available_at": "2026-10-30", "roe": 0.2, "roe_state": "ok", "asset_turnover": 0.5, "asset_turnover_state": "ok", "equity_buffer": 0.4, "equity_buffer_state": "ok", "profit_margin": 0.13, "profit_margin_state": "ok", "payout_ratio": 0.1, "payout_ratio_state": "ok"}], "relative_valuation": null}
+  ],
+  "ratio_definitions": {"roe": "Net income / total equity", "asset_turnover": "Revenue / total assets", "equity_buffer": "Total equity / total assets", "profit_margin": "Net income / revenue", "payout_ratio": "Dividends paid / net income"}
+}

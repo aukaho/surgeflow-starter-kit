@@ -1,0 +1,33 @@
+{
+  "synthetic": true,
+  "ok": true,
+  "data": {
+    "market": "us",
+    "contract": "three_model_served_schema_v1",
+    "publication": {"publication_id": "SYNTHETIC_PUBLICATION", "last_formation": "2026-11-16"},
+    "formation_window": {"first": "2026-11-16", "last": "2026-11-16"},
+    "status": "available",
+    "formation_date": "2026-11-16",
+    "week_start": "2026-11-16",
+    "entry_session": "2026-11-13",
+    "week_state": "open",
+    "return_state": "not_matured",
+    "n_weeks": 1,
+    "portfolios": [
+      {
+        "factor": "VALUE",
+        "status": "available",
+        "n_holdings": 1,
+        "sum_weight": 1.0,
+        "holdings": [{"ticker": "SYNTH", "sector": "Software", "weight": 1.0}],
+        "holdings_truncated": false,
+        "ex_ante": {"market": 1.0, "value": 0.4}
+      }
+    ],
+    "returns": {"VALUE": []},
+    "counts": {"VALUE": {"available": 1}},
+    "return_basis": {"state": "no_realised_week", "basis": "synthetic"},
+    "labels": {"book_definition": "synthetic_research_book"},
+    "freshness": {"latest_formation_date": "2026-11-16", "weeks_behind": 0, "state": "current"}
+  }
+}

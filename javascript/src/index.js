@@ -120,16 +120,17 @@ export class SurgeFlow {
 
     if (!response.ok) {
       const payload = parseObject(text);
-      let message = `SurgeFlow returned HTTP ${response.status}`;
-      const detail = payload?.error || payload?.message;
-      if (typeof detail === "string") message = detail;
+      const message = errorText(payload) || `SurgeFlow returned HTTP ${response.status}`;
       throw new SurgeFlowApiError(response.status, message, payload);
     }
     if (responseFormat === "csv") return text;
 
     const payload = parseObject(text);
     if (!payload) throw new SurgeFlowResponseError("SurgeFlow returned an invalid JSON object");
-    if (payload.ok === false) throw new SurgeFlowResponseError("The SurgeFlow response contains ok=false");
+    if (payload.ok === false) {
+      const detail = errorText(payload);
+      throw new SurgeFlowResponseError(`The SurgeFlow response contains ok=false${detail ? `: ${detail}` : ""}`);
+    }
     return payload;
   }
 
@@ -146,6 +147,14 @@ export class SurgeFlow {
   _validateResponseFormat(responseFormat) {
     if (!["json", "csv"].includes(responseFormat)) throw new TypeError("responseFormat must be json or csv");
   }
+}
+
+function errorText(payload) {
+  let detail = payload?.error || payload?.message;
+  if (detail && typeof detail === "object") {
+    detail = [detail.code, detail.message].filter(Boolean).join(": ") || undefined;
+  }
+  return typeof detail === "string" ? detail : undefined;
 }
 
 function parseObject(text) {

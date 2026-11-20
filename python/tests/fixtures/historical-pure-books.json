@@ -1,0 +1,42 @@
+{
+  "synthetic": true,
+  "ok": true,
+  "data": {
+    "schema_version": "historical_pure_books_v1",
+    "status": "available",
+    "market": "us",
+    "reason_code": null,
+    "message": "Synthetic historical research archive.",
+    "archive": {
+      "schema_version": "historical_pure_books_archive_v1",
+      "synthetic_only": true,
+      "market": "us",
+      "scope": "historical_six_style_holdings_ex_ante_only",
+      "book_family": "corrected_fo2",
+      "arm": "synthetic_arm",
+      "formation_date": "2026-10-05",
+      "entry_session": "2026-10-02",
+      "week_end_session": "2026-10-09",
+      "data_cut": "2026-10-09",
+      "freshness": "historical",
+      "selection": "latest_accepted_closed_formation",
+      "claims": {"statistically_admitted": false, "performance": false, "accuracy": false, "tradable": false},
+      "source": {"source_run_id": "synthetic-run"},
+      "limitations": [{"id": "content_limits", "as_of": "2026-10-09", "text": "Synthetic fixture.", "evidence_sha256": "dddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddd"}],
+      "books": [
+        {
+          "factor": "VALUE",
+          "status": "available",
+          "source_state": "ok",
+          "source_readback_pass": true,
+          "source_refusal_reason": null,
+          "n_holdings": 1,
+          "holdings": [{"ticker": "SYNTH", "sector": "Software", "weight": 1.0}],
+          "exposures": {"kind": "ex_ante", "values": {"market": 1.0, "size": 0.0, "value": 0.4, "momentum": 0.0, "profitability": 0.0, "investment": 0.0, "liquidity": 0.0}},
+          "realised_own_nonpositive": false
+        }
+      ]
+    },
+    "publication": {"receipt_sha256": "eeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeee", "archive_sha256": "ffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffff", "accepted_at": "2026-10-10T00:00:00+00:00"}
+  }
+}

@@ -1,0 +1,15 @@
+{
+  "synthetic": true,
+  "ok": true,
+  "snapshot": "factor-overview",
+  "market": "us",
+  "generated_at": "2026-11-20T00:00:00+00:00",
+  "row_count": 1,
+  "source": "synthetic_public_context",
+  "data": {
+    "as_of_date": "2026-11-19",
+    "status": "available",
+    "message": "Synthetic public factor context, not technical cohort data.",
+    "rows": [{"factor": "VALUE", "date": "2026-11-19", "state": "available", "description": "Synthetic public factor context"}]
+  }
+}

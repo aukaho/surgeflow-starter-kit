@@ -1,0 +1,43 @@
+{
+  "synthetic": true,
+  "ok": true,
+  "data": {
+    "schema_version": "macro_index_votes_v1",
+    "market": "us",
+    "status": "available",
+    "message": "Stored model readings; shared inputs, votes are not independent.",
+    "as_of_date": "2026-11-20",
+    "horizon_sessions": 21,
+    "source": {
+      "table": "synthetic.macro_index_votes_v1",
+      "methodology_version": "macro_index_voters_v1",
+      "created_at": "2026-11-20T21:00:00+00:00"
+    },
+    "indexes": [
+      {
+        "index_id": "SPX",
+        "label": "S&P 500",
+        "base_rate": {"went_up": 6, "matured_windows": 10, "share_up": 0.6, "independent_windows": 10},
+        "tally": {"positive": 1, "negative": 0, "no_reading": 5, "unavailable": 0, "majority": "positive"},
+        "voters": [
+          {
+            "voter": "linear_regression",
+            "vote": 1,
+            "fitted_value": 0.01,
+            "probability": null,
+            "oos_hit_rate": null,
+            "oos_se": null,
+            "oos_n": null,
+            "brier": null,
+            "confusion": null,
+            "auc": null,
+            "diagnostics": {},
+            "metrics": null
+          }
+        ]
+      }
+    ],
+    "metrics_state": {"state": "unavailable", "as_of_date": "2026-11-20", "computed_at": null},
+    "freshness": {"state": "current", "expected_as_of": "2026-11-20", "target_session_date": "2026-12-19"}
+  }
+}

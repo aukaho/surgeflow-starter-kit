@@ -1,0 +1,19 @@
+{
+  "synthetic": true,
+  "count": 1,
+  "portfolios": [
+    {
+      "portfolio_id": "synth001",
+      "name": "Synthetic sample portfolio",
+      "holdings": [
+        {"market": "us", "ticker": "SYNTH", "quantity": 10, "cost_basis": 100.0, "current_price": 110.0, "market_value": 1100.0, "pnl": 100.0},
+        {"market": "us", "ticker": "SYNB", "quantity": 5, "cost_basis": null, "current_price": null, "market_value": null, "pnl": null}
+      ],
+      "markets": ["us"],
+      "created_at": "2026-11-20 00:00:00+00:00",
+      "updated_at": "2026-11-20 00:00:00+00:00",
+      "holdings_count": 2,
+      "total_value": 1100.0
+    }
+  ]
+}

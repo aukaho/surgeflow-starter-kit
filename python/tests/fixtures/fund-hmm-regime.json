@@ -1,0 +1,15 @@
+{
+  "synthetic": true,
+  "source_mode": "walkforward_v2",
+  "rows": [
+    {
+      "market": "us",
+      "regime_label": "expansion",
+      "prob_expansion": 0.7,
+      "prob_late_cycle": 0.2,
+      "prob_contraction": 0.1,
+      "date": "2026-10-31",
+      "methodology_version": "synthetic_hmm_v2"
+    }
+  ]
+}

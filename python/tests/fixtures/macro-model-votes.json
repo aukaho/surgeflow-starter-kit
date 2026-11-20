@@ -1,0 +1,27 @@
+{
+  "synthetic": true,
+  "ok": true,
+  "data": {
+    "schema_version": "macro_model_votes_v1",
+    "market": "us",
+    "status": "available",
+    "message": "Stored model votes; source freshness is not independently checked.",
+    "source": {
+      "table": "synthetic.macro_cross_asset_diagnostics_v1",
+      "checkpoint_id": "synthetic-checkpoint",
+      "as_of_date": "2026-11-20",
+      "created_at": "2026-11-20T21:00:00+00:00",
+      "methodology_version": "synthetic_v1"
+    },
+    "freshness": {
+      "state": "unknown",
+      "checked_at": null,
+      "basis": "Stored diagnostics only; source freshness is not checked by this reader."
+    },
+    "votes": {"rates": 1, "growth": 0, "inflation": -1},
+    "inputs": {"rates_level": 4.2, "growth_state": "mixed"},
+    "score": 0.0,
+    "state": "mixed",
+    "regime_confirmation": "unconfirmed"
+  }
+}
