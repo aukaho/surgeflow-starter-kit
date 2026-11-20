@@ -173,3 +173,25 @@ test("ok=false exposes a typed error", async () => {
 
   await assert.rejects(client.dataFreshness(), SurgeFlowResponseError);
 });
+
+test("ok=false surfaces error code and message", async () => {
+  const { client } = recordingClient('{"ok":false,"error":{"code":"SCOPE_REQUIRED","message":"Key lacks scope."}}');
+
+  await assert.rejects(client.dataFreshness(), error => {
+    assert.ok(error instanceof SurgeFlowResponseError);
+    assert.equal(error.message, "The SurgeFlow response contains ok=false: SCOPE_REQUIRED: Key lacks scope.");
+    return true;
+  });
+});
+
+test("HTTP errors surface an error object's code and message", async () => {
+  const body = '{"ok":false,"error":{"code":"DAILY_LIMIT_EXCEEDED","message":"Daily request limit exceeded for this API key."}}';
+  const client = new SurgeFlow({ fetch: async () => response(body, 429) });
+
+  await assert.rejects(client.memberMe(KEY), error => {
+    assert.ok(error instanceof SurgeFlowApiError);
+    assert.equal(error.statusCode, 429);
+    assert.equal(error.message, "DAILY_LIMIT_EXCEEDED: Daily request limit exceeded for this API key.");
+    return true;
+  });
+});
