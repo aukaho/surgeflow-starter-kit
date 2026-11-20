@@ -92,16 +92,16 @@ python -m pip install './python[notebooks]'
 jupyter notebook notebooks/00_quickstart.ipynb
 ```
 
-The `notebooks` extra adds Jupyter Notebook, pandas, IPython, and ipywidgets. The core client still needs only `requests`.
+The `notebooks` extra adds Jupyter Notebook, pandas, IPython, ipywidgets, and jinja2 (for monitor row highlights; without it the monitor marks changed rows in text). The core client still needs only `requests`.
 The notebooks read `SURGEFLOW_API_KEY`, with hidden `getpass` entry as fallback. They never print the key.
 Set `SURGEFLOW_FIXTURES=1` to read the local synthetic fixtures without network requests.
 Fixture mode reads `python/tests/fixtures` from a repository checkout; for an installed package, set `SURGEFLOW_FIXTURE_DIR` to that folder.
 
 `surgeflow.monitor` provides panels, a scheduler, fixed session gates, change detection, and a request counter.
-The default budget is 1,500 requests per day. The full weekday projection is 1,226 scheduled requests plus one account check.
+The default budget is 1,500 requests per day for each running monitor; a restart starts it from zero and spends about 20 requests on the first full refresh. The key's 2,000 per day is shared by every process using it, so notebook 10 lowers the budget to the daily remaining count from `/api/v1/me`. The full weekday projection is 1,226 scheduled requests plus one account check.
 Hotlist requests run every 120 seconds during the fixed US session. Watchlists run every five minutes.
 Sentiment, insights, and macro votes run every 30 minutes. Fundamentals and factor books run every six hours.
-Screens, alerts, and the Flow Capital fund portfolio summary also run every 30 minutes.
+Screens, alerts, and the SurgeFlow house fund summary (not your holdings) also run every 30 minutes.
 
 Each panel refreshes on a schedule; each panel shows its source date. Only a session-live response describes the current session.
 Fixed exchange hours do not include holidays. The scheduler honours 429 `Retry-After` values.

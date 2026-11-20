@@ -14,6 +14,13 @@ except ImportError as exc:
         "surgeflow.monitor needs pandas; install surgeflow[notebooks]"
     ) from exc
 
+try:
+    import jinja2  # noqa: F401  DataFrame.style needs it; render falls back without it
+except ImportError:
+    _HAS_JINJA2 = False
+else:
+    _HAS_JINJA2 = True
+
 SummarizeResult = Tuple[Any, str]
 
 
@@ -45,6 +52,9 @@ class PanelState:
 
 @dataclass
 class RequestBudget:
+    # Counts only this process's requests: each running monitor has its own cap,
+    # a restart starts from zero (about 20 requests for the first full refresh),
+    # and the key's 2,000 per day is shared by every process using it.
     daily_limit: int = 1500
     used: int = 0
     day: str = field(
@@ -73,6 +83,22 @@ class RequestBudget:
     @property
     def remaining(self) -> int:
         return self.daily_limit - self.used
+
+
+def seed_budget_from_rate_limit(
+    budget: RequestBudget, rate_limit: Any
+) -> Optional[int]:
+    """Lower the local budget to the key's remaining daily requests.
+
+    The key's daily quota is shared by every process using it; /api/v1/me
+    returns X-RateLimit-Daily-Remaining in its rate_limit object.
+    """
+    try:
+        remaining = int(rate_limit["X-RateLimit-Daily-Remaining"])
+    except (KeyError, TypeError, ValueError):
+        return None
+    budget.used = max(budget.used, budget.daily_limit - max(0, remaining))
+    return remaining
 
 
 # shortcut: fixed exchange hours ignore exchange holidays and exceptional closures.
@@ -394,22 +420,33 @@ class Monitor:
         for panel in self.panels:
             state = self.states[panel.name]
             print(f"\n{panel.offering} — {panel.name}\n{state.status}")
-            if state.frame is None:
-                print("No response rows.")
-            elif state.frame.empty:
-                print("Empty response; no table to display.")
-            else:
-                if "_changed" in state.frame:
-                    styled = state.frame.style.apply(
-                        lambda row: [
-                            "background-color: #fff3cd" if row["_changed"] else ""
-                            for _ in row
-                        ],
-                        axis=1,
-                    )
-                    display(styled)
-                else:
-                    display(state.frame)
+            try:
+                self._display_frame(state.frame, display)
+            except Exception as exc:
+                # One bad panel must not hide the panels after it.
+                print(f"Error rendering {panel.name}: {type(exc).__name__}: {exc}")
+
+    @staticmethod
+    def _display_frame(frame: Any, display: Callable[[Any], Any]) -> None:
+        if frame is None:
+            print("No response rows.")
+        elif frame.empty:
+            print("Empty response; no table to display.")
+        elif "_changed" not in frame:
+            display(frame)
+        elif _HAS_JINJA2:
+            display(
+                frame.style.apply(
+                    lambda row: [
+                        "background-color: #fff3cd" if row["_changed"] else ""
+                        for _ in row
+                    ],
+                    axis=1,
+                )
+            )
+        else:
+            # DataFrame.style needs jinja2; mark changed rows in a text column instead.
+            display(frame.assign(_changed=frame["_changed"].map({True: "changed", False: ""})))
 
 
 def default_panels(client: Any, api_key: str, hotlist_market: str = "us") -> List[Panel]:
@@ -456,7 +493,8 @@ def default_panels(client: Any, api_key: str, hotlist_market: str = "us") -> Lis
               lambda: client.member_screens(api_key)),
         panel("06 Managerial Control", "alerts", 1800,
               lambda: client.member_alerts(api_key)),
-        panel("06 Managerial Control", "fund-portfolio-summary", 1800,
+        panel("06 SurgeFlow house fund summary (not your holdings)",
+              "fund-portfolio-summary", 1800,
               lambda: client.member_fund_portfolio_summary(api_key)),
         panel("07 Hotlist", f"{hotlist_market}-hotlist", 120,
               lambda: client.member_hotlist(hotlist_market, api_key), hotlist_market),

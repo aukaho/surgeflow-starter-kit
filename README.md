@@ -90,7 +90,7 @@ Fixture mode reads `python/tests/fixtures` from a repository checkout; for an in
 Each panel refreshes on a schedule; each panel shows its source date. Only a response marked as session-live describes the current session.
 The monitor uses fixed weekday exchange hours and does not handle holidays. Changed rows receive a highlight, and 429 responses honour `Retry-After`.
 
-The member beta permits 2,000 requests per day and 180 per minute for each key. The monitor budget defaults to 1,500 per day.
+The member beta permits 2,000 requests per day and 180 per minute for each key, shared by every process using it. The monitor budget defaults to 1,500 per day for each running monitor; a restart starts it from zero and spends about 20 requests on the first full refresh. Notebook 10 lowers the budget to the daily remaining count from `/api/v1/me`.
 This table gives the maximum projected requests on a full active weekday:
 
 | Offering | Requests per fetch | Cadence | Requests per day |
@@ -101,7 +101,7 @@ This table gives the maximum projected requests on a full active weekday:
 | 04 Pure factor portfolios | 3 routes | 6 h | 12 |
 | 05 Fundamental rankings | 2 routes | 6 h | 8 |
 | 06 Watchlists | 1 route | 5 min | 288 |
-| 06 Screens, alerts, and fund portfolio summary | 3 routes | 30 min | 144 |
+| 06 Screens, alerts, and SurgeFlow house fund summary (not your holdings) | 3 routes | 30 min | 144 |
 | 07 Hotlist and session board, US | 2 routes | 120 s during 6.5 session hours | 390 |
 | 08 Daily actionable insights | 1 route | 30 min | 48 |
 | 09 Layoffs | Unavailable by key | None | 0 |

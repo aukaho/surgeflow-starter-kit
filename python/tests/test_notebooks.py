@@ -16,6 +16,7 @@ def test_all_eleven_notebooks_execute_in_fixture_mode(monkeypatch):
     monkeypatch.setenv("SURGEFLOW_FIXTURES", "1")
     monkeypatch.setenv("PYTHONPATH", str(ROOT / "python" / "src"))
     monkeypatch.delenv("SURGEFLOW_API_KEY", raising=False)
+    monkeypatch.setenv("SURGEFLOW_MONITOR_MAX_CYCLES", "1")
     paths = notebook_paths()
     assert len(paths) == 11
 
@@ -38,6 +39,13 @@ def test_all_eleven_notebooks_execute_in_fixture_mode(monkeypatch):
         assert not [line for line in lines if line.startswith("Error ")], path.name
         assert not any(o.get("output_type") == "error" for c in notebook.cells
                        if c.cell_type == "code" for o in c.outputs), path.name
+        if path.name.startswith("10_"):
+            # The refresh task's output must show every panel, not stop after one.
+            from surgeflow.monitor import default_panels
+
+            for panel in default_panels(None, "key"):
+                assert f"{panel.offering} — {panel.name}\n" in text, panel.name
+            assert "monitor task stopped" not in text
         if path.name[:2] not in ("03", "09"):
             assert "Unavailable by member key" not in text, path.name
 

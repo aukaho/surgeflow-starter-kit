@@ -223,3 +223,62 @@ def test_budget_stop_resumes_on_next_utc_day():
     assert monitor.stopped is False
     assert calls == [1, 1]
     assert budget.day == "2026-11-24" and budget.used == 1
+
+
+def test_render_marks_changed_rows_without_jinja2(monkeypatch, capsys):
+    import IPython.display
+    import surgeflow.monitor as monitor_module
+
+    shown = []
+    monkeypatch.setattr(monitor_module, "_HAS_JINJA2", False)
+    monkeypatch.setattr(IPython.display, "display", shown.append)
+    monkeypatch.setattr(IPython.display, "clear_output", lambda wait=False: None)
+    clock = Clock()
+    rows = [{"ticker": "AAA"}]
+    panels = [simple_panel(lambda: rows, name=name) for name in ("one", "two")]
+    monitor = Monitor(panels, monotonic=clock.monotonic, now=clock.now)
+    monitor.run_due()
+    rows = [{"ticker": "BBB"}]
+    clock.tick = 1000
+    monitor.run_due()
+    monitor.render()
+
+    out = capsys.readouterr().out
+    assert "one" in out and "two" in out and "Error" not in out
+    assert len(shown) == 2
+    assert list(shown[0]["_changed"]) == ["changed"]
+
+
+def test_render_error_in_one_panel_keeps_later_panels(monkeypatch, capsys):
+    import IPython.display
+
+    calls = []
+
+    def display(frame):
+        calls.append(frame)
+        if len(calls) == 1:
+            raise RuntimeError("boom")
+
+    monkeypatch.setattr(IPython.display, "display", display)
+    monkeypatch.setattr(IPython.display, "clear_output", lambda wait=False: None)
+    clock = Clock()
+    panels = [simple_panel(lambda: [{"ticker": "AAA"}], name=n) for n in ("one", "two")]
+    monitor = Monitor(panels, monotonic=clock.monotonic, now=clock.now)
+    monitor.run_due()
+    monitor.render()
+
+    assert "Error rendering one: RuntimeError: boom" in capsys.readouterr().out
+    assert len(calls) == 2
+
+
+def test_seed_budget_from_rate_limit():
+    from surgeflow.monitor import seed_budget_from_rate_limit
+
+    budget = RequestBudget(daily_limit=1500, used=1)
+    assert seed_budget_from_rate_limit(budget, {"X-RateLimit-Daily-Limit": "2000"}) is None
+    assert seed_budget_from_rate_limit(budget, None) is None
+    assert budget.used == 1
+    assert seed_budget_from_rate_limit(budget, {"X-RateLimit-Daily-Remaining": "1900"}) == 1900
+    assert budget.used == 1
+    assert seed_budget_from_rate_limit(budget, {"X-RateLimit-Daily-Remaining": "100"}) == 100
+    assert budget.remaining == 100
