@@ -1,0 +1,16 @@
+{
+  "synthetic": true,
+  "count": 1,
+  "portfolios": [
+    {
+      "portfolio_id": "synthetic-portfolio",
+      "name": "Synthetic portfolio",
+      "holdings": [{"market": "us", "ticker": "SYNTH", "quantity": 1.0, "cost_basis": 10.0, "current_price": 11.0, "market_value": 11.0, "pnl": 1.0}],
+      "markets": ["us"],
+      "created_at": "2026-11-01T00:00:00+00:00",
+      "updated_at": "2026-11-20T00:00:00+00:00",
+      "holdings_count": 1,
+      "total_value": 11.0
+    }
+  ]
+}

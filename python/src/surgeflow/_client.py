@@ -1,3 +1,5 @@
+from datetime import datetime, timezone
+from email.utils import parsedate_to_datetime
 from typing import Any, Dict, Optional, Union
 
 import requests
@@ -8,12 +10,15 @@ from ._errors import (
     SurgeFlowResponseError,
     SurgeFlowTimeoutError,
 )
+from ._fixtures import fixture_enabled, read_fixture
+from ._member import MemberMethods
 
 JsonObject = Dict[str, Any]
 SnapshotResult = Union[JsonObject, str]
+Params = Dict[str, Union[str, int, bool]]
 
 
-class SurgeFlow:
+class SurgeFlow(MemberMethods):
     MARKETS = ("us", "cn", "jp", "hk")
     SNAPSHOTS = (
         "momentum-hotlist",
@@ -35,6 +40,12 @@ class SurgeFlow:
         self.timeout = timeout
         self._session = session or requests.Session()
 
+    def catalog(self) -> JsonObject:
+        result = self._request("/api/v1/catalog")
+        if isinstance(result, str):
+            raise SurgeFlowResponseError("Expected a JSON response")
+        return result
+
     def public_snapshot(
         self,
         snapshot_id: str,
@@ -45,7 +56,7 @@ class SurgeFlow:
     ) -> SnapshotResult:
         if snapshot_id not in self.SNAPSHOTS:
             raise ValueError(f"Unknown snapshot: {snapshot_id}")
-        params: Dict[str, Union[str, int]] = {}
+        params: Params = {}
         if market is not None:
             self._validate_market(market)
             params["market"] = market
@@ -93,30 +104,33 @@ class SurgeFlow:
         )
 
     def member_me(self, api_key: str) -> JsonObject:
-        result = self._request("/api/v1/me", api_key=api_key)
-        if isinstance(result, str):
-            raise SurgeFlowResponseError("Expected a JSON response")
-        return result
+        return self._member_get("/api/v1/me", api_key)
 
-    def member_hotlist(self, market: str, api_key: str) -> JsonObject:
+    def member_hotlist(
+        self, market: str, api_key: str, limit: Optional[int] = None
+    ) -> JsonObject:
         self._validate_market(market)
-        result = self._request(
-            f"/api/v1/markets/{market}/hotlist", api_key=api_key
+        params: Params = {}
+        if limit is not None:
+            self._validate_range("limit", limit, 1, 1000)
+            params["limit"] = limit
+        return self._member_get(
+            f"/api/v1/markets/{market}/hotlist", api_key, params
         )
-        if isinstance(result, str):
-            raise SurgeFlowResponseError("Expected a JSON response")
-        return result
 
     def _request(
         self,
         path: str,
         *,
         api_key: Optional[str] = None,
-        params: Optional[Dict[str, Union[str, int]]] = None,
+        params: Optional[Params] = None,
         response_format: str = "json",
     ) -> SnapshotResult:
         if response_format not in ("json", "csv"):
             raise ValueError("response_format must be json or csv")
+        request_params = {
+            key: value for key, value in (params or {}).items() if value is not None
+        }
         headers = {
             "Accept": "application/json" if response_format == "json" else "text/csv",
             "User-Agent": "surgeflow-python/0.1.0",
@@ -125,12 +139,14 @@ class SurgeFlow:
             if not isinstance(api_key, str) or not api_key.strip():
                 raise ValueError("api_key must be a non-empty string")
             headers["Authorization"] = f"Bearer {api_key}"
+        if fixture_enabled():
+            return read_fixture(path, request_params, response_format)
         try:
             response = self._session.request(
                 "GET",
                 f"{self.base_url}{path}",
                 headers=headers,
-                params=params or {},
+                params=request_params,
                 timeout=self.timeout,
             )
         except requests.Timeout as exc:
@@ -149,9 +165,15 @@ class SurgeFlow:
             message = f"SurgeFlow returned HTTP {response.status_code}"
             if error_payload:
                 detail = error_payload.get("error") or error_payload.get("message")
+                if isinstance(detail, dict):
+                    detail = detail.get("message") or detail.get("code")
                 if isinstance(detail, str):
                     message = detail
-            raise SurgeFlowApiError(response.status_code, message, error_payload)
+            response_headers = getattr(response, "headers", {})
+            retry_after = self._retry_after(response_headers.get("Retry-After"))
+            raise SurgeFlowApiError(
+                response.status_code, message, error_payload, retry_after
+            )
 
         if response_format == "csv":
             return response.text
@@ -164,6 +186,23 @@ class SurgeFlow:
         if payload.get("ok") is False:
             raise SurgeFlowResponseError("The SurgeFlow response contains ok=false")
         return payload
+
+    @staticmethod
+    def _retry_after(value: Optional[str]) -> Optional[float]:
+        if not value:
+            return None
+        try:
+            return max(0.0, float(value))
+        except ValueError:
+            try:
+                target = parsedate_to_datetime(value)
+                if target.tzinfo is None:
+                    target = target.replace(tzinfo=timezone.utc)
+                return max(
+                    0.0, (target - datetime.now(timezone.utc)).total_seconds()
+                )
+            except (TypeError, ValueError):
+                return None
 
     def _validate_market(self, market: str) -> None:
         if market not in self.MARKETS:

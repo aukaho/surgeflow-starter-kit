@@ -1,0 +1,24 @@
+{
+  "synthetic": true,
+  "ok": true,
+  "schema_version": "fundamental_picks_v1",
+  "market": "us",
+  "as_of": "2026-11-20",
+  "statement_watermark": "2026-10-30",
+  "generated_at": "2026-11-20T00:00:00+00:00",
+  "state": "available",
+  "reason": null,
+  "selected_industry": null,
+  "industries": ["Software"],
+  "industry_qualified_counts": {"Software": 10},
+  "source": {"universe_complete": true, "annual_rows_complete": true},
+  "coverage": {"universe_count": 10, "qualified_annual_count": 10},
+  "exclusions": {},
+  "categories": [
+    {"id": "profitability", "label": "Profitability", "formula": "Net income / total equity", "direction": "higher", "state": "available", "eligible_count": 10, "scored_count": 10, "industry_count": 1, "exclusions": {}, "rows": [{"ticker": "SYNTH", "name": "Synthetic Company", "industry": "Software", "taxonomy_source": "synthetic", "fiscal_year": 2025, "report_period_end_date": "2025-12-31", "available_at": "2026-10-30", "available_at_basis": "filing_event_date", "available_at_precision": "date", "filing_date_source": "synthetic", "filing_date_basis": "synthetic", "statement_inputs": {"net_income": 20.0, "total_equity": 100.0}, "value": 0.2, "raw_zscore": 1.0, "score": 1.0, "peer_count": 10}]},
+    {"id": "liquidity", "label": "Liquidity", "formula": "Current assets / current liabilities", "direction": "higher", "state": "available", "eligible_count": 10, "scored_count": 10, "industry_count": 1, "exclusions": {}, "rows": [{"ticker": "SYNTH", "name": "Synthetic Company", "industry": "Software", "fiscal_year": 2025, "report_period_end_date": "2025-12-31", "available_at": "2026-10-30", "statement_inputs": {"total_current_assets": 200.0, "total_current_liabilities": 100.0}, "value": 2.0, "raw_zscore": 0.8, "score": 0.8, "peer_count": 10}]},
+    {"id": "efficiency", "label": "Efficiency", "formula": "Revenue / total assets", "direction": "higher", "state": "available", "eligible_count": 10, "scored_count": 10, "industry_count": 1, "exclusions": {}, "rows": [{"ticker": "SYNTH", "name": "Synthetic Company", "industry": "Software", "fiscal_year": 2025, "report_period_end_date": "2025-12-31", "available_at": "2026-10-30", "statement_inputs": {"revenue": 150.0, "total_assets": 300.0}, "value": 0.5, "raw_zscore": 0.6, "score": 0.6, "peer_count": 10}]},
+    {"id": "lower_leverage", "label": "Lower leverage", "formula": "Total liabilities / total assets", "direction": "lower", "state": "available", "eligible_count": 10, "scored_count": 10, "industry_count": 1, "exclusions": {}, "rows": [{"ticker": "SYNTH", "name": "Synthetic Company", "industry": "Software", "fiscal_year": 2025, "report_period_end_date": "2025-12-31", "available_at": "2026-10-30", "statement_inputs": {"total_liabilities": 60.0, "total_assets": 300.0}, "value": 0.2, "raw_zscore": -0.5, "score": 0.5, "peer_count": 10}]}
+  ],
+  "methodology": {"minimum_peers": 10, "standard_deviation": "sample", "peer_basis": "US industry; qualified latest annual row for each ticker", "limitation": "Synthetic annual statement rankings."}
+}

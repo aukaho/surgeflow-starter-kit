@@ -1,0 +1,20 @@
+{
+  "synthetic": true,
+  "version": "v2",
+  "rows": [
+    {
+      "market": "us",
+      "date": "2026-10-31",
+      "leading_index": 0.2,
+      "coincident_index": 0.1,
+      "lagging_index": -0.1,
+      "published_score": 0.15,
+      "pc1_score": 0.12,
+      "eqw_score": 0.18,
+      "n_used": 5,
+      "n_max": 6,
+      "method": "pc1",
+      "methodology_version": "synthetic_cycle_v2"
+    }
+  ]
+}

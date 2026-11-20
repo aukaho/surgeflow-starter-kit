@@ -1,0 +1,31 @@
+{
+  "synthetic": true,
+  "ok": true,
+  "data": {
+    "schema_version": "daily_insights_v1",
+    "market": "us",
+    "status": "available",
+    "reason_code": null,
+    "as_of_date": "2026-11-20",
+    "age_days": 0,
+    "headline": "A typical day: 1 stock stood apart from its group.",
+    "day_tone": {"label": "typical", "pct_vs_trailing": 0.5, "text": "A typical synthetic day."},
+    "cards": [
+      {
+        "id": "unusual",
+        "kind": "unusual",
+        "title": "Stocks acting unlike their peers",
+        "body": "Synthetic descriptive context.",
+        "items": [{"ticker": "SYNTH", "group": "Synthetic group", "reason": "Unusually high trading activity", "score": 2.0, "from_group": null, "to_group": null, "low_coverage": false}],
+        "next_steps": [{"label": "See every group", "href": "/ml?market=us"}]
+      }
+    ],
+    "map": {
+      "groups": [{"id": 1, "name": "Group 1", "plain_name": "Synthetic group", "count": 10, "share": 1.0, "sample_tickers": ["SYNTH"], "churn": 0.1}],
+      "unusual": [{"ticker": "SYNTH", "group_id": 1, "score": 2.0, "drivers": [{"label": "Trading activity", "direction": "high"}], "low_coverage": false}],
+      "switched": []
+    },
+    "method_note": "Synthetic method description.",
+    "disclaimer": "Research summary of daily statistical groupings. Not a prediction and not investment advice."
+  }
+}

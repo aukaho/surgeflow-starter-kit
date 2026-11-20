@@ -1,0 +1,45 @@
+{
+  "synthetic": true,
+  "ok": true,
+  "data": {
+    "schema_version": "sentiment_whale_picks_v1",
+    "market": "us",
+    "status": "available",
+    "message": null,
+    "bull": [
+      {
+        "ticker": "SYNTH",
+        "quarter": "2026-09-30",
+        "as_of_date": "2026-09-30",
+        "n_funds_buying": 3,
+        "n_funds_selling": 1,
+        "net_shares_change": 100.0,
+        "n_observed_funds": 4,
+        "n_missing_funds": 0,
+        "change_basis": "unadjusted",
+        "methodology_version": "synthetic_whale_v1",
+        "tone": 0.3,
+        "n_articles": 4,
+        "max_published": "2026-11-20T12:00:00Z",
+        "whale_dir": "BUY",
+        "tone_label": "OPTIMISTIC"
+      }
+    ],
+    "bear": [],
+    "disagree": {"count": 0, "tickers": []}
+  },
+  "note": "Synthetic disclosed position changes and relative news tone.",
+  "snapshot": {
+    "whale_as_of": "2026-09-30",
+    "whale_as_of_label": "position date",
+    "whale_quarter": "2026-09-30",
+    "methodology_version": "synthetic_whale_v1",
+    "news_window_days": 30,
+    "news_min_articles": 2,
+    "tone_threshold": 0.1,
+    "tone_measure": "news_tone_shrunk",
+    "news_rebuild_date": "2026-11-20",
+    "news_max_published": "2026-11-20T12:00:00Z"
+  },
+  "count": 1
+}

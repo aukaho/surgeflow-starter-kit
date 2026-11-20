@@ -1,5 +1,6 @@
 from ._client import SurgeFlow
 from ._errors import (
+    NotAvailableYet,
     SurgeFlowApiError,
     SurgeFlowConnectionError,
     SurgeFlowError,
@@ -7,9 +8,10 @@ from ._errors import (
     SurgeFlowTimeoutError,
 )
 
-__version__ = "0.1.0"
+__version__ = "0.2.0"
 
 __all__ = [
+    "NotAvailableYet",
     "SurgeFlow",
     "SurgeFlowApiError",
     "SurgeFlowConnectionError",

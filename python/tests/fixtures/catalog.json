@@ -1,0 +1,16 @@
+{
+  "synthetic": true,
+  "ok": true,
+  "schema_version": "surgeflow.public_api.v1",
+  "status": "beta",
+  "base_url": "https://stock-api-c4qdowjxva-uc.a.run.app",
+  "website_proxy_url": "https://surgeflows.capital",
+  "plans": {
+    "free": {
+      "daily_limit": 2000,
+      "minute_limit": 180,
+      "scopes": ["summary", "screen", "realtime", "hotlist", "ml", "whales", "news", "notes", "macro", "factors"]
+    }
+  },
+  "markets": ["us", "cn", "jp", "hk"]
+}

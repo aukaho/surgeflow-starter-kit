@@ -1,0 +1,54 @@
+{
+  "synthetic": true,
+  "ok": true,
+  "data": {
+    "schema_version": "weekly_pure_books_v1",
+    "market": "us",
+    "status": "available",
+    "reason_code": null,
+    "message": "Synthetic weekly research books.",
+    "freshness": "current",
+    "portfolio": {
+      "schema_version": "weekly_fo2_holdings_v1",
+      "scope": "current_weekly_us_fo2_holdings_ex_ante_only",
+      "market": "us",
+      "book_family": "corrected_fo2",
+      "synthetic_only": true,
+      "formation_date": "2026-11-16",
+      "entry_session": "2026-11-13",
+      "data_cut": "2026-11-13",
+      "week_end_session": "2026-11-20",
+      "arm_multiplier": 0.25,
+      "source_run_id": "synthetic-run",
+      "source_acceptance_sha256": "aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa",
+      "generated_at": "2026-11-16T00:00:00+00:00",
+      "claims": {"statistically_admitted": false, "performance": false, "executed": false, "canonical_model_a": false, "native_final": false},
+      "books": [
+        {
+          "factor": "VALUE",
+          "status": "available",
+          "reason": null,
+          "source_state": "ok",
+          "n_holdings": 1,
+          "holdings": [{"ticker": "SYNTH", "sector": "Software", "weight": 1.0}],
+          "ex_ante": {"market": 1.0, "size": 0.0, "value": 0.4, "momentum": 0.0, "profitability": 0.0, "investment": 0.0, "liquidity": 0.0},
+          "ex_ante_unshrunk": {"market": 1.0, "size": 0.0, "value": 0.4, "momentum": 0.0, "profitability": 0.0, "investment": 0.0, "liquidity": 0.0},
+          "ex_ante_se_independence_lower_bound": {"market": 0.1, "size": 0.0, "value": 0.1, "momentum": 0.0, "profitability": 0.0, "investment": 0.0, "liquidity": 0.0}
+        },
+        {
+          "factor": "MOMENTUM",
+          "status": "withheld",
+          "reason": "synthetic withheld state",
+          "source_state": "withheld",
+          "n_holdings": 0,
+          "holdings": [],
+          "ex_ante": {"market": null, "size": null, "value": null, "momentum": null, "profitability": null, "investment": null, "liquidity": null},
+          "ex_ante_unshrunk": {"market": null, "size": null, "value": null, "momentum": null, "profitability": null, "investment": null, "liquidity": null},
+          "ex_ante_se_independence_lower_bound": {"market": null, "size": null, "value": null, "momentum": null, "profitability": null, "investment": null, "liquidity": null}
+        }
+      ],
+      "limitations": ["Synthetic fixture; not a complete six-book response."]
+    },
+    "publication": {"receipt_sha256": "bbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbb", "artifact_sha256": "cccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccc", "accepted_at": "2026-11-16T00:00:00+00:00"}
+  }
+}

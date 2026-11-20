@@ -1,0 +1,16 @@
+{
+  "synthetic": true,
+  "count": 1,
+  "screens": [
+    {
+      "screen_id": "synthetic-screen",
+      "name": "Synthetic screen",
+      "market": "us",
+      "tab": "all",
+      "filters": "{\"sector\":\"Technology\"}",
+      "sort_field": "ticker",
+      "sort_dir": "asc",
+      "created_at": "2026-11-20T00:00:00+00:00"
+    }
+  ]
+}
