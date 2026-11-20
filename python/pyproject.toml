@@ -19,7 +19,7 @@ classifiers = [
 ]
 
 [project.optional-dependencies]
-notebooks = ["pandas>=1.5", "ipywidgets>=8", "ipython>=8"]
+notebooks = ["notebook>=7", "pandas>=1.5", "ipywidgets>=8", "ipython>=8"]
 test = ["pytest>=7", "pandas>=1.5", "ipython>=8", "nbclient>=0.7", "nbformat>=5", "ipykernel>=6"]
 build = ["build"]
 

@@ -82,8 +82,10 @@ jupyter notebook notebooks/00_quickstart.ipynb
 ```
 
 The eleven notebooks cover the quickstart, nine member offerings, and the live monitor. Offerings 03 and 09 explain their unavailable key routes without calling them.
+The offering 01, 02, 04, 05, 06, and 08 routes are member research routes (beta). They are not yet listed in `/api/v1/catalog`.
 The notebooks read `SURGEFLOW_API_KEY`, with a hidden `getpass` prompt as fallback. They never print the key or put it in a URL.
 The catalogue supplies `base_url`; `SURGEFLOW_BASE_URL` overrides it. Set `SURGEFLOW_FIXTURES=1` to use synthetic responses without network requests.
+Fixture mode reads `python/tests/fixtures` from a repository checkout; for an installed package, set `SURGEFLOW_FIXTURE_DIR` to that folder.
 
 Each panel refreshes on a schedule; each panel shows its source date. Only a response marked as session-live describes the current session.
 The monitor uses fixed weekday exchange hours and does not handle holidays. Changed rows receive a highlight, and 429 responses honour `Retry-After`.

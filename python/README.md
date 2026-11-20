@@ -49,7 +49,7 @@ hotlist = client.member_hotlist("us", key)
 insights = client.member_daily_insights(key)
 ```
 
-The member methods map these routes:
+The member methods map these routes. The offering 01, 02, 04, 05, 06, and 08 routes are member research routes (beta). They are not yet listed in `/api/v1/catalog`.
 
 | Offering | Method | Route |
 |---|---|---|
@@ -81,7 +81,7 @@ The weekly and historical book handlers accept no query parameters. The three-mo
 The Managerial Control methods use GET only. The notebooks never change member data.
 
 The free plan grants all scopes used by these routes. It permits 2,000 requests per day and 180 per minute for each key.
-The [member API catalogue](https://surgeflows.capital/api/v1/catalog) defines the catalogued member contract.
+The [member API catalogue](https://surgeflows.capital/api/v1/catalog) defines the catalogued member contract, including `/api/v1/me` and the market hotlist and realtime routes. It does not yet list the member research routes (beta).
 
 ## Notebooks and monitor
 
@@ -92,9 +92,10 @@ python -m pip install './python[notebooks]'
 jupyter notebook notebooks/00_quickstart.ipynb
 ```
 
-The `notebooks` extra adds pandas, IPython, and ipywidgets. The core client still needs only `requests`.
+The `notebooks` extra adds Jupyter Notebook, pandas, IPython, and ipywidgets. The core client still needs only `requests`.
 The notebooks read `SURGEFLOW_API_KEY`, with hidden `getpass` entry as fallback. They never print the key.
 Set `SURGEFLOW_FIXTURES=1` to read the local synthetic fixtures without network requests.
+Fixture mode reads `python/tests/fixtures` from a repository checkout; for an installed package, set `SURGEFLOW_FIXTURE_DIR` to that folder.
 
 `surgeflow.monitor` provides panels, a scheduler, fixed session gates, change detection, and a request counter.
 The default budget is 1,500 requests per day. The full weekday projection is 1,226 scheduled requests plus one account check.

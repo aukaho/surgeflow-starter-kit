@@ -137,8 +137,10 @@ The notebooks read `SURGEFLOW_API_KEY`, with a hidden `getpass` prompt as fallba
 They use the catalogue `base_url`; set `SURGEFLOW_BASE_URL` to override it.
 They send the key only in the `Authorization: Bearer` header and never print it.
 Set `SURGEFLOW_FIXTURES=1` to run every notebook with synthetic responses and no network request.
+Fixture mode reads `python/tests/fixtures` from a repository checkout; for an installed package, set `SURGEFLOW_FIXTURE_DIR` to that folder.
 
 The quickstart shows plan and usage without showing the key. Notebooks 01 through 09 cover the nine offerings.
+The offering 01, 02, 04, 05, 06, and 08 routes are member research routes (beta). They are not yet listed in `/api/v1/catalog`.
 Technical cohorts and Layoffs are not reachable by member key yet. Their notebooks show no member response.
 The Hotlist notebook supports `us`, `cn`, `jp`, and `hk`. The monitor defaults to `us` during fixed exchange hours.
 
