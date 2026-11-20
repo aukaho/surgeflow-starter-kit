@@ -169,3 +169,16 @@ def test_nested_book_date_appears_in_status():
 
     assert frame.iloc[0]["formation_date"] == "2026-11-16"
     assert "Source date: 2026-11-16" in status
+
+
+def test_fund_portfolio_summary_flat_shape_and_empty_object():
+    frame, status = summarize_payload(
+        {"as_of_date": None, "nav_usd": 1000.0, "n_positions": 0,
+         "state": "principal_cash_baseline_no_live_holdings"}
+    )
+    assert frame.iloc[0]["nav_usd"] == 1000.0
+    assert "status: principal_cash_baseline_no_live_holdings" in status
+
+    frame, status = summarize_payload({})
+    assert frame.empty
+    assert "empty response" in status

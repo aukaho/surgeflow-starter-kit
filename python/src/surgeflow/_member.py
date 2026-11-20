@@ -168,8 +168,9 @@ class MemberMethods:
     def member_alerts(self, api_key: str) -> JsonObject:
         return self._member_get("/api/alerts", api_key)
 
-    def member_portfolio(self, api_key: str) -> JsonObject:
-        return self._member_get("/api/portfolio", api_key)
+    def member_fund_portfolio_summary(self, api_key: str) -> JsonObject:
+        # Flow Capital house fund summary, not a per-member portfolio.
+        return self._member_get("/api/fund/portfolio-summary", api_key)
 
     def member_realtime(
         self, market: str, api_key: str, limit: int = 50

@@ -70,7 +70,7 @@ The member methods map these routes:
 | 06 | `member_watchlists` | `/api/watchlists` |
 | 06 | `member_screens` | `/api/screens` |
 | 06 | `member_alerts` | `/api/alerts` |
-| 06 | `member_portfolio` | `/api/portfolio` |
+| 06 | `member_fund_portfolio_summary` | `/api/fund/portfolio-summary` |
 | 07 | `member_hotlist` | `/api/v1/markets/{market}/hotlist` |
 | 07 | `member_realtime` | `/api/v1/markets/{market}/realtime` |
 | 08 | `member_daily_insights` | `/api/us/daily-insights` |
@@ -100,7 +100,7 @@ Set `SURGEFLOW_FIXTURES=1` to read the local synthetic fixtures without network 
 The default budget is 1,500 requests per day. The full weekday projection is 1,226 scheduled requests plus one account check.
 Hotlist requests run every 120 seconds during the fixed US session. Watchlists run every five minutes.
 Sentiment, insights, and macro votes run every 30 minutes. Fundamentals and factor books run every six hours.
-Screens, alerts, and portfolio also run every 30 minutes.
+Screens, alerts, and the Flow Capital fund portfolio summary also run every 30 minutes.
 
 Each panel refreshes on a schedule; each panel shows its source date. Only a session-live response describes the current session.
 Fixed exchange hours do not include holidays. The scheduler honours 429 `Retry-After` values.

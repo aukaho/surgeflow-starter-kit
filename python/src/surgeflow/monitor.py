@@ -186,11 +186,6 @@ def summarize_payload(payload: Dict[str, Any]) -> SummarizeResult:
                             **(item or {}),
                         }
                     )
-        elif isinstance(data.get("portfolios"), list):
-            for portfolio in data["portfolios"]:
-                row = dict(portfolio)
-                row.pop("holdings", None)
-                rows.append(row)
         elif isinstance(data.get("alerts"), list):
             rows = [row for row in data["alerts"] if isinstance(row, dict)]
         elif isinstance(data.get("screens"), list):
@@ -448,8 +443,8 @@ def default_panels(client: Any, api_key: str, hotlist_market: str = "us") -> Lis
               lambda: client.member_screens(api_key)),
         panel("06 Managerial Control", "alerts", 1800,
               lambda: client.member_alerts(api_key)),
-        panel("06 Managerial Control", "portfolio", 1800,
-              lambda: client.member_portfolio(api_key)),
+        panel("06 Managerial Control", "fund-portfolio-summary", 1800,
+              lambda: client.member_fund_portfolio_summary(api_key)),
         panel("07 Hotlist", f"{hotlist_market}-hotlist", 120,
               lambda: client.member_hotlist(hotlist_market, api_key), hotlist_market),
         panel("07 Hotlist", f"{hotlist_market}-realtime", 120,
