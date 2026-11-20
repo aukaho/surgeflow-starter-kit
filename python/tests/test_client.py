@@ -203,3 +203,34 @@ def test_ok_false_has_a_typed_error():
 
     with pytest.raises(SurgeFlowResponseError):
         client.data_freshness()
+
+
+def test_ok_false_surfaces_error_code_and_message():
+    session = FakeSession(
+        FakeResponse('{"ok":false,"error":{"code":"NOT_READY","message":"Run pending"}}')
+    )
+    client = SurgeFlow(session=session)
+
+    with pytest.raises(SurgeFlowResponseError, match="NOT_READY: Run pending"):
+        client.data_freshness()
+
+
+def test_no_request_sends_an_x_user_id_header():
+    from surgeflow import NotAvailableYet
+    from surgeflow.monitor import default_panels
+
+    session = FakeSession(*[FakeResponse('{"ok":true}') for _ in range(40)])
+    client = SurgeFlow(session=session)
+    client.member_me(KEY)
+    client.data_freshness()
+    for panel in default_panels(client, KEY):
+        panel.fetch()
+    for method in (client.member_technical_cohorts, client.member_layoffs):
+        try:
+            method(KEY)
+        except NotAvailableYet:
+            pass
+
+    assert len(session.calls) >= 21
+    for call in session.calls:
+        assert "x-user-id" not in {name.lower() for name in call["headers"]}, call["url"]

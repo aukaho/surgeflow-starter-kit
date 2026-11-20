@@ -164,11 +164,7 @@ class SurgeFlow(MemberMethods):
                 pass
             message = f"SurgeFlow returned HTTP {response.status_code}"
             if error_payload:
-                detail = error_payload.get("error") or error_payload.get("message")
-                if isinstance(detail, dict):
-                    detail = detail.get("message") or detail.get("code")
-                if isinstance(detail, str):
-                    message = detail
+                message = self._error_text(error_payload) or message
             response_headers = getattr(response, "headers", {})
             retry_after = self._retry_after(response_headers.get("Retry-After"))
             raise SurgeFlowApiError(
@@ -184,8 +180,20 @@ class SurgeFlow(MemberMethods):
         if not isinstance(payload, dict):
             raise SurgeFlowResponseError("SurgeFlow returned a non-object JSON response")
         if payload.get("ok") is False:
-            raise SurgeFlowResponseError("The SurgeFlow response contains ok=false")
+            detail = self._error_text(payload)
+            raise SurgeFlowResponseError(
+                "The SurgeFlow response contains ok=false"
+                + (f": {detail}" if detail else "")
+            )
         return payload
+
+    @staticmethod
+    def _error_text(payload: JsonObject) -> Optional[str]:
+        detail = payload.get("error") or payload.get("message")
+        if isinstance(detail, dict):
+            code, text = detail.get("code"), detail.get("message")
+            detail = ": ".join(str(part) for part in (code, text) if part) or None
+        return detail if isinstance(detail, str) else None
 
     @staticmethod
     def _retry_after(value: Optional[str]) -> Optional[float]:
