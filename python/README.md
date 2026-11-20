@@ -98,7 +98,7 @@ Set `SURGEFLOW_FIXTURES=1` to read the local synthetic fixtures without network 
 Fixture mode reads `python/tests/fixtures` from a repository checkout; for an installed package, set `SURGEFLOW_FIXTURE_DIR` to that folder.
 
 `surgeflow.monitor` provides panels, a scheduler, fixed session gates, change detection, and a request counter.
-The default budget is 1,500 requests per day for each running monitor; a restart starts it from zero and spends about 20 requests on the first full refresh. The key's 2,000 per day is shared by every process using it, so notebook 10 lowers the budget to the daily remaining count from `/api/v1/me`. The full weekday projection is 1,226 scheduled requests plus one account check.
+The default budget is 1,500 requests per day for each running monitor; a restart starts it from zero and spends about 20 requests on the first full refresh. The key's 2,000 per day is shared by every process using it, so in notebook 10 the budget is capped once at startup from the key's remaining daily count reported by `/api/v1/me`; requests made later by other processes are not tracked. The full weekday projection is 1,226 scheduled requests plus one account check.
 Hotlist requests run every 120 seconds during the fixed US session. Watchlists run every five minutes.
 Sentiment, insights, and macro votes run every 30 minutes. Fundamentals and factor books run every six hours.
 Screens, alerts, and your portfolios also run every 30 minutes.

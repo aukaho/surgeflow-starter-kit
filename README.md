@@ -90,7 +90,7 @@ Fixture mode reads `python/tests/fixtures` from a repository checkout; for an in
 Each panel refreshes on a schedule; each panel shows its source date. Only a response marked as session-live describes the current session.
 The monitor uses fixed weekday exchange hours and does not handle holidays. Changed rows receive a highlight, and 429 responses honour `Retry-After`.
 
-The member beta permits 2,000 requests per day and 180 per minute for each key, shared by every process using it. The monitor budget defaults to 1,500 per day for each running monitor; a restart starts it from zero and spends about 20 requests on the first full refresh. Notebook 10 lowers the budget to the daily remaining count from `/api/v1/me`.
+The member beta permits 2,000 requests per day and 180 per minute for each key, shared by every process using it. The monitor budget defaults to 1,500 per day for each running monitor; a restart starts it from zero and spends about 20 requests on the first full refresh. In notebook 10, the budget is capped once at startup from the key's remaining daily count reported by `/api/v1/me`; requests made later by other processes are not tracked.
 This table gives the maximum projected requests on a full active weekday:
 
 | Offering | Requests per fetch | Cadence | Requests per day |

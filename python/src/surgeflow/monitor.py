@@ -88,10 +88,11 @@ class RequestBudget:
 def seed_budget_from_rate_limit(
     budget: RequestBudget, rate_limit: Any
 ) -> Optional[int]:
-    """Lower the local budget to the key's remaining daily requests.
+    """Cap the local budget once, at startup, to the key's remaining daily requests.
 
     The key's daily quota is shared by every process using it; /api/v1/me
-    returns X-RateLimit-Daily-Remaining in its rate_limit object.
+    returns X-RateLimit-Daily-Remaining in its rate_limit object. Requests
+    made later by other processes are not tracked.
     """
     try:
         remaining = int(rate_limit["X-RateLimit-Daily-Remaining"])
