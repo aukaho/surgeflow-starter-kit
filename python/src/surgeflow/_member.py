@@ -177,7 +177,7 @@ class MemberMethods:
         return self._member_get("/api/alerts", api_key)
 
     def member_fund_portfolio_summary(self, api_key: str) -> JsonObject:
-        # Flow Capital house fund summary, not a per-member portfolio.
+        # SurgeFlow house fund summary, not your holdings.
         return self._member_get("/api/fund/portfolio-summary", api_key)
 
     def member_realtime(
