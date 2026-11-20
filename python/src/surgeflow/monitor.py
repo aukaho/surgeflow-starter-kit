@@ -228,6 +228,15 @@ def summarize_payload(payload: Dict[str, Any]) -> SummarizeResult:
                             **(item or {}),
                         }
                     )
+        elif isinstance(data.get("portfolios"), list):
+            for item in data["portfolios"]:
+                for holding in item.get("holdings") or [None]:
+                    rows.append(
+                        {
+                            **{k: v for k, v in item.items() if k != "holdings"},
+                            **(holding or {}),
+                        }
+                    )
         elif isinstance(data.get("portfolio"), dict):
             for book in (data["portfolio"].get("books") or []):
                 rows.append(
@@ -299,7 +308,9 @@ def summarize_payload(payload: Dict[str, Any]) -> SummarizeResult:
     ]
     if message:
         parts.append(f"message: {message}")
-    if frame.empty:
+    if isinstance(data, dict) and data.get("portfolios") == []:
+        parts.append("No portfolios yet")
+    elif frame.empty:
         parts.append("empty response; no rows returned")
     return frame, "; ".join(parts)
 
@@ -493,9 +504,8 @@ def default_panels(client: Any, api_key: str, hotlist_market: str = "us") -> Lis
               lambda: client.member_screens(api_key)),
         panel("06 Managerial Control", "alerts", 1800,
               lambda: client.member_alerts(api_key)),
-        panel("06 SurgeFlow house fund summary (not your holdings)",
-              "fund-portfolio-summary", 1800,
-              lambda: client.member_fund_portfolio_summary(api_key)),
+        panel("06 Managerial Control", "portfolios", 1800,
+              lambda: client.member_portfolio(api_key)),
         panel("07 Hotlist", f"{hotlist_market}-hotlist", 120,
               lambda: client.member_hotlist(hotlist_market, api_key), hotlist_market),
         panel("07 Hotlist", f"{hotlist_market}-realtime", 120,

@@ -171,17 +171,26 @@ def test_nested_book_date_appears_in_status():
     assert "Source date: 2026-11-16" in status
 
 
-def test_fund_portfolio_summary_flat_shape_and_empty_object():
-    frame, status = summarize_payload(
-        {"as_of_date": None, "nav_usd": 1000.0, "n_positions": 0,
-         "state": "principal_cash_baseline_no_live_holdings"}
-    )
-    assert frame.iloc[0]["nav_usd"] == 1000.0
-    assert "status: principal_cash_baseline_no_live_holdings" in status
+def test_member_portfolio_populated_rows_per_holding():
+    import json
+    from pathlib import Path
 
-    frame, status = summarize_payload({})
+    payload = json.loads((Path(__file__).parent / "fixtures" / "portfolio.json").read_text())
+    frame, status = summarize_payload(payload)
+
+    assert frame["ticker"].tolist() == ["SYNTH", "SYNB"]
+    assert frame.iloc[0]["pnl"] == 100.0 and frame.iloc[0]["total_value"] == 1100.0
+    assert "holdings" not in frame
+    assert "Source date: 2026-11-20 00:00:00+00:00" in status
+    assert "No portfolios yet" not in status
+
+
+def test_member_portfolio_empty_account_is_not_an_error():
+    frame, status = summarize_payload({"count": 0, "portfolios": []})
+
     assert frame.empty
-    assert "empty response" in status
+    assert "No portfolios yet" in status
+    assert "empty response" not in status and "Error" not in status
 
 
 def test_jp_afternoon_session_runs_to_1530():

@@ -23,7 +23,7 @@ _EXACT = {
     "/api/watchlists": "watchlists.json",
     "/api/screens": "screens.json",
     "/api/alerts": "alerts.json",
-    "/api/fund/portfolio-summary": "fund-portfolio-summary.json",
+    "/api/portfolio": "portfolio.json",
     "/api/us/daily-insights": "daily-insights.json",
 }
 _DYNAMIC = {

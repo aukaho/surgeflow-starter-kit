@@ -70,7 +70,7 @@ The member methods map these routes. The offering 01, 02, 04, 05, 06, and 08 rou
 | 06 | `member_watchlists` | `/api/watchlists` |
 | 06 | `member_screens` | `/api/screens` |
 | 06 | `member_alerts` | `/api/alerts` |
-| 06 | `member_fund_portfolio_summary` | `/api/fund/portfolio-summary` |
+| 06 | `member_portfolio` | `/api/portfolio` |
 | 07 | `member_hotlist` | `/api/v1/markets/{market}/hotlist` |
 | 07 | `member_realtime` | `/api/v1/markets/{market}/realtime` |
 | 08 | `member_daily_insights` | `/api/us/daily-insights` |
@@ -101,7 +101,7 @@ Fixture mode reads `python/tests/fixtures` from a repository checkout; for an in
 The default budget is 1,500 requests per day for each running monitor; a restart starts it from zero and spends about 20 requests on the first full refresh. The key's 2,000 per day is shared by every process using it, so notebook 10 lowers the budget to the daily remaining count from `/api/v1/me`. The full weekday projection is 1,226 scheduled requests plus one account check.
 Hotlist requests run every 120 seconds during the fixed US session. Watchlists run every five minutes.
 Sentiment, insights, and macro votes run every 30 minutes. Fundamentals and factor books run every six hours.
-Screens, alerts, and the SurgeFlow house fund summary (not your holdings) also run every 30 minutes.
+Screens, alerts, and your portfolios also run every 30 minutes.
 
 Each panel refreshes on a schedule; each panel shows its source date. Only a session-live response describes the current session.
 Fixed exchange hours do not include holidays. The scheduler honours 429 `Retry-After` values.

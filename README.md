@@ -101,7 +101,7 @@ This table gives the maximum projected requests on a full active weekday:
 | 04 Pure factor portfolios | 3 routes | 6 h | 12 |
 | 05 Fundamental rankings | 2 routes | 6 h | 8 |
 | 06 Watchlists | 1 route | 5 min | 288 |
-| 06 Screens, alerts, and SurgeFlow house fund summary (not your holdings) | 3 routes | 30 min | 144 |
+| 06 Screens, alerts, and portfolios | 3 routes | 30 min | 144 |
 | 07 Hotlist and session board, US | 2 routes | 120 s during 6.5 session hours | 390 |
 | 08 Daily actionable insights | 1 route | 30 min | 48 |
 | 09 Layoffs | Unavailable by key | None | 0 |
