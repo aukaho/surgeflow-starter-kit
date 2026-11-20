@@ -40,6 +40,7 @@ class PanelState:
     frame: Any = None
     status: str = "Not fetched yet."
     previous_hashes: Any = None
+    last_fetch: str = ""
 
 
 @dataclass
@@ -83,7 +84,7 @@ SESSIONS = {
     ),
     "jp": (
         "Asia/Tokyo",
-        ((wall_time(9, 0), wall_time(11, 30)), (wall_time(12, 30), wall_time(15, 0))),
+        ((wall_time(9, 0), wall_time(11, 30)), (wall_time(12, 30), wall_time(15, 30))),
     ),
     "hk": (
         "Asia/Hong_Kong",
@@ -317,22 +318,38 @@ class Monitor:
     def run_due(self) -> None:
         tick = self.monotonic()
         wall_now = self.now()
+        if self.stopped and wall_now.astimezone(timezone.utc).date().isoformat() != self.budget.day:
+            # A new UTC day resets the server quota, so resume the stopped panels.
+            self.stopped = False
+            for state in self.states.values():
+                if state.next_attempt == math.inf:
+                    state.next_attempt = 0.0
+
+        def note(state: PanelState, text: str, verb: str) -> None:
+            # Keep the shown table's own source date beside the new note.
+            state.status = f"{text}; {verb} at {wall_now.isoformat()}"
+            if state.last_fetch:
+                state.status += f"; table shows the last fetch: {state.last_fetch}"
+
         for panel in self.panels:
             state = self.states[panel.name]
             if tick < state.next_attempt:
                 continue
             if panel.market is not None and not is_market_open(panel.market, wall_now):
-                state.status = (
-                    "Market closed under fixed weekday hours; holidays are not handled; "
-                    f"fetched at {wall_now.isoformat()}"
+                note(
+                    state,
+                    "Market closed under fixed weekday hours; holidays are not handled",
+                    "checked",
                 )
                 state.next_attempt = tick + panel.cadence_seconds
                 continue
             if self.stopped or not self.budget.consume(panel.cost, wall_now):
                 self.stopped = True
-                state.status = (
-                    f"Budget stop at {self.budget.used}/{self.budget.daily_limit} requests; "
-                    f"fetched at {wall_now.isoformat()}"
+                note(
+                    state,
+                    f"Budget stop at {self.budget.used}/{self.budget.daily_limit} requests "
+                    "until the next UTC day",
+                    "checked",
                 )
                 state.next_attempt = math.inf
                 continue
@@ -344,7 +361,8 @@ class Monitor:
                 )
                 state.frame = frame
                 state.previous_hashes = hashes
-                state.status = f"{status}; fetched at {wall_now.isoformat()}"
+                state.last_fetch = f"{status}; fetched at {wall_now.isoformat()}"
+                state.status = state.last_fetch
                 if removed:
                     state.status += f"; {removed} prior row versions no longer present"
                 state.next_attempt = tick + panel.cadence_seconds
@@ -356,21 +374,16 @@ class Monitor:
                         if exc.retry_after is not None
                         else panel.cadence_seconds
                     )
-                    state.status = (
-                        f"HTTP 429; Retry-After {delay:g} seconds; message: {exc}; "
-                        f"fetched at {wall_now.isoformat()}"
+                    note(
+                        state,
+                        f"HTTP 429; Retry-After {delay:g} seconds; message: {exc}",
+                        "requested",
                     )
                 else:
-                    state.status = (
-                        f"HTTP {exc.status_code}; message: {exc}; "
-                        f"fetched at {wall_now.isoformat()}"
-                    )
+                    note(state, f"HTTP {exc.status_code}; message: {exc}", "requested")
                 state.next_attempt = tick + delay
             except Exception as exc:
-                state.status = (
-                    f"Error {type(exc).__name__}: {exc}; "
-                    f"fetched at {wall_now.isoformat()}"
-                )
+                note(state, f"Error {type(exc).__name__}: {exc}", "requested")
                 state.next_attempt = tick + panel.cadence_seconds
 
     def render(self) -> None:

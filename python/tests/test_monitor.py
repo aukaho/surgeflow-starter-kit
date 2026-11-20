@@ -182,3 +182,44 @@ def test_fund_portfolio_summary_flat_shape_and_empty_object():
     frame, status = summarize_payload({})
     assert frame.empty
     assert "empty response" in status
+
+
+def test_jp_afternoon_session_runs_to_1530():
+    assert is_market_open("jp", datetime(2026, 11, 23, 6, 15, tzinfo=timezone.utc)) is True
+    assert is_market_open("jp", datetime(2026, 11, 23, 6, 30, tzinfo=timezone.utc)) is False
+
+
+def test_closed_market_keeps_last_fetch_source_date():
+    clock = Clock()
+    clock.wall = datetime(2026, 11, 23, 20, 59, tzinfo=timezone.utc)
+    panel = simple_panel(lambda: [{"value": 1}], market="us")
+    monitor = Monitor([panel], monotonic=clock.monotonic, now=clock.now)
+    monitor.run_due()
+    clock.tick, clock.wall = 43200, datetime(2026, 11, 24, 8, 59, tzinfo=timezone.utc)
+    monitor.run_due()
+
+    status = monitor.states["panel"].status
+    assert status.startswith("Market closed")
+    assert "checked at 2026-11-24T08:59:00+00:00" in status
+    assert "table shows the last fetch: Source date: 2026-11-20" in status
+    assert "fetched at 2026-11-23T20:59:00+00:00" in status
+
+
+def test_budget_stop_resumes_on_next_utc_day():
+    clock = Clock()
+    clock.wall = datetime(2026, 11, 23, 23, 50, tzinfo=timezone.utc)
+    calls = []
+    panel = simple_panel(lambda: calls.append(1) or [{"value": 1}], cadence=60)
+    budget = RequestBudget(daily_limit=1, day="2026-11-23")
+    monitor = Monitor([panel], budget=budget, monotonic=clock.monotonic, now=clock.now)
+    monitor.run_due()
+    clock.tick = 60
+    monitor.run_due()
+    assert monitor.stopped is True and calls == [1]
+
+    clock.tick, clock.wall = 900, datetime(2026, 11, 24, 0, 5, tzinfo=timezone.utc)
+    monitor.run_due()
+
+    assert monitor.stopped is False
+    assert calls == [1, 1]
+    assert budget.day == "2026-11-24" and budget.used == 1
