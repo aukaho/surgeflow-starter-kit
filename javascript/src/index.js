@@ -67,6 +67,9 @@ export class SurgeFlow {
     return this.publicSnapshot("news-sentiment", { days, responseFormat: options.responseFormat });
   }
 
+  /** Read the frozen baseline with data to 11 April 2026, not updated daily.
+   * For current daily factor data, use keyless GET https://surgeflows.capital/api/factor-reference/latest.
+   */
   async factorOverview(market, options = {}) {
     this._validateMarket(market);
     return this.publicSnapshot("factor-overview", { market, responseFormat: options.responseFormat });

@@ -1,5 +1,15 @@
 # Changelog
 
+## 0.3.0 - Unreleased
+
+- Added Python member methods for technical cohorts and US layoffs from candidate stock-api release 4.
+- Added a distinct `SurgeFlowFeedUnavailable` state for the two HTTP 503 feed responses.
+- Replaced notebooks 03 and 09 with one-fetch feed tables, source metadata, and plain column guides.
+- Added US cohort and layoff monitor panels with six-hour cadence and opt-in cohort markets.
+- Updated the default monitor projection to 1,234 scheduled requests plus one startup account check.
+- Documented the factor overview as a frozen baseline and linked the keyless daily factor route.
+- Updated the Python package and user agent to 0.3.0.
+
 ## 0.2.0 - 2026-11-21
 
 - Added Python member methods for the seven key-reachable offerings.

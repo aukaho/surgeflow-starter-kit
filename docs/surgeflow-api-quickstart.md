@@ -30,6 +30,9 @@ GET /api/public/snapshots/data-freshness.csv
 Use `us`, `cn`, `jp`, or `hk` for `{market}`.
 The `days` parameter accepts an integer from 1 through 365.
 
+The factor overview is a **frozen baseline (data to 11 April 2026, not updated daily)**.
+For current daily factor data, use keyless `GET https://surgeflows.capital/api/factor-reference/latest`.
+
 The [public manifest](https://surgeflows.capital/api/public/manifest.json) lists snapshot URLs, coverage, and caveats.
 The `generated_at` field records package creation time. It does not replace an observation date.
 
@@ -140,13 +143,17 @@ Set `SURGEFLOW_FIXTURES=1` to run every notebook with synthetic responses and no
 Fixture mode reads `python/tests/fixtures` from a repository checkout; for an installed package, set `SURGEFLOW_FIXTURE_DIR` to that folder.
 
 The quickstart shows plan and usage without showing the key. Notebooks 01 through 09 cover the nine offerings.
-The offering 01, 02, 04, 05, 06, and 08 routes are member research routes (beta). They are not yet listed in `/api/v1/catalog`.
-Technical cohorts and Layoffs are not reachable by member key yet. Their notebooks show no member response.
+The offering 01 through 09 routes are member research routes (beta).
+Once stock-api release 4 is live, the routes are listed in /api/v1/catalog member_research_endpoints (from stock-api release 4).
+The 03 and 09 routes were not live when this version was built.
+Notebook 03 fetches US cohorts by default. Notebook 09 fetches US layoffs and their historical study.
+Both notebooks show source metadata and **Feed unavailable** when the feed returns its documented HTTP 503 state.
 The Hotlist notebook supports `us`, `cn`, `jp`, and `hk`. The monitor defaults to `us` during fixed exchange hours.
 
 Each panel refreshes on a schedule; each panel shows its source date. Only a session-live response describes the current session.
+Cohort and layoff panels refresh at most once every six hours. Other cohort markets require explicit enablement.
 The free beta permits 2,000 requests per day and 180 per minute for each key. The monitor defaults to 1,500 per day.
-Its full weekday projection is 1,226 scheduled requests plus one startup account check.
+Its full weekday projection is 1,234 scheduled requests plus one startup account check.
 
 Free access grants no redistribution rights. **Do not republish the data you fetch.**
 

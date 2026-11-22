@@ -47,6 +47,9 @@ export class SurgeFlow {
   momentumHotlist(market: Market, options?: SnapshotOptions): Promise<JsonObject | string>;
   macroIndicators(options?: SnapshotOptions): Promise<JsonObject | string>;
   newsSentiment(days?: number, options?: SnapshotOptions): Promise<JsonObject | string>;
+  /** Frozen baseline with data to 11 April 2026, not updated daily.
+   * Current daily factor data: keyless GET https://surgeflows.capital/api/factor-reference/latest.
+   */
   factorOverview(market: Market, options?: SnapshotOptions): Promise<JsonObject | string>;
   dataFreshness(options?: SnapshotOptions): Promise<JsonObject | string>;
   memberMe(apiKey: string): Promise<JsonObject>;
