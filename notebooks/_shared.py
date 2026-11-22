@@ -6,7 +6,7 @@ from typing import Any, Callable, Dict, Iterable, Optional
 import pandas as pd
 from IPython.display import display
 
-from surgeflow import NotAvailableYet, SurgeFlow
+from surgeflow import NotAvailableYet, SurgeFlow, SurgeFlowFeedUnavailable
 
 PLACEHOLDER = "sf_live_REPLACE_WITH_YOUR_KEY"
 
@@ -81,6 +81,28 @@ def show_panel(
     return frame
 
 
+def fetch_payload(
+    title: str, fetch: Callable[[], Dict[str, Any]]
+) -> Optional[Dict[str, Any]]:
+    try:
+        return fetch()
+    except SurgeFlowFeedUnavailable:
+        print(
+            f"{title}\nData status: Feed unavailable; source date: not supplied; "
+            f"fetched at: {fetched_at()}"
+        )
+        print("No member data fetched. The response was not replaced with an empty table.")
+        return None
+    except NotAvailableYet as exc:
+        print(f"{title}\nUnavailable by member key: {exc}; fetched at: {fetched_at()}")
+        print("No member data fetched.")
+        return None
+    except Exception as exc:
+        print(f"{title}\nError {type(exc).__name__}: {exc}; fetched at: {fetched_at()}")
+        print("The response was not replaced with an empty table.")
+        return None
+
+
 def fetch_panel(
     title: str,
     fetch: Callable[[], Dict[str, Any]],
@@ -91,15 +113,8 @@ def fetch_panel(
     status: Callable[[Dict[str, Any]], Any],
     message: Optional[Callable[[Dict[str, Any]], Optional[str]]] = None,
 ) -> Any:
-    try:
-        payload = fetch()
-    except NotAvailableYet as exc:
-        print(f"{title}\nUnavailable by member key: {exc}; fetched at: {fetched_at()}")
-        print("No member data fetched.")
-        return None
-    except Exception as exc:
-        print(f"{title}\nError {type(exc).__name__}: {exc}; fetched at: {fetched_at()}")
-        print("The response was not replaced with an empty table.")
+    payload = fetch_payload(title, fetch)
+    if payload is None:
         return None
     return show_panel(
         title,

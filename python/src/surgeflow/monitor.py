@@ -5,7 +5,7 @@ import time
 from typing import Any, Callable, Dict, List, Optional, Sequence, Tuple
 from zoneinfo import ZoneInfo
 
-from ._errors import SurgeFlowApiError
+from ._errors import SurgeFlowApiError, SurgeFlowFeedUnavailable
 
 try:
     import pandas as pd
@@ -53,7 +53,7 @@ class PanelState:
 @dataclass
 class RequestBudget:
     # Counts only this process's requests: each running monitor has its own cap,
-    # a restart starts from zero (about 20 requests for the first full refresh),
+    # a restart starts from zero (about 22 requests for the first full refresh),
     # and the key's 2,000 per day is shared by every process using it.
     daily_limit: int = 1500
     used: int = 0
@@ -202,6 +202,44 @@ def summarize_payload(payload: Dict[str, Any]) -> SummarizeResult:
             for category in data["rankings"]:
                 for row in category.get("rows") or []:
                     rows.append({"category": category.get("id"), **row})
+        elif isinstance(data.get("cohorts"), list):
+            for cohort in data["cohorts"]:
+                observation = cohort.get("observation") or {}
+                observed = {
+                    row.get("ticker"): row
+                    for row in observation.get("holdings") or []
+                }
+                for holding in cohort.get("holdings") or [None]:
+                    holding = holding or {}
+                    observed_row = observed.get(holding.get("ticker"), {})
+                    rows.append(
+                        {
+                            **{
+                                key: value
+                                for key, value in cohort.items()
+                                if key not in ("holdings", "observation")
+                            },
+                            "observation_as_of": observation.get("as_of"),
+                            "observation_state": observation.get("state"),
+                            "elapsed_sessions": observation.get("elapsed_sessions"),
+                            "observation_window": observation.get("observation_window"),
+                            "gross_price_return": observation.get("gross_price_return"),
+                            "gross_usd_return": observation.get("gross_usd_return"),
+                            **holding,
+                            "holding_price_return": observed_row.get("price_return"),
+                            "holding_session_return": observed_row.get("session_return"),
+                            "holding_observation_state": observed_row.get("state"),
+                        }
+                    )
+        elif isinstance(data.get("watch"), list):
+            for row in data["watch"]:
+                if isinstance(row, dict):
+                    rows.append(
+                        {
+                            **{key: value for key, value in row.items() if key != "checks"},
+                            **(row.get("checks") or {}),
+                        }
+                    )
         elif isinstance(data.get("watchlists"), list):
             for watchlist in data["watchlists"]:
                 items = watchlist.get("items") or [None]
@@ -286,6 +324,7 @@ def summarize_payload(payload: Dict[str, Any]) -> SummarizeResult:
             "_rebuild_date",
             "whale_as_of",
             "news_rebuild_date",
+            "data_through",
             "published_at",
         ),
     )
@@ -300,6 +339,11 @@ def summarize_payload(payload: Dict[str, Any]) -> SummarizeResult:
     status = _first(
         payload, ("status", "state", "market_status", "data_quality", "source_mode")
     )
+    if status is None and payload.get("ok") is True and payload.get("schema") in (
+        "technical_strategy_feed_v1",
+        "layoff_watch_v1",
+    ):
+        status = "available"
     message = _first(
         payload, ("message", "reason", "stale_reason", "reason_code")
     )
@@ -404,6 +448,9 @@ class Monitor:
                 if removed:
                     state.status += f"; {removed} prior row versions no longer present"
                 state.next_attempt = tick + panel.cadence_seconds
+            except SurgeFlowFeedUnavailable:
+                note(state, "Feed unavailable", "requested")
+                state.next_attempt = tick + panel.cadence_seconds
             except SurgeFlowApiError as exc:
                 delay = panel.cadence_seconds
                 if exc.status_code == 429:
@@ -461,9 +508,19 @@ class Monitor:
             display(frame.assign(_changed=frame["_changed"].map({True: "changed", False: ""})))
 
 
-def default_panels(client: Any, api_key: str, hotlist_market: str = "us") -> List[Panel]:
+def default_panels(
+    client: Any,
+    api_key: str,
+    hotlist_market: str = "us",
+    cohort_markets: Sequence[str] = ("us",),
+) -> List[Panel]:
     if hotlist_market not in SESSIONS:
         raise ValueError("hotlist_market must be us, cn, jp, or hk")
+    if isinstance(cohort_markets, str) or any(
+        market not in SESSIONS for market in cohort_markets
+    ):
+        raise ValueError("cohort_markets must contain only us, cn, jp, or hk")
+    selected_cohort_markets = tuple(dict.fromkeys(cohort_markets))
 
     def panel(
         offering: str,
@@ -489,6 +546,15 @@ def default_panels(client: Any, api_key: str, hotlist_market: str = "us") -> Lis
               lambda: client.member_sentiment_scores("us", api_key, limit=10)),
         panel("02 Bull & bear sentiment picks", "whale-picks", 1800,
               lambda: client.member_sentiment_whale_picks("us", api_key)),
+        *[
+            panel(
+                "03 Technical cohorts",
+                f"{market}-cohorts",
+                21600,
+                lambda market=market: client.member_technical_cohorts(market, api_key),
+            )
+            for market in selected_cohort_markets
+        ],
         panel("04 Pure factor portfolios", "weekly-pure-books", 21600,
               lambda: client.member_weekly_pure_books(api_key)),
         panel("04 Pure factor portfolios", "historical-pure-books", 21600,
@@ -513,4 +579,6 @@ def default_panels(client: Any, api_key: str, hotlist_market: str = "us") -> Lis
               lambda: client.member_realtime(hotlist_market, api_key), hotlist_market),
         panel("08 Daily actionable insights", "daily-insights", 1800,
               lambda: client.member_daily_insights(api_key)),
+        panel("09 Layoffs", "us-layoffs", 21600,
+              lambda: client.member_layoffs(api_key)),
     ]

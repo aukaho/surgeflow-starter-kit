@@ -3,7 +3,7 @@ from datetime import datetime, timezone
 import pandas as pd
 import pytest
 
-from surgeflow import SurgeFlowApiError
+from surgeflow import SurgeFlowApiError, SurgeFlowFeedUnavailable
 from surgeflow.monitor import (
     Monitor,
     Panel,
@@ -142,8 +142,95 @@ def test_change_detection_marks_changed_rows_and_counts_removed():
 def test_default_projection_is_under_budget():
     panels = default_panels(object(), "sf_live_REPLACE_WITH_YOUR_KEY")
 
-    assert projected_requests_per_day(panels) == 1226
-    assert len(panels) == 19
+    assert projected_requests_per_day(panels) == 1234
+    assert projected_requests_per_day(panels) + 1 <= 1500
+    assert len(panels) == 21
+    by_name = {panel.name: panel for panel in panels}
+    assert by_name["us-cohorts"].cadence_seconds == 21600
+    assert by_name["us-layoffs"].cadence_seconds == 21600
+    assert by_name["us-cohorts"].market is None
+    assert by_name["us-layoffs"].market is None
+    assert not {"cn-cohorts", "jp-cohorts", "hk-cohorts"} & set(by_name)
+
+
+def test_all_cohort_markets_require_opt_in():
+    panels = default_panels(
+        object(),
+        "sf_live_REPLACE_WITH_YOUR_KEY",
+        cohort_markets=("us", "cn", "jp", "hk"),
+    )
+
+    assert projected_requests_per_day(panels) == 1246
+    assert len(panels) == 24
+    assert {"us-cohorts", "cn-cohorts", "jp-cohorts", "hk-cohorts"} <= {
+        panel.name for panel in panels
+    }
+
+
+def test_cohort_market_validation():
+    with pytest.raises(ValueError):
+        default_panels(object(), "key", cohort_markets=("xx",))
+    with pytest.raises(ValueError):
+        default_panels(object(), "key", cohort_markets="us")
+
+
+def test_notebook_feed_summaries_cover_all_markets():
+    import json
+    from pathlib import Path
+
+    fixtures = Path(__file__).parent / "fixtures"
+    currencies = {"us": "USD", "cn": "CNY", "jp": "JPY", "hk": "HKD"}
+    for market, currency in currencies.items():
+        payload = json.loads(
+            (fixtures / f"technical-cohorts-{market}.json").read_text(encoding="utf-8")
+        )
+        frame, status = summarize_payload(payload)
+        assert frame["ticker"].tolist() == ["SYNTH"]
+        assert frame["currency"].tolist() == [currency]
+        assert "Source date: 2026-11-20" in status
+        assert "status: available" in status
+
+    payload = json.loads((fixtures / "layoffs-us.json").read_text(encoding="utf-8"))
+    frame, status = summarize_payload(payload)
+    assert frame["company"].tolist() == ["Synthetic Example Corporation"]
+    assert frame["price_collapse"].tolist() == [False]
+    assert "Source date: 2026-11-20" in status
+    assert "status: available" in status
+
+
+@pytest.mark.parametrize(
+    "name,error_code",
+    [
+        ("us-cohorts", "COHORT_FEED_UNAVAILABLE"),
+        ("us-layoffs", "LAYOFF_FEED_UNAVAILABLE"),
+    ],
+)
+def test_feed_unavailable_preserves_cadence_and_status(name, error_code):
+    clock = Clock()
+    calls = []
+
+    def fetch():
+        calls.append(clock.tick)
+        raise SurgeFlowFeedUnavailable(
+            503,
+            "Feed unavailable",
+            {"ok": False, "error": {"code": error_code}},
+        )
+
+    panel = simple_panel(fetch, cadence=21600, name=name)
+    monitor = Monitor([panel], monotonic=clock.monotonic, now=clock.now)
+    monitor.run_due()
+
+    assert monitor.states[name].status.startswith("Feed unavailable")
+    assert "Error" not in monitor.states[name].status
+    assert monitor.states[name].next_attempt == 21600
+
+    clock.tick = 21599
+    monitor.run_due()
+    assert calls == [0.0]
+    clock.tick = 21600
+    monitor.run_due()
+    assert calls == [0.0, 21600.0]
 
 
 def test_empty_payload_status_is_not_silent():

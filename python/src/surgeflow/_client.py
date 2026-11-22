@@ -7,6 +7,7 @@ import requests
 from ._errors import (
     SurgeFlowApiError,
     SurgeFlowConnectionError,
+    SurgeFlowFeedUnavailable,
     SurgeFlowResponseError,
     SurgeFlowTimeoutError,
 )
@@ -93,6 +94,11 @@ class SurgeFlow(MemberMethods):
     def factor_overview(
         self, market: str, response_format: str = "json"
     ) -> SnapshotResult:
+        """Read the frozen baseline with data to 11 April 2026, not updated daily.
+
+        For current daily factor data, use the keyless
+        https://surgeflows.capital/api/factor-reference/latest route.
+        """
         self._validate_market(market)
         return self.public_snapshot(
             "factor-overview", market=market, response_format=response_format
@@ -133,7 +139,7 @@ class SurgeFlow(MemberMethods):
         }
         headers = {
             "Accept": "application/json" if response_format == "json" else "text/csv",
-            "User-Agent": "surgeflow-python/0.2.0",
+            "User-Agent": "surgeflow-python/0.3.0",
         }
         if api_key is not None:
             if not isinstance(api_key, str) or not api_key.strip():
@@ -167,6 +173,15 @@ class SurgeFlow(MemberMethods):
                 message = self._error_text(error_payload) or message
             response_headers = getattr(response, "headers", {})
             retry_after = self._retry_after(response_headers.get("Retry-After"))
+            detail = (error_payload or {}).get("error")
+            error_code = detail.get("code") if isinstance(detail, dict) else None
+            if response.status_code == 503 and error_code in (
+                "COHORT_FEED_UNAVAILABLE",
+                "LAYOFF_FEED_UNAVAILABLE",
+            ):
+                raise SurgeFlowFeedUnavailable(
+                    response.status_code, "Feed unavailable", error_payload, retry_after
+                )
             raise SurgeFlowApiError(
                 response.status_code, message, error_payload, retry_after
             )

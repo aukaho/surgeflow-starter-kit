@@ -1,0 +1,64 @@
+{
+  "synthetic": true,
+  "ok": true,
+  "schema": "technical_strategy_feed_v1",
+  "market": "jp",
+  "as_of": "2026-11-20",
+  "published_at": "2026-11-20T07:00:00+00:00",
+  "valid_until": "2026-11-23T07:00:00+00:00",
+  "publication_policy": {
+    "local_time": "16:00",
+    "timezone": "Asia/Tokyo"
+  },
+  "cohorts": [
+    {
+      "cohort_id": "synthetic-jp-20261120-ew",
+      "strategy_id": "avwap_recovery",
+      "market": "jp",
+      "currency": "JPY",
+      "weighting": "ew",
+      "state": "reference_portfolio",
+      "as_of": "2026-11-20",
+      "built_at": "2026-11-20T06:30:00+00:00",
+      "cash_usd": null,
+      "cash_local": 0.0,
+      "initial_capital_local": 100000.0,
+      "selection_complete": true,
+      "candidate_count": 1,
+      "holdings": [
+        {
+          "ticker": "SYNTH",
+          "entry_date": "2026-11-20",
+          "entry_reference_price": 2000.0,
+          "starting_weight": 1.0,
+          "target_weight": 1.0,
+          "reference_shares": 50
+        }
+      ],
+      "observation": {
+        "as_of": "2026-11-20",
+        "gross_price_return": 0.0,
+        "gross_usd_return": 0.0,
+        "state": "available",
+        "elapsed_sessions": 0,
+        "observation_window": "open",
+        "holdings": [
+          {
+            "ticker": "SYNTH",
+            "price_return": 0.0,
+            "session_return": 0.0,
+            "state": "available"
+          }
+        ]
+      }
+    }
+  ],
+  "coverage": {
+    "roster": 1,
+    "turnover_not_met": 0,
+    "missing_inputs": 0
+  },
+  "limitations": [
+    "Synthetic research fixture; entry references are not executed prices."
+  ]
+}

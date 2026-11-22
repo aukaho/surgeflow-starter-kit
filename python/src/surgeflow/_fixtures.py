@@ -25,11 +25,13 @@ _EXACT = {
     "/api/alerts": "alerts.json",
     "/api/portfolio": "portfolio.json",
     "/api/us/daily-insights": "daily-insights.json",
+    "/api/us/layoffs/latest": "layoffs-us.json",
 }
 _DYNAMIC = {
     "/api/{market}/stock-scores": "stock-scores-{market}.json",
     "/api/{market}/sentiment-whale-picks": "sentiment-whale-picks-{market}.json",
     "/api/{market}/three-model/portfolios": "three-model-portfolios-{market}.json",
+    "/api/{market}/technical-strategies/cohorts": "technical-cohorts-{market}.json",
     "/api/v1/markets/{market}/hotlist": "member-hotlist-{market}.json",
     "/api/v1/markets/{market}/realtime": "member-realtime-{market}.json",
 }

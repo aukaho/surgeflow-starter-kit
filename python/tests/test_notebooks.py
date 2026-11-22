@@ -46,11 +46,54 @@ def test_all_eleven_notebooks_execute_in_fixture_mode(monkeypatch):
             for panel in default_panels(None, "key"):
                 assert f"{panel.offering} — {panel.name}\n" in text, panel.name
             assert "monitor task stopped" not in text
+            assert "Projected scheduled requests per full active day: 1234" in text
+            assert "Projected total including one startup account check: 1235" in text
             # me.json reports 1,400 remaining, so the 1,500 budget is seeded to 100 used.
             assert "Key daily requests remaining across all processes: 1400" in text
             assert "local budget used: 100 / 1500" in text
-        if path.name[:2] not in ("03", "09"):
-            assert "Unavailable by member key" not in text, path.name
+        assert "Unavailable by member key" not in text, path.name
+        if path.name[:2] in ("03", "09"):
+            assert "Data status: available" in text, path.name
+            assert "source date: 2026-11-20" in text, path.name
+            assert "Column guide:" in text, path.name
+
+
+def test_real_feed_notebooks_fetch_once_and_cite_both_routes():
+    cases = (
+        ("03_technical_cohorts.ipynb", ".member_technical_cohorts(", "COHORT_COLUMNS"),
+        ("09_layoffs.ipynb", ".member_layoffs(", "WATCH_COLUMNS"),
+    )
+    for name, method_call, column_guide in cases:
+        notebook = json.loads((NOTEBOOKS / name).read_text(encoding="utf-8"))
+        code = "\n".join(
+            "".join(cell["source"])
+            for cell in notebook["cells"] if cell["cell_type"] == "code"
+        )
+        markdown = "\n".join(
+            "".join(cell["source"])
+            for cell in notebook["cells"] if cell["cell_type"] == "markdown"
+        )
+        assert code.count(method_call) == 1
+        assert column_guide in code
+        assert "member research routes (beta)" in markdown
+        assert "GET /api/{market}/technical-strategies/cohorts" in markdown
+        assert "GET /api/us/layoffs/latest" in markdown
+        assert "Do not republish" in markdown
+
+
+def test_notebook_feed_unavailable_is_not_an_error(monkeypatch, capsys):
+    monkeypatch.syspath_prepend(str(NOTEBOOKS))
+    from _shared import fetch_payload
+    from surgeflow import SurgeFlowFeedUnavailable
+
+    def unavailable():
+        raise SurgeFlowFeedUnavailable(503, "Feed unavailable")
+
+    assert fetch_payload("Feed test", unavailable) is None
+    text = capsys.readouterr().out
+    assert "Data status: Feed unavailable" in text
+    assert "source date: not supplied" in text
+    assert "Error " not in text
 
 
 def test_committed_notebook_template_has_no_outputs():

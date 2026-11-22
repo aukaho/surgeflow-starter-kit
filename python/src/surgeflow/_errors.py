@@ -31,5 +31,9 @@ class SurgeFlowApiError(SurgeFlowError):
         self.retry_after = retry_after
 
 
+class SurgeFlowFeedUnavailable(SurgeFlowApiError):
+    pass
+
+
 class NotAvailableYet(SurgeFlowError):
     pass
