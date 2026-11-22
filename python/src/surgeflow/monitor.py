@@ -1,6 +1,7 @@
 from dataclasses import dataclass, field
 from datetime import datetime, time as wall_time, timezone
 import math
+import random
 import time
 from typing import Any, Callable, Dict, List, Optional, Sequence, Tuple
 from zoneinfo import ZoneInfo
@@ -401,8 +402,10 @@ class Monitor:
         budget: Optional[RequestBudget] = None,
         monotonic: Callable[[], float] = time.monotonic,
         now: Callable[[], datetime] = lambda: datetime.now(timezone.utc),
+        jitter: Callable[[], float] = random.random,
     ) -> None:
         self.panels = list(panels)
+        self.jitter = jitter
         self.budget = budget or RequestBudget()
         self.monotonic = monotonic
         self.now = now
@@ -442,7 +445,7 @@ class Monitor:
                     "Market closed under fixed weekday hours; holidays are not handled",
                     "checked",
                 )
-                state.next_attempt = tick + panel.cadence_seconds
+                state.next_attempt = tick + self._spread(panel.cadence_seconds)
                 continue
             if self.stopped or not self.budget.consume(panel.cost, wall_now):
                 self.stopped = True
@@ -466,12 +469,12 @@ class Monitor:
                 state.status = state.last_fetch
                 if removed:
                     state.status += f"; {removed} prior row versions no longer present"
-                state.next_attempt = tick + panel.cadence_seconds
+                state.next_attempt = tick + self._spread(panel.cadence_seconds)
             except SurgeFlowFeedUnavailable:
                 note(state, "Feed unavailable", "requested")
-                state.next_attempt = tick + panel.cadence_seconds
+                state.next_attempt = tick + self._spread(panel.cadence_seconds)
             except SurgeFlowApiError as exc:
-                delay = panel.cadence_seconds
+                delay = self._spread(panel.cadence_seconds)
                 if exc.status_code == 429:
                     delay = (
                         max(0.0, exc.retry_after)
@@ -488,7 +491,11 @@ class Monitor:
                 state.next_attempt = tick + delay
             except Exception as exc:
                 note(state, f"Error {type(exc).__name__}: {exc}", "requested")
-                state.next_attempt = tick + panel.cadence_seconds
+                state.next_attempt = tick + self._spread(panel.cadence_seconds)
+
+    def _spread(self, seconds: float) -> float:
+        # +/-10% jitter so monitors started at the same moment do not poll in lockstep.
+        return seconds * (0.9 + 0.2 * self.jitter())
 
     def render(self) -> None:
         from IPython.display import clear_output, display
