@@ -143,7 +143,7 @@ Set `SURGEFLOW_FIXTURES=1` to run every notebook with synthetic responses and no
 Fixture mode reads `python/tests/fixtures` from a repository checkout; for an installed package, set `SURGEFLOW_FIXTURE_DIR` to that folder.
 
 The quickstart shows plan and usage without showing the key. Notebooks 01 through 09 cover the nine offerings.
-The offering 01 through 09 routes are member research routes (beta).
+The offering 01 through 06, 08 and 09 routes are member research routes (beta). The offering 07 routes are the catalogued /api/v1 market hotlist and realtime routes.
 Once stock-api release 4 is live, the routes are listed in /api/v1/catalog member_research_endpoints (from stock-api release 4).
 The 03 and 09 routes were not live when this version was built.
 Notebook 03 fetches US cohorts by default. Notebook 09 fetches US layoffs and their historical study.

@@ -184,11 +184,17 @@ def test_notebook_feed_summaries_cover_all_markets():
         payload = json.loads(
             (fixtures / f"technical-cohorts-{market}.json").read_text(encoding="utf-8")
         )
+        payload["valid_until"] = "2999-01-01T00:00:00+00:00"
         frame, status = summarize_payload(payload)
         assert frame["ticker"].tolist() == ["SYNTH"]
         assert frame["currency"].tolist() == [currency]
         assert "Source date: 2026-11-20" in status
         assert "status: available" in status
+        assert "valid until: 2999-01-01T00:00:00+00:00" in status
+
+        payload["valid_until"] = "2000-01-01T00:00:00+00:00"
+        _, status = summarize_payload(payload)
+        assert "status: past valid_until" in status
 
     payload = json.loads((fixtures / "layoffs-us.json").read_text(encoding="utf-8"))
     frame, status = summarize_payload(payload)

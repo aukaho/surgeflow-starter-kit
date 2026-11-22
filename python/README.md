@@ -53,7 +53,7 @@ cohorts = client.member_technical_cohorts("us", key)
 layoffs = client.member_layoffs(key)
 ```
 
-The member methods map these routes. The offering 01 through 09 routes are member research routes (beta).
+The member methods map these routes. The offering 01 through 06, 08 and 09 routes are member research routes (beta). The offering 07 routes are the catalogued /api/v1 market hotlist and realtime routes.
 Once stock-api release 4 is live, the routes are listed in /api/v1/catalog member_research_endpoints (from stock-api release 4).
 The 03 and 09 routes were not live when this version was built.
 

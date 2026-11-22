@@ -201,8 +201,9 @@ def test_notebook_feed_fixtures_cover_all_markets(monkeypatch):
         payload = client.member_technical_cohorts(market, KEY)
         assert payload["schema"] == "technical_strategy_feed_v1"
         assert payload["synthetic"] is True
-        assert payload["market"] == market
-        assert payload["cohorts"][0]["currency"] == currency
+        assert payload["cohorts"][0]["market"] == market
+        # The real US feed omits currency; readers default it to USD.
+        assert payload["cohorts"][0].get("currency") == (None if market == "us" else currency)
     layoffs = client.member_layoffs(KEY)
     assert layoffs["schema"] == "layoff_watch_v1"
     assert layoffs["synthetic"] is True

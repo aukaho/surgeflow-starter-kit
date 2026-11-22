@@ -2,7 +2,8 @@
 
 ## 0.3.0 - Unreleased
 
-- Added Python member methods for technical cohorts and US layoffs from candidate stock-api release 4.
+- Replaced the `NotAvailableYet` stubs for technical cohorts and US layoffs with route calls from candidate stock-api release 4.
+- Changed (breaking): `member_technical_cohorts` now takes `market` first, as `member_technical_cohorts(market, api_key)`.
 - Added a distinct `SurgeFlowFeedUnavailable` state for the two HTTP 503 feed responses.
 - Replaced notebooks 03 and 09 with one-fetch feed tables, source metadata, and plain column guides.
 - Added US cohort and layoff monitor panels with six-hour cadence and opt-in cohort markets.

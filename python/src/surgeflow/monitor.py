@@ -219,6 +219,13 @@ def summarize_payload(payload: Dict[str, Any]) -> SummarizeResult:
                                 for key, value in cohort.items()
                                 if key not in ("holdings", "observation")
                             },
+                            # The US producer omits currency; its amounts are USD.
+                            "currency": cohort.get("currency")
+                            or (
+                                "USD"
+                                if (cohort.get("market") or data.get("market") or "us") == "us"
+                                else None
+                            ),
                             "observation_as_of": observation.get("as_of"),
                             "observation_state": observation.get("state"),
                             "elapsed_sessions": observation.get("elapsed_sessions"),
@@ -344,6 +351,16 @@ def summarize_payload(payload: Dict[str, Any]) -> SummarizeResult:
         "layoff_watch_v1",
     ):
         status = "available"
+    valid_until = payload.get("valid_until")
+    if status == "available" and valid_until:
+        try:
+            expiry = datetime.fromisoformat(str(valid_until).replace("Z", "+00:00"))
+            if expiry.tzinfo is None:
+                expiry = expiry.replace(tzinfo=timezone.utc)
+            if expiry < datetime.now(timezone.utc):
+                status = "past valid_until"
+        except ValueError:
+            pass
     message = _first(
         payload, ("message", "reason", "stale_reason", "reason_code")
     )
@@ -351,6 +368,8 @@ def summarize_payload(payload: Dict[str, Any]) -> SummarizeResult:
         f"Source date: {source_date or 'not supplied'}",
         f"status: {status or 'not supplied'}",
     ]
+    if valid_until:
+        parts.append(f"valid until: {valid_until}")
     if message:
         parts.append(f"message: {message}")
     if isinstance(data, dict) and data.get("portfolios") == []:

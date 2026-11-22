@@ -2,27 +2,20 @@
   "synthetic": true,
   "ok": true,
   "schema": "technical_strategy_feed_v1",
-  "market": "us",
   "as_of": "2026-11-20",
   "published_at": "2026-11-20T22:00:00+00:00",
   "valid_until": "2026-11-23T22:00:00+00:00",
-  "publication_policy": {
-    "local_time": "16:30",
-    "timezone": "America/New_York"
-  },
   "cohorts": [
     {
       "cohort_id": "synthetic-us-20261120-ew",
       "strategy_id": "fresh_attention_breakout_v2",
       "market": "us",
-      "currency": "USD",
       "weighting": "ew",
       "state": "reference_portfolio",
       "as_of": "2026-11-20",
       "built_at": "2026-11-20T21:30:00+00:00",
       "cash_usd": 0.0,
-      "cash_local": 0.0,
-      "initial_capital_local": 100000.0,
+      "initial_capital_usd": 100000.0,
       "selection_complete": true,
       "candidate_count": 1,
       "holdings": [
