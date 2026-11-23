@@ -144,3 +144,21 @@ def status_with(status: Any, **extra: Any) -> str:
     parts = [str(status or "not supplied")]
     parts += [f"{name.replace('_', ' ')}: {value}" for name, value in extra.items() if value not in (None, "")]
     return "; ".join(parts)
+
+
+def fetch_once(fetch: Callable[[], Dict[str, Any]]) -> Callable[[], Dict[str, Any]]:
+    """Call fetch at most once; later calls return its result or re-raise its error."""
+    outcome: list = []
+
+    def cached() -> Dict[str, Any]:
+        if not outcome:
+            try:
+                outcome.append((True, fetch()))
+            except Exception as exc:
+                outcome.append((False, exc))
+        ok, value = outcome[0]
+        if not ok:
+            raise value
+        return value
+
+    return cached

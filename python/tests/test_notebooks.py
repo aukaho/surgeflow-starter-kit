@@ -210,3 +210,20 @@ def test_failure_scan_catches_failed_monitor_panels():
             "07 Hotlist — us-realtime\nHTTP 429; Retry-After 17 seconds; message: slow\n"
             "09 Layoffs — us-layoffs\nFeed unavailable; requested at 2026-11-23\n")
     assert [line[:8] for line in failure_lines(text)] == ["HTTP 401", "HTTP 429"]
+
+
+def test_shared_fetches_are_sent_once_even_when_they_fail(monkeypatch, capsys):
+    from surgeflow import SurgeFlowApiError
+
+    monkeypatch.syspath_prepend(str(NOTEBOOKS))
+    for name, method in (("05_fundamental_rankings.ipynb", "member_fundamental_peers"),
+                         ("08_daily_insights.ipynb", "member_daily_insights")):
+        calls = []
+
+        def unavailable(self, *args, **kwargs):
+            calls.append(args)
+            raise SurgeFlowApiError(503, "Service unavailable")
+
+        run_notebook_in_process(name, monkeypatch, [(method, unavailable)])
+        assert len(calls) == 1, name
+        assert capsys.readouterr().out.count("Error SurgeFlowApiError") == 2, name
