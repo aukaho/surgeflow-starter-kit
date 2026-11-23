@@ -99,7 +99,7 @@ US cohorts are enabled by default. Set `SURGEFLOW_COHORT_MARKETS` to a comma-sep
 The member beta permits 2,000 requests per day and 180 per minute for each key, shared by every process using it.
 The monitor budget defaults to 1,500 per day for each running monitor. A restart starts it from zero and spends about 22 requests on the first full refresh.
 In notebook 10, the budget is capped once at startup from the key's remaining daily count reported by `/api/v1/me`.
-Requests made later by other processes are not tracked. This table gives the maximum projected requests on a full active weekday:
+Requests made later by other processes are not tracked. This table gives the average projected requests on a full active weekday:
 
 | Offering | Requests per fetch | Cadence | Requests per day |
 |---|---:|---:|---:|
@@ -119,6 +119,7 @@ Requests made later by other processes are not tracked. This table gives the max
 
 Each additional enabled cohort market adds four requests per day.
 All four cohort markets give 1,246 scheduled requests plus one account check, for 1,247 total requests.
+Each refresh is spread by up to 10% either way, so a day can run up to about 11% above these averages: at most about 1,371 scheduled requests, or about 1,384 with all four cohort markets, still under the 1,500 default budget.
 
 Free access grants no redistribution rights. **Do not republish the data you fetch.**
 
