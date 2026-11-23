@@ -191,3 +191,11 @@ def test_cohort_notebook_reports_expired_feed(monkeypatch, capsys):
     out = capsys.readouterr().out
     assert "Data status: past valid_until;" in out
     assert "Data status: available" not in out
+
+
+def test_live_monitor_runs_requests_off_the_event_loop():
+    notebook = json.loads((NOTEBOOKS / "10_live_monitor.ipynb").read_text(encoding="utf-8"))
+    code = "\n".join("".join(cell["source"]) for cell in notebook["cells"] if cell["cell_type"] == "code")
+
+    assert "await asyncio.to_thread(monitor.run_due, lambda: STOP)" in code
+    assert "            monitor.run_due()" not in code

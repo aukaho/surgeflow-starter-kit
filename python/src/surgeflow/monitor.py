@@ -441,7 +441,7 @@ class Monitor:
         print("Each panel refreshes on a schedule; each panel shows its source date.")
         return projected
 
-    def run_due(self) -> None:
+    def run_due(self, stop: Callable[[], bool] = lambda: False) -> None:
         wall_now = self.now()
         if self.stopped and wall_now.astimezone(timezone.utc).date().isoformat() != self.budget.day:
             # A new UTC day resets the server quota, so resume the stopped panels.
@@ -457,6 +457,8 @@ class Monitor:
                 state.status += f"; table shows the last fetch: {state.last_fetch}"
 
         for panel in self.panels:
+            if stop():
+                return
             # Fresh clocks per panel: earlier requests in this pass take real time.
             tick = self.monotonic()
             wall_now = self.now()

@@ -489,3 +489,16 @@ def test_market_check_uses_the_clock_after_earlier_requests():
     Monitor(panels, monotonic=clock.monotonic, now=clock.now, jitter=lambda: 0.0).run_due()
 
     assert calls == ["slow"]
+
+
+def test_stop_is_checked_between_panels():
+    clock = Clock()
+    calls = []
+    stop = []
+    first = simple_panel(lambda: calls.append("first") or stop.append(True) or [{"value": 1}], name="first")
+    second = simple_panel(lambda: calls.append("second") or [{"value": 2}], name="second")
+    monitor = Monitor([first, second], monotonic=clock.monotonic, now=clock.now, jitter=lambda: 0.0)
+
+    monitor.run_due(lambda: bool(stop))
+
+    assert calls == ["first"]
