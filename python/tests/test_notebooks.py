@@ -12,6 +12,11 @@ def notebook_paths():
     return sorted(NOTEBOOKS.glob("*.ipynb"))
 
 
+def failure_lines(text):
+    # Notebook cells print "Error ..."; monitor panels print "HTTP <code>; ...".
+    return [line for line in text.splitlines() if line.startswith(("Error ", "HTTP 4", "HTTP 5"))]
+
+
 def test_all_eleven_notebooks_execute_in_fixture_mode(monkeypatch):
     monkeypatch.setenv("SURGEFLOW_FIXTURES", "1")
     monkeypatch.setenv("PYTHONPATH", str(ROOT / "python" / "src"))
@@ -35,8 +40,7 @@ def test_all_eleven_notebooks_execute_in_fixture_mode(monkeypatch):
             for cell in notebook.cells if cell.cell_type == "code"
             for output in cell.outputs if output.get("output_type") == "stream"
         )
-        lines = text.splitlines()
-        assert not [line for line in lines if line.startswith("Error ")], path.name
+        assert not failure_lines(text), path.name
         assert not any(o.get("output_type") == "error" for c in notebook.cells
                        if c.cell_type == "code" for o in c.outputs), path.name
         if path.name.startswith("10_"):
@@ -199,3 +203,10 @@ def test_live_monitor_runs_requests_off_the_event_loop():
 
     assert "await asyncio.to_thread(monitor.run_due, lambda: STOP)" in code
     assert "            monitor.run_due()" not in code
+
+
+def test_failure_scan_catches_failed_monitor_panels():
+    text = ("07 Hotlist — us-hotlist\nHTTP 401; message: bad key; requested at 2026-11-23\n"
+            "07 Hotlist — us-realtime\nHTTP 429; Retry-After 17 seconds; message: slow\n"
+            "09 Layoffs — us-layoffs\nFeed unavailable; requested at 2026-11-23\n")
+    assert [line[:8] for line in failure_lines(text)] == ["HTTP 401", "HTTP 429"]
