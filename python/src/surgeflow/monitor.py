@@ -520,8 +520,11 @@ class Monitor:
         elif "_changed" not in frame:
             display(frame)
         elif _HAS_JINJA2:
+            # Styler does not escape by default; plain DataFrame display does.
             display(
-                frame.style.apply(
+                frame.style.format(escape="html")
+                .format_index(escape="html", axis=1)
+                .apply(
                     lambda row: [
                         "background-color: #fff3cd" if row["_changed"] else ""
                         for _ in row

@@ -393,3 +393,36 @@ def test_reschedule_spreads_cadence_by_ten_percent():
         monitor = Monitor([panel], monotonic=clock.monotonic, now=clock.now, jitter=lambda v=value: v)
         monitor.run_due()
         assert monitor.states["p"].next_attempt == expected
+
+
+def test_styled_render_escapes_api_text(monkeypatch):
+    import surgeflow.monitor as monitor_module
+
+    class FakeStyler:
+        def __init__(self):
+            self.calls = []
+
+        def format(self, **kwargs):
+            self.calls.append(("format", kwargs))
+            return self
+
+        def format_index(self, **kwargs):
+            self.calls.append(("format_index", kwargs))
+            return self
+
+        def apply(self, *args, **kwargs):
+            self.calls.append(("apply", {}))
+            return self
+
+    styler = FakeStyler()
+    monkeypatch.setattr(monitor_module, "_HAS_JINJA2", True)
+    monkeypatch.setattr(pd.DataFrame, "style", property(lambda self: styler))
+    shown = []
+    frame = pd.DataFrame([{"note": "<b>Injected heading</b>", "_changed": True}])
+
+    Monitor._display_frame(frame, shown.append)
+
+    assert shown == [styler]
+    assert ("format", {"escape": "html"}) in styler.calls
+    assert ("format_index", {"escape": "html", "axis": 1}) in styler.calls
+    assert styler.calls[-1][0] == "apply"
