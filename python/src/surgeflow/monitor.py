@@ -431,6 +431,8 @@ class Monitor:
         self.now = now
         self.states = {panel.name: PanelState() for panel in self.panels}
         self.stopped = False
+        # The API rate-limits per key, so a 429 pauses every panel, not just one.
+        self.cooldown_until = 0.0
 
     def print_projection(self) -> int:
         projected = projected_requests_per_day(self.panels)
@@ -440,7 +442,6 @@ class Monitor:
         return projected
 
     def run_due(self) -> None:
-        tick = self.monotonic()
         wall_now = self.now()
         if self.stopped and wall_now.astimezone(timezone.utc).date().isoformat() != self.budget.day:
             # A new UTC day resets the server quota, so resume the stopped panels.
@@ -456,6 +457,11 @@ class Monitor:
                 state.status += f"; table shows the last fetch: {state.last_fetch}"
 
         for panel in self.panels:
+            # Fresh clocks per panel: earlier requests in this pass take real time.
+            tick = self.monotonic()
+            wall_now = self.now()
+            if tick < self.cooldown_until:
+                return
             state = self.states[panel.name]
             if tick < state.next_attempt:
                 continue
@@ -506,6 +512,11 @@ class Monitor:
                         f"HTTP 429; Retry-After {delay:g} seconds; message: {exc}",
                         "requested",
                     )
+                    if exc.retry_after is not None:
+                        # Retry-After counts from the response, not from the request.
+                        self.cooldown_until = self.monotonic() + delay
+                        state.next_attempt = self.cooldown_until
+                        return
                 else:
                     note(state, f"HTTP {exc.status_code}; message: {exc}", "requested")
                 state.next_attempt = tick + delay

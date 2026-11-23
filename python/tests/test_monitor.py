@@ -447,3 +447,45 @@ def test_summary_keeps_freshness_fallback_and_degraded_states():
     )
     assert "freshness: past_week" in status
     assert "publication fallback: accepted_publication_unavailable" in status
+
+
+def test_retry_after_counts_from_response_and_pauses_every_panel():
+    clock = Clock()
+    calls = []
+
+    def slow_429():
+        calls.append(("first", clock.tick))
+        if len(calls) == 1:
+            clock.tick += 30  # the request itself took 30 seconds
+            raise SurgeFlowApiError(429, "Slow down", retry_after=17)
+        return [{"value": 1}]
+
+    first = simple_panel(slow_429, name="first")
+    second = simple_panel(lambda: calls.append(("second", clock.tick)) or [{"value": 2}], name="second")
+    monitor = Monitor([first, second], monotonic=clock.monotonic, now=clock.now, jitter=lambda: 0.0)
+
+    monitor.run_due()
+    assert calls == [("first", 0.0)]
+    assert monitor.states["first"].next_attempt == 47.0
+    clock.tick = 46
+    monitor.run_due()
+    assert calls == [("first", 0.0)]
+    clock.tick = 47
+    monitor.run_due()
+    assert calls == [("first", 0.0), ("first", 47), ("second", 47)]
+
+
+def test_market_check_uses_the_clock_after_earlier_requests():
+    clock = Clock()  # 10:00 New York, session open
+    calls = []
+
+    def slow():
+        clock.wall = datetime(2026, 11, 23, 21, 0, tzinfo=timezone.utc)  # 16:00, closed
+        calls.append("slow")
+        return [{"value": 1}]
+
+    panels = [simple_panel(slow, name="slow"),
+              simple_panel(lambda: calls.append("hotlist") or [{"value": 2}], name="hotlist", market="us")]
+    Monitor(panels, monotonic=clock.monotonic, now=clock.now, jitter=lambda: 0.0).run_due()
+
+    assert calls == ["slow"]

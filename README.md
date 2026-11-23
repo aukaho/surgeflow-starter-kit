@@ -92,7 +92,7 @@ The catalogue supplies `base_url`; `SURGEFLOW_BASE_URL` overrides it. Set `SURGE
 Fixture mode reads `python/tests/fixtures` from a repository checkout; for an installed package, set `SURGEFLOW_FIXTURE_DIR` to that folder.
 
 Each panel refreshes on a schedule; each panel shows its source date. Only a response marked as session-live describes the current session.
-The monitor uses fixed weekday exchange hours and does not handle holidays. Changed rows receive a highlight, and 429 responses honour `Retry-After`.
+The monitor uses fixed weekday exchange hours and does not handle holidays. Changed rows receive a highlight. A 429 response's `Retry-After` counts from the response and pauses every panel, because the limit applies to the whole key.
 Cohort and layoff panels refresh at most once every six hours. **Feed unavailable** is an availability state, not an error.
 US cohorts are enabled by default. Set `SURGEFLOW_COHORT_MARKETS` to a comma-separated list to enable other cohort markets.
 
