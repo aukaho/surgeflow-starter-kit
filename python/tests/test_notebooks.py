@@ -175,3 +175,19 @@ def test_notebook_summaries_keep_freshness_and_fallback(monkeypatch, capsys):
     assert "Current weekly research books" not in out
     assert ("Data status: available; freshness: past_week; "
             "fallback reason: accepted_publication_unavailable;") in out
+
+
+def test_cohort_notebook_reports_expired_feed(monkeypatch, capsys):
+    monkeypatch.syspath_prepend(str(NOTEBOOKS))
+    fixtures = ROOT / "python" / "tests" / "fixtures"
+
+    def expired(self, market, api_key):
+        payload = json.loads((fixtures / "technical-cohorts-us.json").read_text(encoding="utf-8"))
+        payload["valid_until"] = "2000-01-01T00:00:00+00:00"
+        return payload
+
+    run_notebook_in_process("03_technical_cohorts.ipynb", monkeypatch,
+                            [("member_technical_cohorts", expired)])
+    out = capsys.readouterr().out
+    assert "Data status: past valid_until;" in out
+    assert "Data status: available" not in out

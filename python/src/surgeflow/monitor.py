@@ -176,6 +176,19 @@ def _first(payload: Dict[str, Any], names: Sequence[str]) -> Any:
     return None
 
 
+def past_valid_until(valid_until: Any, now: Optional[datetime] = None) -> bool:
+    """True when a feed's valid_until has passed; False when absent or unparseable."""
+    if not valid_until:
+        return False
+    try:
+        expiry = datetime.fromisoformat(str(valid_until).replace("Z", "+00:00"))
+    except ValueError:
+        return False
+    if expiry.tzinfo is None:
+        expiry = expiry.replace(tzinfo=timezone.utc)
+    return expiry < (now or datetime.now(timezone.utc))
+
+
 def summarize_payload(payload: Dict[str, Any]) -> SummarizeResult:
     data = payload.get("data", payload)
     rows: List[Dict[str, Any]] = []
@@ -353,15 +366,8 @@ def summarize_payload(payload: Dict[str, Any]) -> SummarizeResult:
     ):
         status = "available"
     valid_until = payload.get("valid_until")
-    if status == "available" and valid_until:
-        try:
-            expiry = datetime.fromisoformat(str(valid_until).replace("Z", "+00:00"))
-            if expiry.tzinfo is None:
-                expiry = expiry.replace(tzinfo=timezone.utc)
-            if expiry < datetime.now(timezone.utc):
-                status = "past valid_until"
-        except ValueError:
-            pass
+    if status == "available" and past_valid_until(valid_until):
+        status = "past valid_until"
     freshness = data.get("freshness") if isinstance(data, dict) else None
     if isinstance(freshness, dict):
         freshness = freshness.get("state")

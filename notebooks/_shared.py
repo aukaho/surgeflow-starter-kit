@@ -15,6 +15,14 @@ def fixture_mode() -> bool:
     return os.environ.get("SURGEFLOW_FIXTURES") == "1"
 
 
+# The synthetic fixtures are dated for this moment, so fixture runs do not expire.
+FIXTURE_NOW = datetime(2026, 11, 23, 15, 0, tzinfo=timezone.utc)
+
+
+def now_utc() -> datetime:
+    return FIXTURE_NOW if fixture_mode() else datetime.now(timezone.utc)
+
+
 def fetched_at() -> str:
     return datetime.now(timezone.utc).isoformat()
 
