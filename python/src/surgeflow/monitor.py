@@ -527,8 +527,9 @@ class Monitor:
                 state.next_attempt = tick + self._spread(panel.cadence_seconds)
 
     def _spread(self, seconds: float) -> float:
-        # +/-10% jitter so monitors started at the same moment do not poll in lockstep.
-        return seconds * (0.9 + 0.2 * self.jitter())
+        # 0 to +10% jitter so monitors started together do not poll in lockstep;
+        # never negative, so no panel refreshes more often than its cadence.
+        return seconds * (1.0 + 0.1 * self.jitter())
 
     def render(self) -> None:
         from IPython.display import clear_output, display

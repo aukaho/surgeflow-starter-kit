@@ -40,7 +40,7 @@ def test_cadence_limits_fetches():
     clock = Clock()
     calls = []
     panel = simple_panel(lambda: calls.append(clock.tick) or [{"value": 1}])
-    monitor = Monitor([panel], monotonic=clock.monotonic, now=clock.now, jitter=lambda: 0.5)
+    monitor = Monitor([panel], monotonic=clock.monotonic, now=clock.now, jitter=lambda: 0.0)
 
     monitor.run_due()
     clock.tick = 119
@@ -59,7 +59,7 @@ def test_budget_stops_before_request_over_limit():
     budget = RequestBudget(daily_limit=1)
     monitor = Monitor(
         [first, second], budget=budget,
-        monotonic=clock.monotonic, now=clock.now, jitter=lambda: 0.5,
+        monotonic=clock.monotonic, now=clock.now, jitter=lambda: 0.0,
     )
 
     monitor.run_due()
@@ -92,7 +92,7 @@ def test_closed_market_does_not_fetch():
     clock.wall = datetime(2026, 11, 22, 15, 0, tzinfo=timezone.utc)
     calls = []
     panel = simple_panel(lambda: calls.append(1) or [{"value": 1}], market="us")
-    monitor = Monitor([panel], monotonic=clock.monotonic, now=clock.now, jitter=lambda: 0.5)
+    monitor = Monitor([panel], monotonic=clock.monotonic, now=clock.now, jitter=lambda: 0.0)
 
     monitor.run_due()
 
@@ -111,7 +111,7 @@ def test_retry_after_delays_next_fetch():
         return [{"value": 1}]
 
     panel = simple_panel(fetch)
-    monitor = Monitor([panel], monotonic=clock.monotonic, now=clock.now, jitter=lambda: 0.5)
+    monitor = Monitor([panel], monotonic=clock.monotonic, now=clock.now, jitter=lambda: 0.0)
     monitor.run_due()
     clock.tick = 16
     monitor.run_due()
@@ -224,7 +224,7 @@ def test_feed_unavailable_preserves_cadence_and_status(name, error_code):
         )
 
     panel = simple_panel(fetch, cadence=21600, name=name)
-    monitor = Monitor([panel], monotonic=clock.monotonic, now=clock.now, jitter=lambda: 0.5)
+    monitor = Monitor([panel], monotonic=clock.monotonic, now=clock.now, jitter=lambda: 0.0)
     monitor.run_due()
 
     assert monitor.states[name].status.startswith("Feed unavailable")
@@ -295,7 +295,7 @@ def test_closed_market_keeps_last_fetch_source_date():
     clock = Clock()
     clock.wall = datetime(2026, 11, 23, 20, 59, tzinfo=timezone.utc)
     panel = simple_panel(lambda: [{"value": 1}], market="us")
-    monitor = Monitor([panel], monotonic=clock.monotonic, now=clock.now, jitter=lambda: 0.5)
+    monitor = Monitor([panel], monotonic=clock.monotonic, now=clock.now, jitter=lambda: 0.0)
     monitor.run_due()
     clock.tick, clock.wall = 43200, datetime(2026, 11, 24, 8, 59, tzinfo=timezone.utc)
     monitor.run_due()
@@ -313,7 +313,7 @@ def test_budget_stop_resumes_on_next_utc_day():
     calls = []
     panel = simple_panel(lambda: calls.append(1) or [{"value": 1}], cadence=60)
     budget = RequestBudget(daily_limit=1, day="2026-11-23")
-    monitor = Monitor([panel], budget=budget, monotonic=clock.monotonic, now=clock.now, jitter=lambda: 0.5)
+    monitor = Monitor([panel], budget=budget, monotonic=clock.monotonic, now=clock.now, jitter=lambda: 0.0)
     monitor.run_due()
     clock.tick = 60
     monitor.run_due()
@@ -338,7 +338,7 @@ def test_render_marks_changed_rows_without_jinja2(monkeypatch, capsys):
     clock = Clock()
     rows = [{"ticker": "AAA"}]
     panels = [simple_panel(lambda: rows, name=name) for name in ("one", "two")]
-    monitor = Monitor(panels, monotonic=clock.monotonic, now=clock.now, jitter=lambda: 0.5)
+    monitor = Monitor(panels, monotonic=clock.monotonic, now=clock.now, jitter=lambda: 0.0)
     monitor.run_due()
     rows = [{"ticker": "BBB"}]
     clock.tick = 1000
@@ -365,7 +365,7 @@ def test_render_error_in_one_panel_keeps_later_panels(monkeypatch, capsys):
     monkeypatch.setattr(IPython.display, "clear_output", lambda wait=False: None)
     clock = Clock()
     panels = [simple_panel(lambda: [{"ticker": "AAA"}], name=n) for n in ("one", "two")]
-    monitor = Monitor(panels, monotonic=clock.monotonic, now=clock.now, jitter=lambda: 0.5)
+    monitor = Monitor(panels, monotonic=clock.monotonic, now=clock.now, jitter=lambda: 0.0)
     monitor.run_due()
     monitor.render()
 
@@ -386,8 +386,8 @@ def test_seed_budget_from_rate_limit():
     assert budget.remaining == 100
 
 
-def test_reschedule_spreads_cadence_by_ten_percent():
-    for value, expected in ((0.0, 900.0), (1.0, 1100.0)):
+def test_reschedule_delays_cadence_by_up_to_ten_percent_never_less():
+    for value, expected in ((0.0, 1000.0), (0.5, 1050.0), (1.0, 1100.0)):
         clock = Clock()
         panel = simple_panel(lambda: [{"ticker": "AAA"}], cadence=1000, name="p")
         monitor = Monitor([panel], monotonic=clock.monotonic, now=clock.now, jitter=lambda v=value: v)

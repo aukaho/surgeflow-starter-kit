@@ -2,7 +2,7 @@
 
 ## 0.3.0 - Unreleased
 
-- The monitor spreads each panel's refresh by up to 10% either way, so monitors started at the same moment do not poll in lockstep.
+- The monitor delays each panel's refresh by 0 to 10%, never less than its cadence, so monitors started at the same moment do not poll in lockstep.
 
 - Replaced the `NotAvailableYet` stubs for technical cohorts and US layoffs with route calls from candidate stock-api release 4.
 - Changed (breaking): `member_technical_cohorts` now takes `market` first, as `member_technical_cohorts(market, api_key)`.
