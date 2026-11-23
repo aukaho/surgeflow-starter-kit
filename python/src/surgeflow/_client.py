@@ -144,6 +144,9 @@ class SurgeFlow(MemberMethods):
         if api_key is not None:
             if not isinstance(api_key, str) or not api_key.strip():
                 raise ValueError("api_key must be a non-empty string")
+            # Reject before the transport, whose header errors would echo the key.
+            if any(ord(ch) < 32 or ord(ch) == 127 for ch in api_key):
+                raise ValueError("api_key contains a control character; paste the key again")
             headers["Authorization"] = f"Bearer {api_key}"
         if fixture_enabled():
             return read_fixture(path, request_params, response_format)

@@ -228,3 +228,15 @@ def test_no_request_sends_an_x_user_id_header():
     assert len(session.calls) >= 23
     for call in session.calls:
         assert "x-user-id" not in {name.lower() for name in call["headers"]}, call["url"]
+
+
+def test_member_key_with_control_character_is_rejected_without_echo():
+    session = FakeSession()
+    client = SurgeFlow(session=session)
+
+    with pytest.raises(ValueError) as caught:
+        client.member_me("PLACEHOLDER\nX")
+
+    assert "PLACEHOLDER" not in str(caught.value)
+    assert caught.value.__cause__ is None and caught.value.__context__ is None
+    assert session.calls == []

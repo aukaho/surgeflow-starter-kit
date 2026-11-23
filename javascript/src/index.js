@@ -98,6 +98,8 @@ export class SurgeFlow {
     };
     if (apiKey !== undefined) {
       if (typeof apiKey !== "string" || !apiKey.trim()) throw new TypeError("apiKey must be a non-empty string");
+      // Reject before fetch, whose header errors would echo the key.
+      if (/[\x00-\x1f\x7f]/.test(apiKey)) throw new TypeError("apiKey contains a control character; paste the key again");
       headers.Authorization = `Bearer ${apiKey}`;
     }
 
