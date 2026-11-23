@@ -118,3 +118,33 @@ def test_new_fixtures_have_top_level_synthetic_label():
         if path.name in recorded:
             continue
         assert json.loads(path.read_text(encoding="utf-8"))["synthetic"] is True
+
+
+def run_notebook_in_process(name, monkeypatch, patches=()):
+    """Run a notebook's code cells in this process; return its namespace."""
+    import _shared
+    from surgeflow import SurgeFlow
+
+    monkeypatch.setenv("SURGEFLOW_FIXTURES", "1")
+    monkeypatch.delenv("SURGEFLOW_API_KEY", raising=False)
+    monkeypatch.chdir(NOTEBOOKS)
+    monkeypatch.setattr(_shared, "display", lambda frame: None)
+    for method, replacement in patches:
+        monkeypatch.setattr(SurgeFlow, method, replacement)
+    namespace = {}
+    notebook = json.loads((NOTEBOOKS / name).read_text(encoding="utf-8"))
+    for cell in notebook["cells"]:
+        if cell["cell_type"] == "code":
+            exec("".join(cell["source"]), namespace)
+    return namespace
+
+
+def test_cycle_columns_match_producer_schema(monkeypatch, capsys):
+    monkeypatch.syspath_prepend(str(NOTEBOOKS))
+    namespace = run_notebook_in_process("01_macro_model_votes.ipynb", monkeypatch)
+    row = namespace["cycle_frame"].iloc[0]
+
+    assert row["leading_method"] == "pc1" and row["lagging_method"] == "equal_weight"
+    assert (row["leading_n_used"], row["leading_n_max"]) == (5, 6)
+    assert row["cycle_phase"] == "expansion"
+    assert not namespace["cycle_frame"].isna().any().any()
