@@ -129,3 +129,10 @@ def fetch_panel(
 
 def selected(row: Dict[str, Any], names: Iterable[str]) -> Dict[str, Any]:
     return {name: row.get(name) for name in names}
+
+
+def status_with(status: Any, **extra: Any) -> str:
+    """Keep freshness and fallback states beside the availability status."""
+    parts = [str(status or "not supplied")]
+    parts += [f"{name.replace('_', ' ')}: {value}" for name, value in extra.items() if value not in (None, "")]
+    return "; ".join(parts)

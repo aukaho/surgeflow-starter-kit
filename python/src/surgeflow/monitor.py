@@ -362,6 +362,14 @@ def summarize_payload(payload: Dict[str, Any]) -> SummarizeResult:
                 status = "past valid_until"
         except ValueError:
             pass
+    freshness = data.get("freshness") if isinstance(data, dict) else None
+    if isinstance(freshness, dict):
+        freshness = freshness.get("state")
+    publication = data.get("publication") if isinstance(data, dict) else None
+    fallback = publication.get("fallback_reason") if isinstance(publication, dict) else None
+    degraded = payload.get("degraded") is True
+    if degraded and status is None:
+        status = "degraded"
     message = _first(
         payload, ("message", "reason", "stale_reason", "reason_code")
     )
@@ -371,6 +379,12 @@ def summarize_payload(payload: Dict[str, Any]) -> SummarizeResult:
     ]
     if valid_until:
         parts.append(f"valid until: {valid_until}")
+    if isinstance(freshness, str) and freshness:
+        parts.append(f"freshness: {freshness}")
+    if fallback:
+        parts.append(f"publication fallback: {fallback}")
+    if degraded:
+        parts.append("degraded read: the service may have served a cached or empty list")
     if message:
         parts.append(f"message: {message}")
     if isinstance(data, dict) and data.get("portfolios") == []:

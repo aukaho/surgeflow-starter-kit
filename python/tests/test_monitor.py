@@ -426,3 +426,24 @@ def test_styled_render_escapes_api_text(monkeypatch):
     assert ("format", {"escape": "html"}) in styler.calls
     assert ("format_index", {"escape": "html", "axis": 1}) in styler.calls
     assert styler.calls[-1][0] == "apply"
+
+
+def test_summary_keeps_freshness_fallback_and_degraded_states():
+    _, status = summarize_payload({"count": 0, "watchlists": [], "degraded": True})
+    assert "status: degraded" in status and "degraded read" in status
+
+    _, status = summarize_payload(
+        {"ok": True, "data": {"status": "available", "as_of_date": "2026-11-19",
+                              "freshness": {"state": "stale"}, "indexes": []}}
+    )
+    assert "status: available" in status and "freshness: stale" in status
+
+    _, status = summarize_payload(
+        {"ok": True, "data": {
+            "status": "available", "freshness": "past_week",
+            "publication": {"fallback": True, "fallback_reason": "accepted_publication_unavailable"},
+            "portfolio": {"formation_date": "2026-11-09", "books": [{"factor": "VALUE"}]},
+        }}
+    )
+    assert "freshness: past_week" in status
+    assert "publication fallback: accepted_publication_unavailable" in status

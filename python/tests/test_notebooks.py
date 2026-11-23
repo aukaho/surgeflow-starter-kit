@@ -148,3 +148,30 @@ def test_cycle_columns_match_producer_schema(monkeypatch, capsys):
     assert (row["leading_n_used"], row["leading_n_max"]) == (5, 6)
     assert row["cycle_phase"] == "expansion"
     assert not namespace["cycle_frame"].isna().any().any()
+
+
+def test_notebook_summaries_keep_freshness_and_fallback(monkeypatch, capsys):
+    monkeypatch.syspath_prepend(str(NOTEBOOKS))
+    fixtures = ROOT / "python" / "tests" / "fixtures"
+
+    def stale_votes(self, api_key, *args, **kwargs):
+        payload = json.loads((fixtures / "macro-index-votes.json").read_text(encoding="utf-8"))
+        payload["data"]["freshness"]["state"] = "stale"
+        return payload
+
+    def past_week_books(self, api_key):
+        payload = json.loads((fixtures / "weekly-pure-books.json").read_text(encoding="utf-8"))
+        payload["data"]["freshness"] = "past_week"
+        payload["data"]["publication"] = {"fallback": True, "fallback_reason": "accepted_publication_unavailable"}
+        return payload
+
+    run_notebook_in_process("01_macro_model_votes.ipynb", monkeypatch,
+                            [("member_macro_index_votes", stale_votes)])
+    assert "Data status: available; freshness: stale;" in capsys.readouterr().out
+
+    run_notebook_in_process("04_pure_factor_portfolios.ipynb", monkeypatch,
+                            [("member_weekly_pure_books", past_week_books)])
+    out = capsys.readouterr().out
+    assert "Current weekly research books" not in out
+    assert ("Data status: available; freshness: past_week; "
+            "fallback reason: accepted_publication_unavailable;") in out
