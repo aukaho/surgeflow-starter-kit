@@ -71,7 +71,7 @@ def test_momentum_hotlist_uses_recorded_fixture_and_user_agent():
     assert call["timeout"] == 30
     assert call["headers"] == {
         "Accept": "application/json",
-        "User-Agent": "surgeflow-python/0.2.0",
+        "User-Agent": "surgeflow-python/0.3.0",
     }
 
 
@@ -216,7 +216,6 @@ def test_ok_false_surfaces_error_code_and_message():
 
 
 def test_no_request_sends_an_x_user_id_header():
-    from surgeflow import NotAvailableYet
     from surgeflow.monitor import default_panels
 
     session = FakeSession(*[FakeResponse('{"ok":true}') for _ in range(40)])
@@ -225,12 +224,19 @@ def test_no_request_sends_an_x_user_id_header():
     client.data_freshness()
     for panel in default_panels(client, KEY):
         panel.fetch()
-    for method in (client.member_technical_cohorts, client.member_layoffs):
-        try:
-            method(KEY)
-        except NotAvailableYet:
-            pass
 
-    assert len(session.calls) >= 21
+    assert len(session.calls) >= 23
     for call in session.calls:
         assert "x-user-id" not in {name.lower() for name in call["headers"]}, call["url"]
+
+
+def test_member_key_with_control_character_is_rejected_without_echo():
+    session = FakeSession()
+    client = SurgeFlow(session=session)
+
+    with pytest.raises(ValueError) as caught:
+        client.member_me("PLACEHOLDER\nX")
+
+    assert "PLACEHOLDER" not in str(caught.value)
+    assert caught.value.__cause__ is None and caught.value.__context__ is None
+    assert session.calls == []

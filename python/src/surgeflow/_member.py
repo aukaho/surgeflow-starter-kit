@@ -1,6 +1,6 @@
 from typing import Any, Dict, Optional, Union
 
-from ._errors import NotAvailableYet, SurgeFlowResponseError
+from ._errors import SurgeFlowResponseError
 
 JsonObject = Dict[str, Any]
 Params = Dict[str, Union[str, int, bool]]
@@ -99,10 +99,10 @@ class MemberMethods:
             f"/api/{market}/sentiment-whale-picks", api_key, {"limit": limit}
         )
 
-    def member_technical_cohorts(self, api_key: str) -> JsonObject:
-        raise NotAvailableYet(
-            "Technical cohorts are not available with a member key yet. "
-            "The live route uses a website cookie; use only the public factor context."
+    def member_technical_cohorts(self, market: str, api_key: str) -> JsonObject:
+        self._validate_market(market)
+        return self._member_get(
+            f"/api/{market}/technical-strategies/cohorts", api_key
         )
 
     def member_weekly_pure_books(self, api_key: str) -> JsonObject:
@@ -192,10 +192,7 @@ class MemberMethods:
         return self._member_get("/api/us/daily-insights", api_key)
 
     def member_layoffs(self, api_key: str) -> JsonObject:
-        raise NotAvailableYet(
-            "Layoffs are not available with a member key yet. "
-            "No stock-api route exists, so this notebook shows no layoffs data."
-        )
+        return self._member_get("/api/us/layoffs/latest", api_key)
 
     @staticmethod
     def _validate_version(version: str) -> None:

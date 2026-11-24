@@ -1,11 +1,12 @@
 from dataclasses import dataclass, field
 from datetime import datetime, time as wall_time, timezone
 import math
+import random
 import time
 from typing import Any, Callable, Dict, List, Optional, Sequence, Tuple
 from zoneinfo import ZoneInfo
 
-from ._errors import SurgeFlowApiError
+from ._errors import SurgeFlowApiError, SurgeFlowFeedUnavailable
 
 try:
     import pandas as pd
@@ -53,7 +54,7 @@ class PanelState:
 @dataclass
 class RequestBudget:
     # Counts only this process's requests: each running monitor has its own cap,
-    # a restart starts from zero (about 20 requests for the first full refresh),
+    # a restart starts from zero (about 22 requests for the first full refresh),
     # and the key's 2,000 per day is shared by every process using it.
     daily_limit: int = 1500
     used: int = 0
@@ -175,6 +176,19 @@ def _first(payload: Dict[str, Any], names: Sequence[str]) -> Any:
     return None
 
 
+def past_valid_until(valid_until: Any, now: Optional[datetime] = None) -> bool:
+    """True when a feed's valid_until has passed; False when absent or unparseable."""
+    if not valid_until:
+        return False
+    try:
+        expiry = datetime.fromisoformat(str(valid_until).replace("Z", "+00:00"))
+    except ValueError:
+        return False
+    if expiry.tzinfo is None:
+        expiry = expiry.replace(tzinfo=timezone.utc)
+    return expiry < (now or datetime.now(timezone.utc))
+
+
 def summarize_payload(payload: Dict[str, Any]) -> SummarizeResult:
     data = payload.get("data", payload)
     rows: List[Dict[str, Any]] = []
@@ -202,6 +216,51 @@ def summarize_payload(payload: Dict[str, Any]) -> SummarizeResult:
             for category in data["rankings"]:
                 for row in category.get("rows") or []:
                     rows.append({"category": category.get("id"), **row})
+        elif isinstance(data.get("cohorts"), list):
+            for cohort in data["cohorts"]:
+                observation = cohort.get("observation") or {}
+                observed = {
+                    row.get("ticker"): row
+                    for row in observation.get("holdings") or []
+                }
+                for holding in cohort.get("holdings") or [None]:
+                    holding = holding or {}
+                    observed_row = observed.get(holding.get("ticker"), {})
+                    rows.append(
+                        {
+                            **{
+                                key: value
+                                for key, value in cohort.items()
+                                if key not in ("holdings", "observation")
+                            },
+                            # The US producer omits currency; its amounts are USD.
+                            "currency": cohort.get("currency")
+                            or (
+                                "USD"
+                                if (cohort.get("market") or data.get("market") or "us") == "us"
+                                else None
+                            ),
+                            "observation_as_of": observation.get("as_of"),
+                            "observation_state": observation.get("state"),
+                            "elapsed_sessions": observation.get("elapsed_sessions"),
+                            "observation_window": observation.get("observation_window"),
+                            "gross_price_return": observation.get("gross_price_return"),
+                            "gross_usd_return": observation.get("gross_usd_return"),
+                            **holding,
+                            "holding_price_return": observed_row.get("price_return"),
+                            "holding_session_return": observed_row.get("session_return"),
+                            "holding_observation_state": observed_row.get("state"),
+                        }
+                    )
+        elif isinstance(data.get("watch"), list):
+            for row in data["watch"]:
+                if isinstance(row, dict):
+                    rows.append(
+                        {
+                            **{key: value for key, value in row.items() if key != "checks"},
+                            **(row.get("checks") or {}),
+                        }
+                    )
         elif isinstance(data.get("watchlists"), list):
             for watchlist in data["watchlists"]:
                 items = watchlist.get("items") or [None]
@@ -286,6 +345,7 @@ def summarize_payload(payload: Dict[str, Any]) -> SummarizeResult:
             "_rebuild_date",
             "whale_as_of",
             "news_rebuild_date",
+            "data_through",
             "published_at",
         ),
     )
@@ -300,6 +360,22 @@ def summarize_payload(payload: Dict[str, Any]) -> SummarizeResult:
     status = _first(
         payload, ("status", "state", "market_status", "data_quality", "source_mode")
     )
+    if status is None and payload.get("ok") is True and payload.get("schema") in (
+        "technical_strategy_feed_v1",
+        "layoff_watch_v1",
+    ):
+        status = "available"
+    valid_until = payload.get("valid_until")
+    if status == "available" and past_valid_until(valid_until):
+        status = "past valid_until"
+    freshness = data.get("freshness") if isinstance(data, dict) else None
+    if isinstance(freshness, dict):
+        freshness = freshness.get("state")
+    publication = data.get("publication") if isinstance(data, dict) else None
+    fallback = publication.get("fallback_reason") if isinstance(publication, dict) else None
+    degraded = payload.get("degraded") is True
+    if degraded and status is None:
+        status = "degraded"
     message = _first(
         payload, ("message", "reason", "stale_reason", "reason_code")
     )
@@ -307,6 +383,14 @@ def summarize_payload(payload: Dict[str, Any]) -> SummarizeResult:
         f"Source date: {source_date or 'not supplied'}",
         f"status: {status or 'not supplied'}",
     ]
+    if valid_until:
+        parts.append(f"valid until: {valid_until}")
+    if isinstance(freshness, str) and freshness:
+        parts.append(f"freshness: {freshness}")
+    if fallback:
+        parts.append(f"publication fallback: {fallback}")
+    if degraded:
+        parts.append("degraded read: the service may have served a cached or empty list")
     if message:
         parts.append(f"message: {message}")
     if isinstance(data, dict) and data.get("portfolios") == []:
@@ -338,13 +422,17 @@ class Monitor:
         budget: Optional[RequestBudget] = None,
         monotonic: Callable[[], float] = time.monotonic,
         now: Callable[[], datetime] = lambda: datetime.now(timezone.utc),
+        jitter: Callable[[], float] = random.random,
     ) -> None:
         self.panels = list(panels)
+        self.jitter = jitter
         self.budget = budget or RequestBudget()
         self.monotonic = monotonic
         self.now = now
         self.states = {panel.name: PanelState() for panel in self.panels}
         self.stopped = False
+        # The API rate-limits per key, so a 429 pauses every panel, not just one.
+        self.cooldown_until = 0.0
 
     def print_projection(self) -> int:
         projected = projected_requests_per_day(self.panels)
@@ -353,8 +441,7 @@ class Monitor:
         print("Each panel refreshes on a schedule; each panel shows its source date.")
         return projected
 
-    def run_due(self) -> None:
-        tick = self.monotonic()
+    def run_due(self, stop: Callable[[], bool] = lambda: False) -> None:
         wall_now = self.now()
         if self.stopped and wall_now.astimezone(timezone.utc).date().isoformat() != self.budget.day:
             # A new UTC day resets the server quota, so resume the stopped panels.
@@ -370,6 +457,13 @@ class Monitor:
                 state.status += f"; table shows the last fetch: {state.last_fetch}"
 
         for panel in self.panels:
+            if stop():
+                return
+            # Fresh clocks per panel: earlier requests in this pass take real time.
+            tick = self.monotonic()
+            wall_now = self.now()
+            if tick < self.cooldown_until:
+                return
             state = self.states[panel.name]
             if tick < state.next_attempt:
                 continue
@@ -379,7 +473,7 @@ class Monitor:
                     "Market closed under fixed weekday hours; holidays are not handled",
                     "checked",
                 )
-                state.next_attempt = tick + panel.cadence_seconds
+                state.next_attempt = tick + self._spread(panel.cadence_seconds)
                 continue
             if self.stopped or not self.budget.consume(panel.cost, wall_now):
                 self.stopped = True
@@ -403,9 +497,12 @@ class Monitor:
                 state.status = state.last_fetch
                 if removed:
                     state.status += f"; {removed} prior row versions no longer present"
-                state.next_attempt = tick + panel.cadence_seconds
+                state.next_attempt = tick + self._spread(panel.cadence_seconds)
+            except SurgeFlowFeedUnavailable:
+                note(state, "Feed unavailable", "requested")
+                state.next_attempt = tick + self._spread(panel.cadence_seconds)
             except SurgeFlowApiError as exc:
-                delay = panel.cadence_seconds
+                delay = self._spread(panel.cadence_seconds)
                 if exc.status_code == 429:
                     delay = (
                         max(0.0, exc.retry_after)
@@ -417,12 +514,22 @@ class Monitor:
                         f"HTTP 429; Retry-After {delay:g} seconds; message: {exc}",
                         "requested",
                     )
+                    if exc.retry_after is not None:
+                        # Retry-After counts from the response, not from the request.
+                        self.cooldown_until = self.monotonic() + delay
+                        state.next_attempt = self.cooldown_until
+                        return
                 else:
                     note(state, f"HTTP {exc.status_code}; message: {exc}", "requested")
                 state.next_attempt = tick + delay
             except Exception as exc:
                 note(state, f"Error {type(exc).__name__}: {exc}", "requested")
-                state.next_attempt = tick + panel.cadence_seconds
+                state.next_attempt = tick + self._spread(panel.cadence_seconds)
+
+    def _spread(self, seconds: float) -> float:
+        # 0 to +10% jitter so monitors started together do not poll in lockstep;
+        # never negative, so no panel refreshes more often than its cadence.
+        return seconds * (1.0 + 0.1 * self.jitter())
 
     def render(self) -> None:
         from IPython.display import clear_output, display
@@ -447,8 +554,11 @@ class Monitor:
         elif "_changed" not in frame:
             display(frame)
         elif _HAS_JINJA2:
+            # Styler does not escape by default; plain DataFrame display does.
             display(
-                frame.style.apply(
+                frame.style.format(escape="html")
+                .format_index(escape="html", axis=1)
+                .apply(
                     lambda row: [
                         "background-color: #fff3cd" if row["_changed"] else ""
                         for _ in row
@@ -461,9 +571,19 @@ class Monitor:
             display(frame.assign(_changed=frame["_changed"].map({True: "changed", False: ""})))
 
 
-def default_panels(client: Any, api_key: str, hotlist_market: str = "us") -> List[Panel]:
+def default_panels(
+    client: Any,
+    api_key: str,
+    hotlist_market: str = "us",
+    cohort_markets: Sequence[str] = ("us",),
+) -> List[Panel]:
     if hotlist_market not in SESSIONS:
         raise ValueError("hotlist_market must be us, cn, jp, or hk")
+    if isinstance(cohort_markets, str) or any(
+        market not in SESSIONS for market in cohort_markets
+    ):
+        raise ValueError("cohort_markets must contain only us, cn, jp, or hk")
+    selected_cohort_markets = tuple(dict.fromkeys(cohort_markets))
 
     def panel(
         offering: str,
@@ -489,6 +609,15 @@ def default_panels(client: Any, api_key: str, hotlist_market: str = "us") -> Lis
               lambda: client.member_sentiment_scores("us", api_key, limit=10)),
         panel("02 Bull & bear sentiment picks", "whale-picks", 1800,
               lambda: client.member_sentiment_whale_picks("us", api_key)),
+        *[
+            panel(
+                "03 Technical cohorts",
+                f"{market}-cohorts",
+                21600,
+                lambda market=market: client.member_technical_cohorts(market, api_key),
+            )
+            for market in selected_cohort_markets
+        ],
         panel("04 Pure factor portfolios", "weekly-pure-books", 21600,
               lambda: client.member_weekly_pure_books(api_key)),
         panel("04 Pure factor portfolios", "historical-pure-books", 21600,
@@ -513,4 +642,6 @@ def default_panels(client: Any, api_key: str, hotlist_market: str = "us") -> Lis
               lambda: client.member_realtime(hotlist_market, api_key), hotlist_market),
         panel("08 Daily actionable insights", "daily-insights", 1800,
               lambda: client.member_daily_insights(api_key)),
+        panel("09 Layoffs", "us-layoffs", 21600,
+              lambda: client.member_layoffs(api_key)),
     ]

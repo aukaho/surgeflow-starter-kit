@@ -14,6 +14,8 @@ curl "https://surgeflows.capital/api/public/snapshots/momentum-hotlist.json?mark
 ```
 
 Public snapshots cover momentum Hotlist samples, macro indicators, news sentiment, factor overviews, and data freshness.
+The factor overview is a **frozen baseline (data to 11 April 2026, not updated daily)**.
+For current daily factor data, use keyless `GET https://surgeflows.capital/api/factor-reference/latest`.
 Data can be delayed or historical. Free access does not grant redistribution rights.
 
 Use these resources:
@@ -81,33 +83,43 @@ python -m pip install './python[notebooks]'
 jupyter notebook notebooks/00_quickstart.ipynb
 ```
 
-The eleven notebooks cover the quickstart, nine member offerings, and the live monitor. Offerings 03 and 09 explain their unavailable key routes without calling them.
-The offering 01, 02, 04, 05, 06, and 08 routes are member research routes (beta). They are not yet listed in `/api/v1/catalog`.
+The eleven notebooks cover the quickstart, nine member offerings, and the live monitor.
+The offering 01 through 06, 08 and 09 routes are member research routes (beta). The offering 07 routes are the catalogued /api/v1 market hotlist and realtime routes.
+The routes are listed in /api/v1/catalog member_research_endpoints.
+The 03 and 09 routes were not live when this version was built.
 The notebooks read `SURGEFLOW_API_KEY`, with a hidden `getpass` prompt as fallback. They never print the key or put it in a URL.
 The catalogue supplies `base_url`; `SURGEFLOW_BASE_URL` overrides it. Set `SURGEFLOW_FIXTURES=1` to use synthetic responses without network requests.
 Fixture mode reads `python/tests/fixtures` from a repository checkout; for an installed package, set `SURGEFLOW_FIXTURE_DIR` to that folder.
 
 Each panel refreshes on a schedule; each panel shows its source date. Only a response marked as session-live describes the current session.
-The monitor uses fixed weekday exchange hours and does not handle holidays. Changed rows receive a highlight, and 429 responses honour `Retry-After`.
+The monitor uses fixed weekday exchange hours and does not handle holidays. Changed rows receive a highlight. A 429 response's `Retry-After` counts from the response and pauses every panel, because the limit applies to the whole key.
+Cohort and layoff panels refresh at most once every six hours. **Feed unavailable** is an availability state, not an error.
+US cohorts are enabled by default. Set `SURGEFLOW_COHORT_MARKETS` to a comma-separated list to enable other cohort markets.
 
-The member beta permits 2,000 requests per day and 180 per minute for each key, shared by every process using it. The monitor budget defaults to 1,500 per day for each running monitor; a restart starts it from zero and spends about 20 requests on the first full refresh. In notebook 10, the budget is capped once at startup from the key's remaining daily count reported by `/api/v1/me`; requests made later by other processes are not tracked.
-This table gives the maximum projected requests on a full active weekday:
+The member beta permits 2,000 requests per day and 180 per minute for each key, shared by every process using it.
+The monitor budget defaults to 1,500 per day for each running monitor. A restart starts it from zero and spends about 22 requests on the first full refresh.
+In notebook 10, the budget is capped once at startup from the key's remaining daily count reported by `/api/v1/me`.
+Requests made later by other processes are not tracked. This table gives the maximum projected requests on a full active weekday:
 
 | Offering | Requests per fetch | Cadence | Requests per day |
 |---|---:|---:|---:|
 | 01 Macro model votes | 5 routes | 30 min | 240 |
 | 02 Bull & bear sentiment picks | 2 routes | 30 min | 96 |
-| 03 Technical cohorts | Unavailable by key | None | 0 |
+| 03 Technical cohorts, US | 1 route | 6 h | 4 |
 | 04 Pure factor portfolios | 3 routes | 6 h | 12 |
 | 05 Fundamental rankings | 2 routes | 6 h | 8 |
 | 06 Watchlists | 1 route | 5 min | 288 |
 | 06 Screens, alerts, and portfolios | 3 routes | 30 min | 144 |
 | 07 Hotlist and session board, US | 2 routes | 120 s during 6.5 session hours | 390 |
 | 08 Daily actionable insights | 1 route | 30 min | 48 |
-| 09 Layoffs | Unavailable by key | None | 0 |
-| **Scheduled total** | | | **1,226** |
+| 09 Layoffs | 1 route | 6 h | 4 |
+| **Scheduled total** | | | **1,234** |
 | One startup account check | 1 route | Once | 1 |
-| **Projected total** | | | **1,227** |
+| **Projected total** | | | **1,235** |
+
+Each additional enabled cohort market adds four requests per day.
+All four cohort markets give 1,246 scheduled requests plus one account check, for 1,247 total requests.
+Each refresh is delayed by 0 to 10% so monitors started together do not poll in lockstep. The delay is never negative, so no panel refreshes sooner than its cadence and a day does not exceed these totals.
 
 Free access grants no redistribution rights. **Do not republish the data you fetch.**
 

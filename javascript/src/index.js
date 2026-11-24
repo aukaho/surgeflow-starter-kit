@@ -67,6 +67,9 @@ export class SurgeFlow {
     return this.publicSnapshot("news-sentiment", { days, responseFormat: options.responseFormat });
   }
 
+  /** Read the frozen baseline with data to 11 April 2026, not updated daily.
+   * For current daily factor data, use keyless GET https://surgeflows.capital/api/factor-reference/latest.
+   */
   async factorOverview(market, options = {}) {
     this._validateMarket(market);
     return this.publicSnapshot("factor-overview", { market, responseFormat: options.responseFormat });
@@ -95,6 +98,8 @@ export class SurgeFlow {
     };
     if (apiKey !== undefined) {
       if (typeof apiKey !== "string" || !apiKey.trim()) throw new TypeError("apiKey must be a non-empty string");
+      // Reject before fetch, whose header errors would echo the key.
+      if (/[\x00-\x1f\x7f]/.test(apiKey)) throw new TypeError("apiKey contains a control character; paste the key again");
       headers.Authorization = `Bearer ${apiKey}`;
     }
 

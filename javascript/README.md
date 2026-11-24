@@ -25,6 +25,8 @@ const hotlistCsv = await client.momentumHotlist("us", { responseFormat: "csv" })
 
 Public methods return decoded JSON objects by default. Use `{ responseFormat: "csv" }` to receive CSV text.
 Market arguments accept `us`, `cn`, `jp`, or `hk`. The `days` argument accepts 1 through 365.
+The factor overview is a **frozen baseline (data to 11 April 2026, not updated daily)**.
+For current daily factor data, use keyless `GET https://surgeflows.capital/api/factor-reference/latest`.
 
 Use `publicSnapshot(snapshotId, { market, days, responseFormat })` for the generic snapshot method.
 The [public OpenAPI document](https://surgeflows.capital/api/public/openapi.json) defines the live contract.

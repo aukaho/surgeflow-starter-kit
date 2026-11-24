@@ -6,13 +6,21 @@ from typing import Any, Callable, Dict, Iterable, Optional
 import pandas as pd
 from IPython.display import display
 
-from surgeflow import NotAvailableYet, SurgeFlow
+from surgeflow import NotAvailableYet, SurgeFlow, SurgeFlowFeedUnavailable
 
 PLACEHOLDER = "sf_live_REPLACE_WITH_YOUR_KEY"
 
 
 def fixture_mode() -> bool:
     return os.environ.get("SURGEFLOW_FIXTURES") == "1"
+
+
+# The synthetic fixtures are dated for this moment, so fixture runs do not expire.
+FIXTURE_NOW = datetime(2026, 11, 23, 15, 0, tzinfo=timezone.utc)
+
+
+def now_utc() -> datetime:
+    return FIXTURE_NOW if fixture_mode() else datetime.now(timezone.utc)
 
 
 def fetched_at() -> str:
@@ -81,6 +89,28 @@ def show_panel(
     return frame
 
 
+def fetch_payload(
+    title: str, fetch: Callable[[], Dict[str, Any]]
+) -> Optional[Dict[str, Any]]:
+    try:
+        return fetch()
+    except SurgeFlowFeedUnavailable:
+        print(
+            f"{title}\nData status: Feed unavailable; source date: not supplied; "
+            f"fetched at: {fetched_at()}"
+        )
+        print("No member data fetched. The response was not replaced with an empty table.")
+        return None
+    except NotAvailableYet as exc:
+        print(f"{title}\nUnavailable by member key: {exc}; fetched at: {fetched_at()}")
+        print("No member data fetched.")
+        return None
+    except Exception as exc:
+        print(f"{title}\nError {type(exc).__name__}: {exc}; fetched at: {fetched_at()}")
+        print("The response was not replaced with an empty table.")
+        return None
+
+
 def fetch_panel(
     title: str,
     fetch: Callable[[], Dict[str, Any]],
@@ -91,15 +121,8 @@ def fetch_panel(
     status: Callable[[Dict[str, Any]], Any],
     message: Optional[Callable[[Dict[str, Any]], Optional[str]]] = None,
 ) -> Any:
-    try:
-        payload = fetch()
-    except NotAvailableYet as exc:
-        print(f"{title}\nUnavailable by member key: {exc}; fetched at: {fetched_at()}")
-        print("No member data fetched.")
-        return None
-    except Exception as exc:
-        print(f"{title}\nError {type(exc).__name__}: {exc}; fetched at: {fetched_at()}")
-        print("The response was not replaced with an empty table.")
+    payload = fetch_payload(title, fetch)
+    if payload is None:
         return None
     return show_panel(
         title,
@@ -114,3 +137,28 @@ def fetch_panel(
 
 def selected(row: Dict[str, Any], names: Iterable[str]) -> Dict[str, Any]:
     return {name: row.get(name) for name in names}
+
+
+def status_with(status: Any, **extra: Any) -> str:
+    """Keep freshness and fallback states beside the availability status."""
+    parts = [str(status or "not supplied")]
+    parts += [f"{name.replace('_', ' ')}: {value}" for name, value in extra.items() if value not in (None, "")]
+    return "; ".join(parts)
+
+
+def fetch_once(fetch: Callable[[], Dict[str, Any]]) -> Callable[[], Dict[str, Any]]:
+    """Call fetch at most once; later calls return its result or re-raise its error."""
+    outcome: list = []
+
+    def cached() -> Dict[str, Any]:
+        if not outcome:
+            try:
+                outcome.append((True, fetch()))
+            except Exception as exc:
+                outcome.append((False, exc))
+        ok, value = outcome[0]
+        if not ok:
+            raise value
+        return value
+
+    return cached

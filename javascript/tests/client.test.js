@@ -195,3 +195,15 @@ test("HTTP errors surface an error object's code and message", async () => {
     return true;
   });
 });
+
+test("a member key with a control character is rejected without echo", async () => {
+  let called = false;
+  const client = new SurgeFlow({ fetch: async () => { called = true; } });
+  await assert.rejects(client.memberMe("PLACEHOLDER\nX"), (error) => {
+    assert.ok(error instanceof TypeError);
+    assert.ok(!String(error.message).includes("PLACEHOLDER"));
+    assert.equal(error.cause, undefined);
+    return true;
+  });
+  assert.equal(called, false);
+});

@@ -1,0 +1,52 @@
+{
+  "synthetic": true,
+  "ok": true,
+  "schema": "layoff_watch_v1",
+  "market": "us",
+  "published_at": "2026-11-20T23:00:00+00:00",
+  "data_through": "2026-11-20",
+  "watch": [
+    {
+      "company": "Synthetic Example Corporation",
+      "ticker": "SYNTH",
+      "sector": "tech",
+      "filing_date": "2026-11-20",
+      "filing_url": "https://www.sec.gov/Archives/edgar/data/0000000000/synthetic-20261120.htm",
+      "state": "non_distress",
+      "checks": {
+        "price_collapse": false,
+        "bankruptcy_or_default_filing": false,
+        "losing_money_and_burning_cash": false
+      },
+      "prior_12m_return": 0.05
+    }
+  ],
+  "study": {
+    "primary": "non_distress_all at +126 sessions",
+    "events_layoff_8k": 12,
+    "events_after_90d_dedup": 10,
+    "states": {
+      "non_distress": 8,
+      "distress": 2
+    },
+    "groups": {
+      "non_distress_all": {
+        "126": {
+          "n": 8,
+          "mean": 0.01,
+          "median": 0.005,
+          "share_positive": 0.625,
+          "se_clustered_month": 0.02,
+          "t": 0.5,
+          "clusters": 4
+        }
+      }
+    },
+    "limitations": [
+      "Synthetic historical statistics with a small event count.",
+      "Synthetic industry comparisons exclude costs and dividends."
+    ]
+  },
+  "method": "Synthetic SEC filing rows and historical comparisons with synthetic industry peers.",
+  "disclaimer": "Research data only, not investment advice. Historical statistics are descriptive."
+}

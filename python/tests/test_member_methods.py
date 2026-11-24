@@ -1,8 +1,9 @@
 import json
+from pathlib import Path
 
 import pytest
 
-from surgeflow import NotAvailableYet, SurgeFlow, SurgeFlowApiError
+from surgeflow import SurgeFlow, SurgeFlowApiError, SurgeFlowFeedUnavailable
 
 KEY = "sf_live_REPLACE_WITH_YOUR_KEY"
 BASE = "https://stock-api-c4qdowjxva-uc.a.run.app"
@@ -108,13 +109,104 @@ def test_member_method_url_header_and_params(method, path, params):
     assert KEY not in call["url"]
 
 
-@pytest.mark.parametrize("method", ["member_technical_cohorts", "member_layoffs"])
-def test_unavailable_offerings_raise_clear_typed_error(method):
+@pytest.mark.parametrize(
+    "method,args,path",
+    [
+        (
+            "member_technical_cohorts",
+            ("us", KEY),
+            "/api/us/technical-strategies/cohorts",
+        ),
+        ("member_layoffs", (KEY,), "/api/us/layoffs/latest"),
+    ],
+)
+def test_notebook_feed_method_url_header_and_params(method, args, path):
+    session = FakeSession()
+    client = SurgeFlow(base_url=BASE, session=session)
+
+    assert getattr(client, method)(*args)["synthetic"] is True
+
+    call = session.calls[0]
+    assert call["method"] == "GET"
+    assert call["url"] == BASE + path
+    assert call["params"] == {}
+    assert call["headers"]["Authorization"] == f"Bearer {KEY}"
+    assert KEY not in call["url"]
+
+
+@pytest.mark.parametrize(
+    "method,args,fixture_name,error_code",
+    [
+        (
+            "member_technical_cohorts",
+            ("us", KEY),
+            "technical-cohorts-unavailable.json",
+            "COHORT_FEED_UNAVAILABLE",
+        ),
+        (
+            "member_layoffs",
+            (KEY,),
+            "layoffs-unavailable.json",
+            "LAYOFF_FEED_UNAVAILABLE",
+        ),
+    ],
+)
+def test_feed_unavailable_has_distinct_state(method, args, fixture_name, error_code):
+    body = (Path(__file__).parent / "fixtures" / fixture_name).read_text(encoding="utf-8")
+    session = FakeSession(FakeResponse(body, status_code=503))
+    client = SurgeFlow(session=session)
+
+    with pytest.raises(SurgeFlowFeedUnavailable) as caught:
+        getattr(client, method)(*args)
+
+    assert caught.value.status_code == 503
+    assert caught.value.payload["error"]["code"] == error_code
+    assert str(caught.value) == "Feed unavailable"
+
+
+def test_invalid_market_response_remains_normal_api_error():
+    response = FakeResponse(
+        '{"ok":false,"error":{"code":"INVALID_MARKET",'
+        '"message":"Market must be one of us, cn, jp, hk."}}',
+        status_code=400,
+    )
+    client = SurgeFlow(session=FakeSession(response))
+
+    with pytest.raises(SurgeFlowApiError) as caught:
+        client.member_technical_cohorts("us", KEY)
+
+    assert not isinstance(caught.value, SurgeFlowFeedUnavailable)
+    assert caught.value.status_code == 400
+    assert caught.value.payload["error"]["code"] == "INVALID_MARKET"
+    assert str(caught.value) == "INVALID_MARKET: Market must be one of us, cn, jp, hk."
+
+
+@pytest.mark.parametrize("market", ["xx", "US", "", None])
+def test_cohorts_reject_invalid_market_before_request(market):
     session = FakeSession()
     client = SurgeFlow(session=session)
 
-    with pytest.raises(NotAvailableYet, match="not available with a member key yet"):
-        getattr(client, method)(KEY)
+    with pytest.raises(ValueError):
+        client.member_technical_cohorts(market, KEY)
+    assert session.calls == []
+
+
+def test_notebook_feed_fixtures_cover_all_markets(monkeypatch):
+    session = FakeSession()
+    client = SurgeFlow(session=session)
+    monkeypatch.setenv("SURGEFLOW_FIXTURES", "1")
+    currencies = {"us": "USD", "cn": "CNY", "jp": "JPY", "hk": "HKD"}
+
+    for market, currency in currencies.items():
+        payload = client.member_technical_cohorts(market, KEY)
+        assert payload["schema"] == "technical_strategy_feed_v1"
+        assert payload["synthetic"] is True
+        assert payload["cohorts"][0]["market"] == market
+        # The real US feed omits currency; readers default it to USD.
+        assert payload["cohorts"][0].get("currency") == (None if market == "us" else currency)
+    layoffs = client.member_layoffs(KEY)
+    assert layoffs["schema"] == "layoff_watch_v1"
+    assert layoffs["synthetic"] is True
     assert session.calls == []
 
 
@@ -152,6 +244,7 @@ def test_all_four_market_paths_preserve_market_and_header(market):
 
     client.member_sentiment_scores(market, KEY)
     client.member_sentiment_whale_picks(market, KEY)
+    client.member_technical_cohorts(market, KEY)
     client.member_three_model_portfolios(KEY, market=market)
     client.member_hotlist(market, KEY)
     client.member_realtime(market, KEY)
@@ -159,6 +252,7 @@ def test_all_four_market_paths_preserve_market_and_header(market):
     assert [call["url"] for call in session.calls] == [
         f"{BASE}/api/{market}/stock-scores",
         f"{BASE}/api/{market}/sentiment-whale-picks",
+        f"{BASE}/api/{market}/technical-strategies/cohorts",
         f"{BASE}/api/{market}/three-model/portfolios",
         f"{BASE}/api/v1/markets/{market}/hotlist",
         f"{BASE}/api/v1/markets/{market}/realtime",

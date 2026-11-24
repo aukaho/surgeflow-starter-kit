@@ -7,9 +7,9 @@
   "row_count": 1,
   "source": "synthetic_public_context",
   "data": {
-    "as_of_date": "2026-11-19",
+    "as_of_date": "2026-04-11",
     "status": "available",
-    "message": "Synthetic public factor context, not technical cohort data.",
-    "rows": [{"factor": "VALUE", "date": "2026-11-19", "state": "available", "description": "Synthetic public factor context"}]
+    "message": "Synthetic frozen baseline, not current daily factor data.",
+    "rows": [{"factor": "VALUE", "date": "2026-04-11", "state": "available", "description": "Synthetic frozen baseline"}]
   }
 }
