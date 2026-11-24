@@ -144,7 +144,7 @@ Fixture mode reads `python/tests/fixtures` from a repository checkout; for an in
 
 The quickstart shows plan and usage without showing the key. Notebooks 01 through 09 cover the nine offerings.
 The offering 01 through 06, 08 and 09 routes are member research routes (beta). The offering 07 routes are the catalogued /api/v1 market hotlist and realtime routes.
-Once stock-api release 4 is live, the routes are listed in /api/v1/catalog member_research_endpoints (from stock-api release 4).
+The routes are listed in /api/v1/catalog member_research_endpoints.
 The 03 and 09 routes were not live when this version was built.
 Notebook 03 fetches US cohorts by default. Notebook 09 fetches US layoffs and their historical study.
 Both notebooks show source metadata and **Feed unavailable** when the feed returns its documented HTTP 503 state.

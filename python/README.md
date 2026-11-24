@@ -54,7 +54,7 @@ layoffs = client.member_layoffs(key)
 ```
 
 The member methods map these routes. The offering 01 through 06, 08 and 09 routes are member research routes (beta). The offering 07 routes are the catalogued /api/v1 market hotlist and realtime routes.
-Once stock-api release 4 is live, the routes are listed in /api/v1/catalog member_research_endpoints (from stock-api release 4).
+The routes are listed in /api/v1/catalog member_research_endpoints.
 The 03 and 09 routes were not live when this version was built.
 
 | Offering | Method | Route |
@@ -90,7 +90,7 @@ The 03 and 09 routes require the `screen` scope. Their HTTP 503 feed states use 
 
 The free plan grants all scopes used by these routes. It permits 2,000 requests per day and 180 per minute for each key.
 The [member API catalogue](https://surgeflows.capital/api/v1/catalog) defines the catalogued member contract, including `/api/v1/me` and the market hotlist and realtime routes.
-The catalogue exposes `member_research_endpoints` for the beta routes after stock-api release 4 is live.
+The catalogue exposes `member_research_endpoints` for the beta routes.
 
 ## Notebooks and monitor
 
