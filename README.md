@@ -84,6 +84,7 @@ jupyter notebook notebooks/00_quickstart.ipynb
 ```
 
 The eleven notebooks cover the quickstart, nine member offerings, and the live monitor.
+Notebook 03 shows cohort analytics as research measurements, with explicit status text when a metric is not available.
 The offering 01 through 06, 08 and 09 routes are member research routes (beta). The offering 07 routes are the catalogued /api/v1 market hotlist and realtime routes.
 The routes are listed in /api/v1/catalog member_research_endpoints.
 The 03 and 09 routes were not live when this version was built.

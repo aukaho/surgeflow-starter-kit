@@ -1,5 +1,12 @@
 # Changelog
 
+## 0.4.0 - Unreleased
+
+- Added shared cohort analytics rows with explicit metric statuses and formatting for notebook 03.
+- Added cohort window coverage, metric status counts, and available-value medians to the existing monitor panels without extra requests.
+- Added fixture coverage for all metric statuses, older cohorts without analytics, unknown fields, and carried risk-free rates.
+- Updated the Python package and user agent to 0.4.0.
+
 ## 0.3.0 - 2026-11-24
 
 - The monitor delays each panel's refresh by 0 to 10%, never less than its cadence, so monitors started at the same moment do not poll in lockstep.
