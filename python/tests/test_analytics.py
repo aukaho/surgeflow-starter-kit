@@ -1,4 +1,5 @@
 import json
+import os
 from collections import Counter
 from pathlib import Path
 
@@ -8,10 +9,9 @@ from surgeflow import cohort_analytics_rows, summarize_cohort_analytics
 from surgeflow._analytics import COHORT_ANALYTICS_METRICS, NO_ANALYTICS
 
 FIXTURES = Path(__file__).parent / "fixtures"
-REAL_SAMPLE = Path(
-    "/private/tmp/claude-501/-Users-aukaho-Desktop-files/"
-    "a9c0a6af-365c-42ed-b2b7-dd14dce20217/scratchpad/cohorts/us_latest.json"
-)
+# Optional: point SURGEFLOW_REAL_COHORT_SAMPLE at a saved published US cohort feed.
+_SAMPLE = os.environ.get("SURGEFLOW_REAL_COHORT_SAMPLE", "").strip()
+REAL_SAMPLE = Path(_SAMPLE) if _SAMPLE else None
 
 
 def fixture_payload():
@@ -91,14 +91,53 @@ def test_analytics_statistics_use_only_available_values_for_medians():
     assert summary["risk_free_carried"] is True
 
 
-@pytest.mark.skipif(not REAL_SAMPLE.is_file(), reason="real cohort sample is not available")
+@pytest.mark.skipif(
+    REAL_SAMPLE is None or not REAL_SAMPLE.is_file(),
+    reason="set SURGEFLOW_REAL_COHORT_SAMPLE to a saved cohort feed",
+)
 def test_real_sample_rows_and_sharpe_status_counts():
     payload = json.loads(REAL_SAMPLE.read_text(encoding="utf-8"))
 
     rows = cohort_analytics_rows(payload)
 
+    # These counts match the feed published on 2026-11-24; a later sample may differ.
     assert len(rows) == 156
     assert Counter(row["sharpe_ann"].split(":", 1)[0] for row in rows) == {
         "incomplete": 144,
         "not_computable": 12,
     }
+
+
+def _cohort(cohort_id, n, market="us", benchmark="S&P 500", metric=None):
+    analytics = {
+        "window": {"n": n, "target": 30, "minimum": 10},
+        "benchmark": {"name": benchmark},
+        "portfolio": {"window_return": metric or {"status": "available", "value": 0.01, "n": n}},
+    }
+    return {"cohort_id": cohort_id, "market": market, "observation": {"analytics": analytics}}
+
+
+def test_rows_name_market_and_benchmark_from_the_feed():
+    rows = cohort_analytics_rows({"cohorts": [_cohort("hk-1", 12, market="hk", benchmark="Hang Seng Index")]})
+    assert rows[0]["market"] == "hk"
+    assert rows[0]["benchmark"] == "Hang Seng Index"
+
+
+def test_rows_put_longest_windows_first_and_no_analytics_last():
+    payload = {"cohorts": [_cohort("a", 3), {"cohort_id": "old"}, _cohort("b", 12), _cohort("c", 12), _cohort("d", 0)]}
+    assert [row["cohort_id"] for row in cohort_analytics_rows(payload)] == ["b", "c", "a", "d", "old"]
+
+
+@pytest.mark.parametrize("bad", [True, float("inf"), float("nan"), "abc", None])
+def test_window_label_never_prints_invalid_numbers(bad):
+    label = cohort_analytics_rows({"cohorts": [_cohort("x", bad)]})[0]["window"]
+    assert label == "not supplied of target 30 sessions, minimum 10"
+
+
+def test_available_without_a_value_counts_as_incomplete():
+    payload = {"cohorts": [_cohort("x", 12, metric={"status": "available", "value": None})]}
+    assert cohort_analytics_rows(payload)[0]["window_return"] == "available: value not supplied"
+    summary = summarize_cohort_analytics(payload)
+    assert summary["status_counts"]["window_return"]["available"] == 0
+    assert summary["status_counts"]["window_return"]["incomplete"] == 1
+    assert summary["medians"]["window_return"] is None

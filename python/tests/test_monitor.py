@@ -215,7 +215,7 @@ def test_cohort_monitor_analytics_counts_and_medians():
     frame, status = summarize_payload(payload)
 
     assert len(frame) == 4
-    assert "Analytics: window n >= 10: 2 of 4 cohorts" in status
+    assert "window target 30 sessions, minimum 10; 2 of 4 cohorts have at least 10 sessions" in status
     assert "analytics not published for this cohort: 1" in status
     assert "window_return=2/0/1" in status
     assert "benchmark_window_return=1/1/1" in status
@@ -224,7 +224,7 @@ def test_cohort_monitor_analytics_counts_and_medians():
     assert "window_return=2.00%" in status
     assert "information_ratio_ann=2.00" in status
     assert "tracking_error_ann=3.00%" in status
-    assert "risk-free rate carried from the previous date" in status
+    assert "For some dates, the risk-free rate is carried forward from the previous date." in status
 
 
 @pytest.mark.parametrize(

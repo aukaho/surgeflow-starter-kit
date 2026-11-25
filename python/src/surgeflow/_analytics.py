@@ -53,7 +53,8 @@ def _metric_display(name: str, metric: Any) -> Tuple[str, Optional[float], str]:
     if status == "available":
         value = _number(metric.get("value"))
         if value is None:
-            return status, None, "available: value not supplied"
+            # Counted as incomplete so the monitor's available count matches its medians.
+            return "incomplete", None, "available: value not supplied"
         return status, value, _format_value(name, value)
     if status in ("incomplete", "not_computable"):
         return status, None, f"{status}: {reason_text}"
@@ -76,6 +77,11 @@ def _text(value: Any) -> str:
     return str(value) if value not in (None, "") else "not supplied"
 
 
+def _count_text(value: Any) -> str:
+    number = _number(value)
+    return str(int(number)) if number is not None and number == int(number) else "not supplied"
+
+
 def _records(payload: Dict[str, Any]) -> List[Dict[str, Any]]:
     data = payload.get("data", payload)
     if not isinstance(data, dict) or not isinstance(data.get("cohorts"), list):
@@ -90,12 +96,14 @@ def _records(payload: Dict[str, Any]) -> List[Dict[str, Any]]:
         row = {
             "cohort_id": _text(cohort.get("cohort_id")),
             "strategy_id": _text(cohort.get("strategy_id")),
+            "market": _text(cohort.get("market") or data.get("market") or "us"),
             "weighting": _text(cohort.get("weighting")),
             "as_of": _text(
                 cohort.get("as_of") or observation.get("as_of")
             ),
         }
         if not isinstance(analytics, dict):
+            row["benchmark"] = NO_ANALYTICS
             row["window"] = NO_ANALYTICS
             row.update({name: NO_ANALYTICS for name in COHORT_ANALYTICS_METRICS})
             row.update(
@@ -113,12 +121,14 @@ def _records(payload: Dict[str, Any]) -> List[Dict[str, Any]]:
         row["as_of"] = _text(
             analytics.get("as_of") or observation.get("as_of") or cohort.get("as_of")
         )
+        benchmark = analytics.get("benchmark")
+        row["benchmark"] = _text(benchmark.get("name") if isinstance(benchmark, dict) else None)
         window = analytics.get("window")
         window = window if isinstance(window, dict) else {}
         window_n = _number(window.get("n"))
         row["window"] = (
-            f"{_text(window.get('n'))} of target {_text(window.get('target'))} sessions, "
-            f"minimum {_text(window.get('minimum'))}"
+            f"{_count_text(window.get('n'))} of target {_count_text(window.get('target'))} sessions, "
+            f"minimum {_count_text(window.get('minimum'))}"
             if window
             else "not_computable: window not published"
         )
@@ -153,9 +163,14 @@ def cohort_analytics_rows(payload: Dict[str, Any]) -> List[Dict[str, Any]]:
     message. Unknown fields are ignored, apart from the carried risk-free note.
     """
     private_keys = {"_window_n", "_statuses", "_values"}
+    # Longest windows first (measurable cohorts on top); sorted() is stable, so feed order breaks ties.
+    records = sorted(
+        _records(payload),
+        key=lambda row: (row["_window_n"] is None, -(row["_window_n"] or 0)),
+    )
     return [
         {key: value for key, value in row.items() if key not in private_keys}
-        for row in _records(payload)
+        for row in records
     ]
 
 
@@ -194,8 +209,10 @@ def summarize_cohort_analytics(payload: Dict[str, Any]) -> Dict[str, Any]:
 def format_cohort_analytics_summary(summary: Dict[str, Any]) -> str:
     """Format cohort analytics statistics as compact monitor status lines."""
     lines = [
-        "Analytics: window n >= 10: "
-        f"{summary['window_n_at_least_10']} of {summary['cohort_count']} cohorts"
+        "SurgeFlow cohort analytics (research measurement, not a forecast): "
+        "window target 30 sessions, minimum 10; "
+        f"{summary['window_n_at_least_10']} of {summary['cohort_count']} cohorts "
+        "have at least 10 sessions"
     ]
     if summary["not_published_count"]:
         lines[0] += (
@@ -219,6 +236,7 @@ def format_cohort_analytics_summary(summary: Dict[str, Any]) -> str:
             f"{name}={_format_value(name, value) if value is not None else 'not available'}"
         )
     lines.append("Analytics medians (available values): " + "; ".join(medians))
+    lines.append("A 30-session window is short and these estimates are noisy.")
     if summary["risk_free_carried"]:
-        lines.append("risk-free rate carried from the previous date")
+        lines.append("For some dates, the risk-free rate is carried forward from the previous date.")
     return "\n".join(lines)

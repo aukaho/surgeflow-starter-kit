@@ -206,10 +206,11 @@ def test_cohort_analytics_notebook_executes_in_fixture_mode(monkeypatch, capsys)
 
     assert len(frame) == 4
     assert not frame.isna().any().any()
-    assert "Cohort analytics (research measurement, not a forecast)" in out
+    assert "SurgeFlow cohort analytics (research measurement, not a forecast)" in out
+    assert "Rows are ordered by window length, longest first." in out
     assert "A 30-session window is short and these estimates are noisy. Measured returns describe the past window only; they are not a forecast." in out
-    assert "The risk-free rate is a proxy where analytics.risk_free.proxy is true." in out
-    assert "risk-free rate carried from the previous date" in out
+    assert "The risk-free rate used for Sharpe is an approximate (proxy) rate, not an official daily rate." in out
+    assert "For some dates, the risk-free rate is carried forward from the previous date." in out
     assert frame.iloc[3]["window_return"] == "analytics not published for this cohort"
 
 

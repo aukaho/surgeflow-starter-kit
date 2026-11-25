@@ -3,6 +3,7 @@
 ## 0.4.0 - Unreleased
 
 - Added shared cohort analytics rows with explicit metric statuses and formatting for notebook 03.
+- Analytics rows name each cohort's market and the benchmark the feed reports, and list the longest observation windows first.
 - Added cohort window coverage, metric status counts, and available-value medians to the existing monitor panels without extra requests.
 - Added fixture coverage for all metric statuses, older cohorts without analytics, unknown fields, and carried risk-free rates.
 - Updated the Python package and user agent to 0.4.0.
