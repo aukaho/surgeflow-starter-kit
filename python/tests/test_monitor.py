@@ -186,8 +186,9 @@ def test_notebook_feed_summaries_cover_all_markets():
         )
         payload["valid_until"] = "2999-01-01T00:00:00+00:00"
         frame, status = summarize_payload(payload)
-        assert frame["ticker"].tolist() == ["SYNTH"]
-        assert frame["currency"].tolist() == [currency]
+        expected_tickers = ["SYNTH", "SYNI", "SYNN", "SYNA"] if market == "us" else ["SYNTH"]
+        assert frame["ticker"].tolist() == expected_tickers
+        assert frame["currency"].tolist() == [currency] * len(expected_tickers)
         assert "Source date: 2026-11-20" in status
         assert "status: available" in status
         assert "valid until: 2999-01-01T00:00:00+00:00" in status
@@ -202,6 +203,28 @@ def test_notebook_feed_summaries_cover_all_markets():
     assert frame["price_collapse"].tolist() == [False]
     assert "Source date: 2026-11-20" in status
     assert "status: available" in status
+
+
+def test_cohort_monitor_analytics_counts_and_medians():
+    import json
+    from pathlib import Path
+
+    fixture = Path(__file__).parent / "fixtures" / "technical-cohorts-us.json"
+    payload = json.loads(fixture.read_text(encoding="utf-8"))
+
+    frame, status = summarize_payload(payload)
+
+    assert len(frame) == 4
+    assert "Analytics: window n >= 10: 2 of 4 cohorts" in status
+    assert "analytics not published for this cohort: 1" in status
+    assert "window_return=2/0/1" in status
+    assert "benchmark_window_return=1/1/1" in status
+    assert "sharpe_ann=1/1/1" in status
+    assert "ic_mean_30d=1/1/1" in status
+    assert "window_return=2.00%" in status
+    assert "information_ratio_ann=2.00" in status
+    assert "tracking_error_ann=3.00%" in status
+    assert "risk-free rate carried from the previous date" in status
 
 
 @pytest.mark.parametrize(

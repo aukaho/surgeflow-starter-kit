@@ -139,7 +139,7 @@ class SurgeFlow(MemberMethods):
         }
         headers = {
             "Accept": "application/json" if response_format == "json" else "text/csv",
-            "User-Agent": "surgeflow-python/0.3.0",
+            "User-Agent": "surgeflow-python/0.4.0",
         }
         if api_key is not None:
             if not isinstance(api_key, str) or not api_key.strip():

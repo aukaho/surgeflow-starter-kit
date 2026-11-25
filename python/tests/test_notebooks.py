@@ -197,6 +197,22 @@ def test_cohort_notebook_reports_expired_feed(monkeypatch, capsys):
     assert "Data status: available" not in out
 
 
+def test_cohort_analytics_notebook_executes_in_fixture_mode(monkeypatch, capsys):
+    monkeypatch.syspath_prepend(str(NOTEBOOKS))
+
+    namespace = run_notebook_in_process("03_technical_cohorts.ipynb", monkeypatch)
+    out = capsys.readouterr().out
+    frame = namespace["analytics_frame"]
+
+    assert len(frame) == 4
+    assert not frame.isna().any().any()
+    assert "Cohort analytics (research measurement, not a forecast)" in out
+    assert "A 30-session window is short and these estimates are noisy. Measured returns describe the past window only; they are not a forecast." in out
+    assert "The risk-free rate is a proxy where analytics.risk_free.proxy is true." in out
+    assert "risk-free rate carried from the previous date" in out
+    assert frame.iloc[3]["window_return"] == "analytics not published for this cohort"
+
+
 def test_live_monitor_runs_requests_off_the_event_loop():
     notebook = json.loads((NOTEBOOKS / "10_live_monitor.ipynb").read_text(encoding="utf-8"))
     code = "\n".join("".join(cell["source"]) for cell in notebook["cells"] if cell["cell_type"] == "code")

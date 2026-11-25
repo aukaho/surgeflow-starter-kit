@@ -30,13 +30,346 @@
       ],
       "observation": {
         "as_of": "2026-11-20",
+        "gross_price_return": 0.01,
+        "state": "available",
+        "elapsed_sessions": 30,
+        "observation_window": "complete",
+        "holdings": [
+          {
+            "ticker": "SYNTH",
+            "price_return": 0.01,
+            "session_return": 0.001,
+            "state": "available"
+          }
+        ],
+        "analytics": {
+          "as_of": "2026-11-20",
+          "schema": "synthetic_cohort_analytics_v1",
+          "future_analytics_field": {
+            "anything": "ignored"
+          },
+          "window": {
+            "n": 30,
+            "complete_n": 30,
+            "minimum": 10,
+            "target": 30,
+            "start": "2026-10-09",
+            "end": "2026-11-20"
+          },
+          "benchmark": {
+            "name": "S&P 500"
+          },
+          "risk_free": {
+            "proxy": true,
+            "convention": "rf_1d = rf_annualized / 252",
+            "risk_free_carried": true
+          },
+          "portfolio": {
+            "window_return": {
+              "status": "available",
+              "reason": null,
+              "n": 30,
+              "value": 0.01
+            },
+            "benchmark_window_return": {
+              "status": "available",
+              "reason": null,
+              "n": 30,
+              "value": 0.015
+            },
+            "active_mean_ann": {
+              "status": "available",
+              "reason": null,
+              "n": 30,
+              "value": 0.12
+            },
+            "volatility_daily": {
+              "status": "available",
+              "reason": null,
+              "n": 30,
+              "value": 0.2
+            },
+            "tracking_error_ann": {
+              "status": "available",
+              "reason": null,
+              "n": 30,
+              "value": 0.02
+            },
+            "information_ratio_ann": {
+              "status": "available",
+              "reason": null,
+              "n": 30,
+              "value": 1.0
+            },
+            "sharpe_ann": {
+              "status": "available",
+              "reason": null,
+              "n": 30,
+              "value": 1.25,
+              "future_sharpe_flag": true
+            }
+          },
+          "skill": {
+            "ic_mean_30d": {
+              "status": "available",
+              "reason": null,
+              "n": 30,
+              "value": 0.0456
+            }
+          },
+          "daily_series": []
+        }
+      }
+    },
+    {
+      "cohort_id": "synthetic-us-20261119-ew",
+      "strategy_id": "fresh_attention_breakout_v2",
+      "market": "us",
+      "weighting": "ew",
+      "state": "reference_portfolio",
+      "as_of": "2026-11-19",
+      "built_at": "2026-11-19T21:30:00+00:00",
+      "cash_usd": 0.0,
+      "initial_capital_usd": 100000.0,
+      "selection_complete": true,
+      "candidate_count": 1,
+      "holdings": [
+        {
+          "ticker": "SYNI",
+          "entry_date": "2026-11-19",
+          "entry_reference_price": 50.0,
+          "starting_weight": 1.0,
+          "target_weight": 1.0,
+          "reference_shares": 2000
+        }
+      ],
+      "observation": {
+        "as_of": "2026-11-19",
+        "gross_price_return": 0.03,
+        "state": "available",
+        "elapsed_sessions": 20,
+        "observation_window": "open",
+        "holdings": [
+          {
+            "ticker": "SYNI",
+            "price_return": 0.03,
+            "session_return": 0.002,
+            "state": "available"
+          }
+        ],
+        "analytics": {
+          "as_of": "2026-11-19",
+          "window": {
+            "n": 20,
+            "complete_n": 20,
+            "minimum": 10,
+            "target": 30,
+            "start": "2026-10-26",
+            "end": "2026-11-19"
+          },
+          "benchmark": {
+            "name": "S&P 500"
+          },
+          "risk_free": {
+            "proxy": true,
+            "convention": "rf_1d = rf_annualized / 252"
+          },
+          "portfolio": {
+            "window_return": {
+              "status": "available",
+              "reason": null,
+              "n": 20,
+              "value": 0.03
+            },
+            "benchmark_window_return": {
+              "status": "incomplete",
+              "reason": "synthetic_incomplete",
+              "n": 20,
+              "value": null
+            },
+            "active_mean_ann": {
+              "status": "incomplete",
+              "reason": "synthetic_incomplete",
+              "n": 20,
+              "value": null
+            },
+            "volatility_daily": {
+              "status": "incomplete",
+              "reason": "synthetic_incomplete",
+              "n": 20,
+              "value": null
+            },
+            "tracking_error_ann": {
+              "status": "available",
+              "reason": null,
+              "n": 20,
+              "value": 0.04
+            },
+            "information_ratio_ann": {
+              "status": "available",
+              "reason": null,
+              "n": 20,
+              "value": 3.0
+            },
+            "sharpe_ann": {
+              "status": "incomplete",
+              "reason": "missing_risk_free_or_return",
+              "n": 20,
+              "value": null
+            }
+          },
+          "skill": {
+            "ic_mean_30d": {
+              "status": "incomplete",
+              "reason": "synthetic_incomplete",
+              "n": 20,
+              "value": null
+            }
+          },
+          "daily_series": []
+        }
+      }
+    },
+    {
+      "cohort_id": "synthetic-us-20261118-ew",
+      "strategy_id": "fresh_attention_breakout_v2",
+      "market": "us",
+      "weighting": "ew",
+      "state": "reference_portfolio",
+      "as_of": "2026-11-18",
+      "built_at": "2026-11-18T21:30:00+00:00",
+      "cash_usd": 0.0,
+      "initial_capital_usd": 100000.0,
+      "selection_complete": true,
+      "candidate_count": 1,
+      "holdings": [
+        {
+          "ticker": "SYNN",
+          "entry_date": "2026-11-18",
+          "entry_reference_price": 25.0,
+          "starting_weight": 1.0,
+          "target_weight": 1.0,
+          "reference_shares": 4000
+        }
+      ],
+      "observation": {
+        "as_of": "2026-11-18",
+        "gross_price_return": 0.0,
+        "state": "available",
+        "elapsed_sessions": 5,
+        "observation_window": "open",
+        "holdings": [
+          {
+            "ticker": "SYNN",
+            "price_return": 0.0,
+            "session_return": 0.0,
+            "state": "available"
+          }
+        ],
+        "analytics": {
+          "as_of": "2026-11-18",
+          "window": {
+            "n": 5,
+            "complete_n": 5,
+            "minimum": 10,
+            "target": 30,
+            "start": "2026-11-13",
+            "end": "2026-11-18"
+          },
+          "benchmark": {
+            "name": "S&P 500"
+          },
+          "risk_free": {
+            "proxy": true,
+            "convention": "rf_1d = rf_annualized / 252"
+          },
+          "portfolio": {
+            "window_return": {
+              "status": "not_computable",
+              "reason": "fewer_than_10_sessions",
+              "n": 5,
+              "value": null
+            },
+            "benchmark_window_return": {
+              "status": "not_computable",
+              "reason": "fewer_than_10_sessions",
+              "n": 5,
+              "value": null
+            },
+            "active_mean_ann": {
+              "status": "not_computable",
+              "reason": "fewer_than_10_sessions",
+              "n": 5,
+              "value": null
+            },
+            "volatility_daily": {
+              "status": "not_computable",
+              "reason": "fewer_than_10_sessions",
+              "n": 5,
+              "value": null
+            },
+            "tracking_error_ann": {
+              "status": "not_computable",
+              "reason": "fewer_than_10_sessions",
+              "n": 5,
+              "value": null
+            },
+            "information_ratio_ann": {
+              "status": "not_computable",
+              "reason": "fewer_than_10_sessions",
+              "n": 5,
+              "value": null
+            },
+            "sharpe_ann": {
+              "status": "not_computable",
+              "reason": "fewer_than_10_sessions",
+              "n": 5,
+              "value": null
+            }
+          },
+          "skill": {
+            "ic_mean_30d": {
+              "status": "not_computable",
+              "reason": "fewer_than_10_sessions",
+              "n": 5,
+              "value": null
+            }
+          },
+          "daily_series": []
+        }
+      }
+    },
+    {
+      "cohort_id": "synthetic-us-20261117-ew",
+      "strategy_id": "fresh_attention_breakout_v2",
+      "market": "us",
+      "weighting": "ew",
+      "state": "reference_portfolio",
+      "as_of": "2026-11-17",
+      "built_at": "2026-11-17T21:30:00+00:00",
+      "cash_usd": 0.0,
+      "initial_capital_usd": 100000.0,
+      "selection_complete": true,
+      "candidate_count": 1,
+      "holdings": [
+        {
+          "ticker": "SYNA",
+          "entry_date": "2026-11-17",
+          "entry_reference_price": 10.0,
+          "starting_weight": 1.0,
+          "target_weight": 1.0,
+          "reference_shares": 10000
+        }
+      ],
+      "observation": {
+        "as_of": "2026-11-17",
         "gross_price_return": 0.0,
         "state": "available",
         "elapsed_sessions": 0,
         "observation_window": "open",
         "holdings": [
           {
-            "ticker": "SYNTH",
+            "ticker": "SYNA",
             "price_return": 0.0,
             "session_return": 0.0,
             "state": "available"
@@ -46,7 +379,7 @@
     }
   ],
   "coverage": {
-    "roster": 1,
+    "roster": 4,
     "turnover_not_met": 0,
     "missing_inputs": 0
   },
