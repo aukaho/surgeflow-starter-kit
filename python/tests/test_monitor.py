@@ -216,6 +216,8 @@ def test_cohort_monitor_analytics_counts_and_medians():
 
     assert len(frame) == 4
     assert "window target 30 sessions, minimum 10; 2 of 4 cohorts have at least 10 sessions" in status
+    assert "SurgeFlow cohort analytics (research measurement, not a forecast)" in status
+    assert "A 30-session window is short and these estimates are noisy." in status
     assert "analytics not published for this cohort: 1" in status
     assert "window_return=2/0/1" in status
     assert "benchmark_window_return=1/1/1" in status

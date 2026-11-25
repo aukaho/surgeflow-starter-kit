@@ -136,8 +136,14 @@ def test_window_label_never_prints_invalid_numbers(bad):
 
 def test_available_without_a_value_counts_as_incomplete():
     payload = {"cohorts": [_cohort("x", 12, metric={"status": "available", "value": None})]}
-    assert cohort_analytics_rows(payload)[0]["window_return"] == "available: value not supplied"
+    assert cohort_analytics_rows(payload)[0]["window_return"] == "incomplete: value not supplied"
     summary = summarize_cohort_analytics(payload)
     assert summary["status_counts"]["window_return"]["available"] == 0
     assert summary["status_counts"]["window_return"]["incomplete"] == 1
     assert summary["medians"]["window_return"] is None
+
+
+def test_fractional_window_n_is_not_counted():
+    payload = {"cohorts": [_cohort("x", 12.5)]}
+    assert cohort_analytics_rows(payload)[0]["window"].startswith("not supplied of target")
+    assert summarize_cohort_analytics(payload)["window_n_at_least_10"] == 0

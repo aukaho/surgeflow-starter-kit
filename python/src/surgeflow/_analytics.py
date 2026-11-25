@@ -54,7 +54,7 @@ def _metric_display(name: str, metric: Any) -> Tuple[str, Optional[float], str]:
         value = _number(metric.get("value"))
         if value is None:
             # Counted as incomplete so the monitor's available count matches its medians.
-            return "incomplete", None, "available: value not supplied"
+            return "incomplete", None, "incomplete: value not supplied"
         return status, value, _format_value(name, value)
     if status in ("incomplete", "not_computable"):
         return status, None, f"{status}: {reason_text}"
@@ -125,7 +125,8 @@ def _records(payload: Dict[str, Any]) -> List[Dict[str, Any]]:
         row["benchmark"] = _text(benchmark.get("name") if isinstance(benchmark, dict) else None)
         window = analytics.get("window")
         window = window if isinstance(window, dict) else {}
-        window_n = _number(window.get("n"))
+        # Only whole-number session counts count, matching the window label.
+        window_n = _number(window.get("n")) if _count_text(window.get("n")) != "not supplied" else None
         row["window"] = (
             f"{_count_text(window.get('n'))} of target {_count_text(window.get('target'))} sessions, "
             f"minimum {_count_text(window.get('minimum'))}"
