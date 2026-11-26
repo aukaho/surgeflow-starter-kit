@@ -67,7 +67,7 @@
             }
           },
           {
-            "voter": "ridge_regression",
+            "voter": "ar1",
             "vote": null,
             "fitted_value": null,
             "probability": null,
@@ -81,7 +81,7 @@
             "metrics": null
           },
           {
-            "voter": "lasso_regression",
+            "voter": "ma",
             "vote": null,
             "fitted_value": null,
             "probability": null,
@@ -95,7 +95,7 @@
             "metrics": null
           },
           {
-            "voter": "random_forest",
+            "voter": "arima",
             "vote": null,
             "fitted_value": null,
             "probability": null,
@@ -109,7 +109,7 @@
             "metrics": null
           },
           {
-            "voter": "gradient_boosting",
+            "voter": "decision_tree",
             "vote": null,
             "fitted_value": null,
             "probability": null,
