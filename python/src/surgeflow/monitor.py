@@ -6,6 +6,7 @@ import time
 from typing import Any, Callable, Dict, List, Optional, Sequence, Tuple
 from zoneinfo import ZoneInfo
 
+from ._analytics import format_cohort_analytics_summary, summarize_cohort_analytics
 from ._errors import SurgeFlowApiError, SurgeFlowFeedUnavailable
 
 try:
@@ -397,7 +398,11 @@ def summarize_payload(payload: Dict[str, Any]) -> SummarizeResult:
         parts.append("No portfolios yet")
     elif frame.empty:
         parts.append("empty response; no rows returned")
-    return frame, "; ".join(parts)
+    summary = "; ".join(parts)
+    if isinstance(data, dict) and isinstance(data.get("cohorts"), list):
+        analytics = summarize_cohort_analytics(payload)
+        summary += "\n" + format_cohort_analytics_summary(analytics)
+    return frame, summary
 
 
 def _with_change_flags(frame: Any, previous_hashes: Any) -> Tuple[Any, Any, int]:
