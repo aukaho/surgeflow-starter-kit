@@ -1,5 +1,11 @@
 # Changelog
 
+## 0.4.1 - Unreleased
+
+- Notebook 01 now compares measured index-voter hit rates with the always-up base rate at both supported horizons.
+- The index-voter tables explain that no edge is demonstrated and show explicit text for unavailable metrics and absent down calls.
+- Updated the Python package and user agent to 0.4.1.
+
 ## 0.4.0 - 2026-11-26
 
 - Added shared cohort analytics rows with explicit metric statuses and formatting for notebook 03.
