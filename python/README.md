@@ -1,6 +1,6 @@
 # surgeflow Python client
 
-`surgeflow` 0.4.0 reads SurgeFlow public snapshots and member research endpoints.
+`surgeflow` 0.4.1 reads SurgeFlow public snapshots and member research endpoints.
 It requires Python 3.9 or later and uses `requests` as its only core dependency.
 The client and member API remain in beta.
 
@@ -131,7 +131,7 @@ The default timeout is 30 seconds. Set `timeout` in seconds when constructing th
 - `SurgeFlowResponseError` identifies invalid JSON or a response with `ok=false`.
 - `SurgeFlowError` is the base class for these errors.
 
-Every request uses the `surgeflow-python/0.4.0` user agent.
+Every request uses the `surgeflow-python/0.4.1` user agent.
 
 ## Test
 

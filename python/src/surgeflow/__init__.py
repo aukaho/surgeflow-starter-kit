@@ -9,8 +9,9 @@ from ._errors import (
     SurgeFlowResponseError,
     SurgeFlowTimeoutError,
 )
+from ._macro import index_voter_metric_display
 
-__version__ = "0.4.0"
+__version__ = "0.4.1"
 
 __all__ = [
     "NotAvailableYet",
@@ -22,6 +23,7 @@ __all__ = [
     "SurgeFlowResponseError",
     "SurgeFlowTimeoutError",
     "cohort_analytics_rows",
+    "index_voter_metric_display",
     "summarize_cohort_analytics",
     "__version__",
 ]

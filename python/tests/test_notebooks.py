@@ -154,6 +154,27 @@ def test_cycle_columns_match_producer_schema(monkeypatch, capsys):
     assert not namespace["cycle_frame"].isna().any().any()
 
 
+def test_index_voter_notebook_shows_measured_rates_for_both_horizons(monkeypatch, capsys):
+    monkeypatch.syspath_prepend(str(NOTEBOOKS))
+    namespace = run_notebook_in_process("01_macro_model_votes.ipynb", monkeypatch)
+    out = capsys.readouterr().out
+
+    assert out.count("No demonstrated edge") == 2
+    assert ("These votes have not shown an ability to call the next session better than always up. "
+            "They are descriptive readings, not forecasts.") in out
+    assert ("No edge is demonstrated for these 21-session votes. Compare their history with the "
+            "21-session always-up base rate. They are descriptive readings, not forecasts.") in out
+    for label in ("Measured hit rate", "Always-up base rate", "Down-call hit rate"):
+        assert label in out
+    assert "oos_hit_rate" not in out
+    assert ("Unavailable means the measured figures were not supplied for this reading; "
+            "it is not zero.") in out
+    assert list(namespace["index_frames"][1].columns) == [
+        "index_id", "voter", "vote", "Measured hit rate", "Always-up base rate",
+        "Down-call hit rate", "majority", "as_of_date",
+    ]
+
+
 def test_notebook_summaries_keep_freshness_and_fallback(monkeypatch, capsys):
     monkeypatch.syspath_prepend(str(NOTEBOOKS))
     fixtures = ROOT / "python" / "tests" / "fixtures"
