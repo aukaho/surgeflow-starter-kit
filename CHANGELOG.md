@@ -1,6 +1,6 @@
 # Changelog
 
-## 0.4.1 - Unreleased
+## 0.4.1 - 2026-11-26
 
 - Notebook 01 now compares measured index-voter hit rates with the always-up base rate at both supported horizons.
 - The index-voter tables explain that no edge is demonstrated and show explicit text for unavailable metrics and absent down calls.
