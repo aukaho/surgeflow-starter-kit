@@ -1,6 +1,6 @@
 # Changelog
 
-## 0.4.0 - Unreleased
+## 0.4.0 - 2026-11-26
 
 - Added shared cohort analytics rows with explicit metric statuses and formatting for notebook 03.
 - Analytics rows name each cohort's market and the benchmark the feed reports, and list the longest observation windows first.
